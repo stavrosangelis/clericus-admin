@@ -514,6 +514,7 @@ export default class ImportClassPieceToDB extends Component {
       }
     }
     postData.faces = checkedFaces;
+
     let context = this;
     axios({
         method: 'post',
@@ -539,6 +540,7 @@ export default class ImportClassPieceToDB extends Component {
     })
     .catch(function (error) {
     });
+
   }
 
   toggleReImportModal = () => {
@@ -897,7 +899,7 @@ export default class ImportClassPieceToDB extends Component {
 
       let updateModal = <Modal isOpen={this.state.updateModal} toggle={this.toggleUpdateModal} className={this.props.className+" update-modal"}>
         <form onSubmit={this.updatePerson}>
-          <ModalHeader toggle={this.toggleDuplicateModal}>Update person</ModalHeader>
+          <ModalHeader toggle={this.toggleUpdateModal}>Update person</ModalHeader>
           <ModalBody>
             <div className="row">
 

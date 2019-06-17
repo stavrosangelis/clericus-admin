@@ -1,21 +1,44 @@
 import React, { Component } from 'react';
 import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
 import { Link } from 'react-router-dom';
-import {getResourceThumbnailURL} from '../helpers/helpers';
+import {getPersonThumbnailURL,getPersonLabel,getResourceThumbnailURL} from '../helpers/helpers';
+import axios from 'axios';
+import {APIPath} from '../static/constants';
 
-export default class ViewClasspiece extends Component {
+export default class ViewPerson extends Component {
   constructor(props) {
     super(props);
 
+    let person = this.props.person;
+    let honorificPrefix = '';
+    let firstName = '';
+    let lastName = '';
+    let description = '';
+    if (person!==null) {
+      if (typeof person.honorificPrefix!=="undefined" && person.honorificPrefix!==null) {
+        honorificPrefix = person.honorificPrefix;
+      }
+      if (typeof person.firstName!=="undefined" && person.firstName!==null) {
+        firstName = person.firstName;
+      }
+      if (typeof person.lastName!=="undefined" && person.lastName!==null) {
+        lastName = person.lastName;
+      }
+      if (typeof person.description!=="undefined" && person.description!==null) {
+        description = person.description;
+      }
+    }
+
     this.state = {
-      zoom: 100,
-      label: this.props.resource.label,
-      detailsOpen: false,
+      detailsOpen: true,
       metadataOpen: false,
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,
-      resourcesOpen: false,
+      honorificPrefix: honorificPrefix,
+      firstName: firstName,
+      lastName: lastName,
+      description: description,
     }
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -26,10 +49,18 @@ export default class ViewClasspiece extends Component {
     this.relatedPeople = this.relatedPeople.bind(this);
     this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.deleteRef = this.deleteRef.bind(this);
   }
 
   formSubmit(e) {
     e.preventDefault();
+    let newData = {
+      honorificPrefix: this.state.honorificPrefix,
+      firstName: this.state.firstName,
+      lastName: this.state.lastName,
+      description: this.state.description,
+    }
+    this.props.update(newData);
   }
 
   handleChange(e){
@@ -91,16 +122,20 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedEvents() {
-    let references = this.props.resource.events;
+    if (this.props.person===null || this.props.person.length===0) {
+      return [];
+    }
+    let references = this.props.person.events;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
       if (reference.ref!==null) {
         let label = reference.ref.label;
-        let newRow = <div key={i}>
+        let newRow = <div key={i} className="ref-item">
           <Link to={"/event/"+reference.ref._id} href={"/event/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Event")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -109,17 +144,21 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedOrganisations() {
-    let references = this.props.resource.organisations;
+    if (this.props.person===null || this.props.person.length===0) {
+      return [];
+    }
+    let references = this.props.person.organisations;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
       if (reference.ref!==null) {
         let label = reference.ref.label;
 
-        let newRow = <div key={i}>
+        let newRow = <div key={i} className="ref-item">
           <Link to={"/organisations/"+reference.ref._id} href={"/organisations/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Organisation")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -128,7 +167,10 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedPeople() {
-    let references = this.props.resource.people;
+    if (this.props.person===null || this.props.person.length===0) {
+      return [];
+    }
+    let references = this.props.person.people;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
@@ -137,11 +179,11 @@ export default class ViewClasspiece extends Component {
         if (reference.ref.lastName!=="") {
           label+= " "+reference.ref.lastName
         }
-
-        let newRow = <div key={i}>
+        let newRow = <div key={i} className="ref-item">
           <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Person")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -150,22 +192,28 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedResources() {
-    let references = this.props.resource.resources;
+    if (this.props.person===null || this.props.person.length===0) {
+      return [];
+    }
+    let references = this.props.person.resources;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
-      let thumbnailPath = getResourceThumbnailURL(reference.ref);
-      let thumbnailImage = [];
-      if (thumbnailPath!==null) {
-        thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+      if (reference.ref!==null) {
+        let thumbnailPath = getResourceThumbnailURL(reference.ref);
+        let thumbnailImage = [];
+        if (thumbnailPath!==null) {
+          thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+        }
+        let newRow = <div key={i} className="img-thumbnail related-resource">
+            <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
+              <i>{reference.refLabel}</i>
+              {thumbnailImage}
+            </Link>
+            <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Resource")}><i className="fa fa-times" /></div>
+          </div>
+        output.push(newRow);
       }
-      let newRow = <div key={i} className="img-thumbnail related-resource">
-          <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
-            <i>{reference.refType}</i><br/>
-            {thumbnailImage}
-          </Link>
-        </div>
-      output.push(newRow);
     }
     return output;
   }
@@ -180,17 +228,29 @@ export default class ViewClasspiece extends Component {
     });
   }
 
-  render() {
-    let resource = this.props.resource;
-
-    let thumbnailPath = getResourceThumbnailURL(resource);
-    let thumbnailImage = [];
-    if (thumbnailPath!==null) {
-      thumbnailImage = <img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail"/>;
+  deleteRef(ref, refTerm, model) {
+    let context = this;
+    let params = {
+      items: [
+        {_id: this.props.person._id, type: "Person"},
+        {_id: ref, type: model}
+      ],
+      taxonomyTermId: refTerm,
     }
-    // metadata
-    let metadataOutput = this.parseMetadata(this.props.resource.metadata[0].image);
+    axios({
+      method: 'delete',
+      url: APIPath+'reference',
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      context.props.reload();
+	  })
+	  .catch(function (error) {
+	  });
+  }
 
+  render() {
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
       detailsOpenActive = "";
@@ -216,10 +276,16 @@ export default class ViewClasspiece extends Component {
       resourcesOpenActive = "";
     }
 
+    let metadataItems = this.parseMetadata();
     let relatedEvents = this.relatedEvents();
     let relatedOrganisations = this.relatedOrganisations();
     let relatedPeople = this.relatedPeople();
     let relatedResources = this.relatedResources();
+
+    let metadataCard = " hidden";
+    if (metadataItems.length>0) {
+      metadataItems = "";
+    }
 
     let relatedEventsCard = " hidden";
     if (relatedEvents.length>0) {
@@ -237,6 +303,22 @@ export default class ViewClasspiece extends Component {
     if (relatedResources.length>0) {
       relatedResourcesCard = "";
     }
+    let thumbnailImage = [];
+    let thumbnailURL = getPersonThumbnailURL(this.props.person);
+    if (thumbnailURL!==null) {
+      thumbnailImage = <img src={thumbnailURL} className="img-fluid img-thumbnail" alt={getPersonLabel(this.props.person)} />
+    }
+    let metadataOutput = [];
+
+    let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
+    let updateBtn = <Button color="primary" outline type="submit" size="sm" onClick={()=>this.formSubmit}>{this.props.updateBtn}</Button>
+
+    let errorContainerClass = " hidden";
+    if (this.props.errorVisible) {
+      errorContainerClass = "";
+    }
+    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -247,19 +329,35 @@ export default class ViewClasspiece extends Component {
             <Card>
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'detailsOpen')}>Details <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></CardTitle>
+                {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
                     <FormGroup>
-                      <Label for="labelInput">Label</Label>
-                      <Input type="text" name="label" id="labelInput" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>
+                      <Label for="honorificPrefix">Honorific Prefix</Label>
+                      <Input type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix} onChange={this.handleChange}/>
                     </FormGroup>
-                    <Button color="primary" outline type="submit" size="sm"><i className="fa fa-save" /> Update</Button>
+                    <FormGroup>
+                      <Label for="firstName">First name</Label>
+                      <Input type="text" name="firstName" id="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="lastName">Last name</Label>
+                      <Input type="text" name="lastName" id="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="description">Description</Label>
+                      <Input type="textarea" name="description" id="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <div className="text-right">
+                      {deleteBtn}
+                      {updateBtn}
+                    </div>
                   </Form>
                 </Collapse>
               </CardBody>
             </Card>
 
-            <Card>
+            <Card className={metadataCard}>
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'metadataOpen')}>Metadata<Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+metadataOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.metadataOpen}>
@@ -267,7 +365,6 @@ export default class ViewClasspiece extends Component {
                 </Collapse>
               </CardBody>
             </Card>
-
 
             <Card className={relatedEventsCard}>
               <CardBody>

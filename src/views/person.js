@@ -1,11 +1,15 @@
 import React, { Component } from 'react';
-import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import {
+  Spinner,
+  Button,
+  Modal, ModalHeader, ModalBody, ModalFooter
+} from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import {APIPath} from '../static/constants';
 
-import ViewResource from '../components/view-resource';
+import ViewPerson from '../components/view-person';
 import AddRelation from '../components/add-relations';
 
 import {Redirect} from 'react-router-dom';
@@ -16,20 +20,18 @@ import {connect} from "react-redux";
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
-    resourceEntity: state.resourceEntity,
+    personEntity: state.personEntity,
    };
 };
 
-class Resource extends Component {
+class Person extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       reload: false,
       loading: true,
-      resource: null,
-      systemType: null,
-      newId: null,
+      person:null,
       redirect: false,
       redirectReload: false,
       deleteModal: false,
@@ -53,6 +55,7 @@ class Resource extends Component {
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
     this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
+    this.validatePerson = this.validatePerson.bind(this);
     this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
     this.delete = this.delete.bind(this);
     this.reload = this.reload.bind(this);
@@ -64,34 +67,33 @@ class Resource extends Component {
     if (_id==="new") {
       this.setState({
         loading: false,
-        systemType: 'thumbnail',
         addReferencesVisible: false
       })
     }
     else {
-      let params = {_id:_id}
+    let params = {_id: _id};
       axios({
-          method: 'get',
-          url: APIPath+'resource',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          context.setState({
-            loading: false,
-            resource: responseData,
-            systemType: responseData.systemType,
-            reload: false,
-          });
-    	  })
-    	  .catch(function (error) {
-    	  });
+        method: 'get',
+        url: APIPath+'person',
+        crossDomain: true,
+        params: params
+      })
+  	  .then(function (response) {
+        let responseData = response.data.data;
+        context.setState({
+          loading: false,
+          reload: false,
+          person: responseData
+        });
+
+  	  })
+  	  .catch(function (error) {
+  	  });
     }
   }
 
   loadReferenceLabelsNTypes() {
-    let properties = this.props.resourceEntity.properties;
+    let properties = this.props.personEntity.properties;
     let referencesLabels = parseReferenceLabels(properties);
     let referencesTypes = parseReferenceTypes(properties);
     this.setState({
@@ -111,7 +113,7 @@ class Resource extends Component {
           errorText: []
         })
       }
-      if (this.state.resource!==null && typeof this.state.resource._id!=="undefined") {
+      if (typeof this.state.person._id!=="undefined") {
         this.setState({
           closeUploadModal: true
         })
@@ -142,35 +144,73 @@ class Resource extends Component {
       updating: true,
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
     })
-    let resource = this.state.resource;
-    resource.label = newData.label;
-    resource.systemType = newData.systemType;
-    resource.description = newData.description;
-
     let postData = {
-      resource: resource
+      honorificPrefix: newData.honorificPrefix,
+      firstName: newData.firstName,
+      lastName: newData.lastName,
+      description: newData.description,
     }
-    let context = this;
-    axios({
+    let _id = this.props.match.params._id;
+    if (_id!=="new") {
+      postData._id = _id;
+    }
+    let isValid = this.validatePerson(postData);
+    if (isValid) {
+      let context = this;
+      axios({
         method: 'post',
-        url: APIPath+'resource',
+        url: APIPath+'person',
         crossDomain: true,
         data: postData
       })
       .then(function (response) {
-        context.setState({
+        let responseData = response.data.data;
+        let newState = {
           updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
-        });
-
+          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+          reload: true
+        };
+        if (_id==="new") {
+          newState.redirectReload = true;
+          newState.newId = responseData.data._id;
+        }
+        context.setState(newState);
         setTimeout(function() {
           context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update success</span>
+            updateBtn: <span><i className="fa fa-save" /> Update</span>
           });
         },2000);
       })
       .catch(function (error) {
       });
+    }
+  }
+
+  validatePerson(postData) {
+    if (postData.firstName.length<2) {
+      this.setState({
+        updating: false,
+        errorVisible: true,
+        errorText: <div>The person's <b>firstName</b> must contain at least two (2) characters</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    if (postData.lastName.length<2) {
+      this.setState({
+        updating: false,
+        errorVisible: true,
+        errorText: <div>The person's <b>lastName</b> must contain at least two (2) characters</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    this.setState({
+      updating: false,
+      errorVisible: false,
+      errorText: []
+    })
+    return true;
   }
 
   toggleDeleteModal() {
@@ -184,15 +224,16 @@ class Resource extends Component {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
-        loading: false,
-        systemType: 'thumbnail'
+        loading: false
       })
     }
     else {
+      let params = {_id: _id};
       axios({
           method: 'delete',
-          url: APIPath+'resource?_id='+_id,
+          url: APIPath+'person',
           crossDomain: true,
+          params: params
         })
     	  .then(function (response) {
           let responseData = response.data.data;
@@ -221,6 +262,9 @@ class Resource extends Component {
     if(prevProps.match.params._id!==this.props.match.params._id){
       this.load();
     }
+    if (this.state.loading) {
+      this.load();
+    }
     if (this.state.reload) {
       this.load();
     }
@@ -246,16 +290,20 @@ class Resource extends Component {
 
   render() {
     let label = '';
-    if (this.state.resource!==null && typeof this.state.resource.label!=="undefined") {
-      label = this.state.resource.label;
+    if (this.state.person!==null && typeof this.state.person.firstName!=="undefined") {
+      label = this.state.person.firstName;
+      if (this.state.person.lastName!=="") {
+        label += " "+this.state.person.lastName;
+      }
     }
-    let heading = "Resource \""+label+"\"";
+
+    let heading = "Person \""+label+"\"";
     if (this.props.match.params._id==="new") {
-      heading = "Add new resource";
+      heading = "Add new person";
     }
     let breadcrumbsItems = [
-      {label: "Resources", icon: "pe-7s-photo", active: false, path: "/resources"},
-      {label: heading, icon: "pe-7s-photo", active: true, path: ""}
+      {label: "People", icon: "pe-7s-users", active: false, path: "/people"},
+      {label: heading, icon: "pe-7s-users", active: true, path: ""}
     ];
 
     let redirectElem = [];
@@ -269,33 +317,34 @@ class Resource extends Component {
         </div>
       </div>
     </div>
+
     if (!this.state.loading) {
-      let viewComponent = <ViewResource
-        resource={this.state.resource}
-        file={label}
-        delete={this.toggleDeleteModal}
-        uploadResponse={this.uploadResponse}
-        update={this.update}
-        updateBtn={this.state.updateBtn}
-        errorVisible={this.state.errorVisible}
-        errorText={this.state.errorText}
-        closeUploadModal={this.state.closeUploadModal}
-        reload={this.reload}
-        />;
-      content = <div className="resources-container">
-          {viewComponent}
+      content = <div className="items-container">
+          <ViewPerson
+            person={this.state.person}
+            label={label}
+            delete={this.toggleDeleteModal}
+            uploadResponse={this.uploadResponse}
+            update={this.update}
+            updateBtn={this.state.updateBtn}
+            errorVisible={this.state.errorVisible}
+            errorText={this.state.errorText}
+            closeUploadModal={this.state.closeUploadModal}
+            reload={this.reload}
+            />
       </div>
+
       if (this.state.redirect) {
-        redirectElem = <Redirect to="/resources" />;
+        redirectElem = <Redirect to="/people" />;
       }
       if (this.state.redirectReload) {
-        redirectReload = <Redirect to={"/resource/"+this.state.newId} />;
+        redirectReload = <Redirect to={"/person/"+this.state.newId} />;
       }
 
       deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal} className={this.props.className}>
           <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
           <ModalBody>
-          The resource "{label}" will be deleted. Continue?
+          The person "{label}" will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-right">
             <Button className="pull-left" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
@@ -303,25 +352,27 @@ class Resource extends Component {
           </ModalFooter>
         </Modal>;
     }
+
     let relationReference = {
-      type: "Resource",
+      type: "Person",
       ref: this.props.match.params._id
     };
+
     let addRelation = [];
-    if (this.state.resource!==null) {
+    if (this.state.person!==null) {
       addRelation = <AddRelation
         reload={this.reload}
         reference={relationReference}
-        item={this.state.resource}
+        item={this.state.person}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
         />
     }
     return(
       <div>
-        {redirectElem}
-        {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+      {redirectElem}
+      {redirectReload}
+      <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>
@@ -334,4 +385,4 @@ class Resource extends Component {
     );
   }
 }
-export default Resource = connect(mapStateToProps, [])(Resource);
+export default Person = connect(mapStateToProps, [])(Person);

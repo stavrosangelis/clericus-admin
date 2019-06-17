@@ -1,1 +1,1 @@
-export const _toogleToolBox = "toggleToolbox";
+export const GENERIC_UPDATE = "GENERIC_UPDATE";

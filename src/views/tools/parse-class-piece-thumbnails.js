@@ -57,6 +57,10 @@ export default class ParseClassPieceThumbnails extends Component {
       contextualMenuTargetFace: false,
       selectedNode: [],
       selectedNodeKey: [],
+
+      // errorModal
+      errorModalVisible: false,
+      errorModalText: []
     }
     this.loadFile = this.loadFile.bind(this);
     this.loadFaces = this.loadFaces.bind(this);
@@ -100,6 +104,9 @@ export default class ParseClassPieceThumbnails extends Component {
     this.handleContextMenu = this.handleContextMenu.bind(this);
     this.handleClick = this.handleClick.bind(this);
     this.handleScroll = this.handleScroll.bind(this);
+
+
+    this.toggleErrorModal = this.toggleErrorModal.bind(this);
   }
 
   loadFile = () => {
@@ -506,8 +513,21 @@ export default class ParseClassPieceThumbnails extends Component {
     if (this.state.linkingSelectionActive) {
       return false;
     }
-    if (this.state.linkingActive) {
+    if (this.state.linkingActive && this.state.linkingSelection) {
       let selectedFace = this.getFaceInSelection();
+
+      // check if thumbnail exists
+      let face = this.state.faces[selectedFace];
+      if (typeof face.thumbnail==="undefined") {
+        let errorModalText = <div>Please return to the <b>Selections</b> step and click on <b>Extract thumbnails</b> to continue.</div>
+        this.toggleErrorModal(true, errorModalText);
+        this.setState({
+          linkingSelection: false,
+          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'}
+        })
+        return false;
+      }
+
       let selectedText = this.getTextsSelection();
       let saveSelectedModal = false;
 
@@ -529,6 +549,7 @@ export default class ParseClassPieceThumbnails extends Component {
         if (typeof selectedFaceData.diocese!=="undefined") {
           inputdiocese = selectedFaceData.diocese;
         }
+
         this.setState({
           selectionFaces: selectedFace,
           selectionText: selectedText,
@@ -840,7 +861,6 @@ export default class ParseClassPieceThumbnails extends Component {
       }
     }
 
-
     let clickX = e.clientX;
     let clickY = e.clientY;
     let screenW = window.innerWidth;
@@ -882,6 +902,17 @@ export default class ParseClassPieceThumbnails extends Component {
         contextualMenuVisible: false
       });
     }
+  }
+
+  toggleErrorModal = (value=null, text=null) => {
+    let visible = !this.state.errorModalVisible;
+    if (value!==null) {
+      visible = value;
+    }
+    this.setState({
+      errorModalVisible: visible,
+      errorModalText: text
+    })
   }
 
   componentDidMount() {
@@ -1109,8 +1140,10 @@ export default class ParseClassPieceThumbnails extends Component {
     if (this.state.selectionFaces!==null) {
       let selectedFace = this.state.faces[this.state.selectionFaces];
       if (typeof selectedFace!=="undefined") {
-        let thumbnail = selectedFace.thumbnail;
-        selectedThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnail.path} />
+        if (typeof selectedFace.thumbnail!=="undefined") {
+          let thumbnail = selectedFace.thumbnail;
+          selectedThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnail.path} />
+        }
       }
 
     }
@@ -1132,6 +1165,16 @@ export default class ParseClassPieceThumbnails extends Component {
       {label: "Class Piece \""+fileName+"\"", icon: "", active: false, path: "/parse-class-piece/"+fileName},
       {label: heading, icon: "", active: true, path: ""}
     ];
+
+    let errorModal = <Modal isOpen={this.state.errorModalVisible} toggle={()=>this.toggleErrorModal(!this.state.errorModalVisible,null)}>
+        <ModalHeader toggle={()=>this.toggleErrorModal(false,[])}>Error</ModalHeader>
+        <ModalBody>
+          {this.state.errorModalText}
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" color="secondary" onClick={()=>this.toggleErrorModal(false,[])}>Close</Button>
+        </ModalFooter>
+    </Modal>
 
     return(
       <div id="classpiece-content-wrapper">
@@ -1235,6 +1278,7 @@ export default class ParseClassPieceThumbnails extends Component {
           addNewSelection={this.addNewSelection}
           removeSelection={this.removeSelection}
           />
+          {errorModal}
       </div>
     );
   }

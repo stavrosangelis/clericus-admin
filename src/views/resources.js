@@ -1,30 +1,61 @@
 import React, { Component } from 'react';
-import { Card, CardImg, CardText, CardBody, Dropdown, DropdownToggle, DropdownMenu, DropdownItem} from 'reactstrap';
+import { Card, CardImg, CardText, CardBody} from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
+import PageActions from '../components/resources-page-actions';
 
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
-import {classPieceThumbnails, outputDir, APIPath} from '../static/constants';
+import {APIPath} from '../static/constants';
+import {getResourceThumbnailURL} from '../helpers/helpers';
 
-export default class Resources extends Component {
+import {connect} from "react-redux";
+import {
+  setPaginationParams
+} from "../redux/actions/main-actions";
+
+const mapStateToProps = state => {
+  return {
+    resourcesPagination: state.resourcesPagination,
+    systemTypes: state.systemTypes
+   };
+};
+
+function mapDispatchToProps(dispatch) {
+  return {
+    setPaginationParams: (type,params) => dispatch(setPaginationParams(type,params))
+  }
+}
+
+class Resources extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       loading: true,
-      systemTypes: [],
-      activeSystemType: null,
-      systemTypesDropdownOpen: false,
+      tableLoading: true,
+      systemTypes: this.props.systemTypes,
+      activeSystemType: this.props.resourcesPagination.activeSystemType,
       resources: [],
+      page: this.props.resourcesPagination.page,
+      gotoPage: this.props.resourcesPagination.page,
+      limit: this.props.resourcesPagination.limit,
+      totalPages: 0,
+      totalItems: 0,
+      insertModalVisible: false
     }
     this.getSystemTypes = this.getSystemTypes.bind(this);
     this.load = this.load.bind(this);
     this.fileOutput = this.fileOutput.bind(this);
-    this.toggleSystemTypesDropdownOpen = this.toggleSystemTypesDropdownOpen.bind(this);
+    this.updatePage = this.updatePage.bind(this);
+    this.updateLimit = this.updateLimit.bind(this);
+    this.gotoPage = this.gotoPage.bind(this);
+    this.handleChange = this.handleChange.bind(this);
     this.setActiveSystemType = this.setActiveSystemType.bind(this);
+    this.toggleInsertModal = this.toggleInsertModal.bind(this);
+    this.updateStorePagination = this.updateStorePagination.bind(this);
   }
+
   getSystemTypes() {
     let context = this;
     axios({
@@ -36,7 +67,6 @@ export default class Resources extends Component {
         let responseData = response.data;
         if (responseData.status) {
           context.setState({
-            loading: false,
             systemTypes: responseData.data,
           });
         }
@@ -46,15 +76,23 @@ export default class Resources extends Component {
   }
 
   load() {
+    this.setState({
+      tableLoading: true
+    })
     let context = this;
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit
+    }
     let url = APIPath+'resources';
     if (this.state.activeSystemType!==null) {
-      url = APIPath+'resources?systemType='+this.state.activeSystemType;
+      params.systemType = this.state.activeSystemType;
     }
     axios({
         method: 'get',
         url: url,
         crossDomain: true,
+        params: params
       })
   	  .then(function (response) {
         let responseData = response.data.data;
@@ -63,9 +101,30 @@ export default class Resources extends Component {
           let file = responseData.data[i];
           filesOutput.push(context.fileOutput(i, file));
         }
-        context.setState({
-          resources: filesOutput,
-        });
+        let currentPage = 1;
+        if (responseData.currentPage>0) {
+          currentPage = responseData.currentPage;
+        }
+        // normalize the page number when the selected page is empty for the selected number of items per page
+        if (currentPage>1 && responseData.data.length===0) {
+          context.setState({
+            page: currentPage-1
+          });
+          setTimeout(function() {
+            context.load();
+          },10)
+        }
+        else {
+          context.setState({
+            loading: false,
+            tableLoading: false,
+            page: currentPage,
+            totalPages: responseData.totalPages,
+            totalItems: responseData.totalItems,
+            resources: filesOutput,
+          });
+        }
+
 
   	  })
   	  .catch(function (error) {
@@ -73,27 +132,16 @@ export default class Resources extends Component {
   }
 
   fileOutput(i, file) {
-    let thumbnail = [];
-    if (file.systemType==="classpiece") {
-      thumbnail = classPieceThumbnails+file.fileName;
-    }
-    else if (file.systemType==="thumbnail") {
-      let classPiece = null;
-      for (let r=0;r<file.resources.length; r++) {
-        let resource = file.resources[r];
-        if (resource.refType==="isPartOf") {
-          classPiece = resource.ref;
-        }
-      }
-      if (classPiece!==null) {
-        let dirName = classPiece.fileName.replace("."+classPiece.metadata[0].image.default.type, "", classPiece.fileName);
-        thumbnail = outputDir+dirName+"/thumbnails/"+file.fileName;
-      }
-    }
     let parseUrl = "/resource/"+file._id;
+    let thumbnailImage = [];
+    let thumbnailPath = getResourceThumbnailURL(file);
+    if (thumbnailPath!==null) {
+      thumbnailImage = <Link to={parseUrl} href={parseUrl}><CardImg src={thumbnailPath} alt={file.label} /></Link>
+    }
+
     let fileOutput = <div key={i} className="col-12 col-sm-6 col-md-3">
       <Card style={{marginBottom: '15px'}}>
-        <Link to={parseUrl} href={parseUrl}><CardImg src={thumbnail} alt={file.label} /></Link>
+        {thumbnailImage}
         <CardBody>
           <CardText className="text-center">
             <label><Link to={parseUrl} href={parseUrl}>{file.label}</Link></label>
@@ -104,26 +152,101 @@ export default class Resources extends Component {
     return fileOutput;
   }
 
-  toggleSystemTypesDropdownOpen() {
+  updatePage(e) {
+    if (e>0 && e!==this.state.page) {
+      this.setState({
+        page: e,
+        gotoPage: e,
+      });
+      this.updateStorePagination(null,null,e);
+      let context = this;
+      setTimeout(function(){
+        context.load();
+      },100);
+    }
+  }
+
+  updateStorePagination(limit=null, activeSystemType=null, page=null) {
+    if (limit===null) {
+      limit = this.state.limit;
+    }
+    if (activeSystemType===null) {
+      activeSystemType = this.state.activeSystemType;
+    }
+    if (page===null) {
+      page = this.state.page;
+    }
+    let payload = {
+      limit:limit,
+      activeSystemType:activeSystemType,
+      page:page,
+    }
+    this.props.setPaginationParams("resources", payload);
+  }
+
+  gotoPage(e) {
+    e.preventDefault();
+    let gotoPage = this.state.gotoPage;
+    let page = this.state.page;
+    if (gotoPage>0 && gotoPage!==page) {
+      this.setState({
+        page: gotoPage
+      })
+      this.updateStorePagination(null,null,gotoPage);
+      let context = this;
+      setTimeout(function(){
+        context.load();
+      },100);
+    }
+  }
+
+  updateLimit(limit) {
     this.setState({
-      systemTypesDropdownOpen: !this.state.systemTypesDropdownOpen
-    })
+      limit: limit
+    });
+    this.updateStorePagination(limit,null,null);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100)
+  }
+
+  handleChange(e) {
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let name = target.name;
+    this.setState({
+      [name]: value
+    });
   }
 
   setActiveSystemType(systemType) {
     this.setState({
       activeSystemType: systemType
     })
+    this.updateStorePagination(null,systemType,null);
     let context = this;
     setTimeout(function() {
       context.load();
     },100)
   }
 
+  toggleInsertModal() {
+    this.setState({
+      insertModalVisible: !this.state.insertModalVisible
+    })
+  }
+
   componentDidMount() {
-    loadProgressBar();
-    this.getSystemTypes();
     this.load();
+  }
+
+  componentDidUpdate(prevProps) {
+    if(prevProps.systemTypes!==this.props.systemTypes) {
+      this.setState({
+        systemTypes: this.props.systemTypes
+      })
+    }
   }
 
   render() {
@@ -140,42 +263,28 @@ export default class Resources extends Component {
       </div>
     </div>
     if (!this.state.loading) {
-      let systemTypesDropdownItems = [];
-      let defaultActive = false;
-      if (this.state.activeSystemType===null) {
-        defaultActive = true;
-      }
-      let defaultItem = <DropdownItem active={defaultActive} onClick={this.setActiveSystemType.bind(this,null)} key={0}>All</DropdownItem>;
-      systemTypesDropdownItems.push(defaultItem);
-      for (let st=0;st<this.state.systemTypes.length; st++) {
-        let dc=st+1;
-        let systemType = this.state.systemTypes[st];
-        let active = false;
-        if (this.state.activeSystemType===systemType._id) {
-          active = true;
-        }
-        let dropdownItem = <DropdownItem active={active} onClick={this.setActiveSystemType.bind(this,systemType._id )} key={dc}><span className="first-cap">{systemType._id}</span></DropdownItem>;
-        systemTypesDropdownItems.push(dropdownItem);
-      }
-      let systemTypesDropdown = <Dropdown className="pull-right" size="sm" isOpen={this.state.systemTypesDropdownOpen} toggle={this.toggleSystemTypesDropdownOpen}>
-        <DropdownToggle color="secondary" outline caret>
-          Select type
-        </DropdownToggle>
-        <DropdownMenu right>
-          {systemTypesDropdownItems}
-        </DropdownMenu>
-      </Dropdown>
+      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/resource/new" href="/resource/new"><i className="fa fa-plus" /></Link>;
+
+      let pageActions = <PageActions
+        limit={this.state.limit}
+        current_page={this.state.page}
+        gotoPageValue={this.state.gotoPage}
+        total_pages={this.state.totalPages}
+        systemTypes={this.state.systemTypes}
+        activeSystemType={this.state.activeSystemType}
+        updatePage={this.updatePage}
+        gotoPage={this.gotoPage}
+        handleChange={this.handleChange}
+        updateLimit={this.updateLimit}
+        setActiveSystemType={this.setActiveSystemType}
+      />
       content = <div className="resources-container">
-        <div className="row">
-          <div className="col-12">
-            <div className="page-actions">
-              {systemTypesDropdown}
-            </div>
-          </div>
-        </div>
+        {pageActions}
         <div className="row">
           {this.state.resources}
         </div>
+        {pageActions}
+        {addNewBtn}
       </div>
     }
 
@@ -192,3 +301,4 @@ export default class Resources extends Component {
     );
   }
 }
+export default Resources = connect(mapStateToProps, mapDispatchToProps)(Resources);

@@ -18,6 +18,16 @@ import {
 } from "reactstrap";
 
 import dashboardRoutes from "../routes/index";
+import {connect} from "react-redux";
+import {
+  logout,
+} from "../redux/actions/main-actions";
+
+function mapDispatchToProps(dispatch) {
+  return {
+    logout: () => dispatch(logout())
+  }
+}
 
 class Header extends React.Component {
   constructor(props) {
@@ -99,8 +109,21 @@ class Header extends React.Component {
   }
 
   render() {
+    let userName = '';
+    let user = JSON.parse(localStorage.getItem('user'));
+    if (user!==null) {
+      if (user.firstName!=="") {
+        userName = user.firstName;
+      }
+      if (user.lastName!=="") {
+        userName += " "+user.lastName;
+      }
+      if (userName==="") {
+        userName = user.email;
+      }
+    }
+
     return (
-      // add or remove classes depending if we are on full-screen-maps page or not
       <Navbar
         expand="lg"
         className="main-navbar"
@@ -156,15 +179,14 @@ class Header extends React.Component {
                 toggle={e => this.dropdownToggle(e)}
               >
                 <DropdownToggle caret nav>
-                  <i className="nc-icon nc-bell-55" />
+                  <i className="pe-header-bar-icon pe-7s-user" />
                   <p>
                     <span className="d-lg-none d-md-block">Some Actions</span>
                   </p>
                 </DropdownToggle>
                 <DropdownMenu right>
-                  <DropdownItem tag="a">Action</DropdownItem>
-                  <DropdownItem tag="a">Another Action</DropdownItem>
-                  <DropdownItem tag="a">Something else here</DropdownItem>
+                  <DropdownItem>Welcome {userName}</DropdownItem>
+                  <DropdownItem tag="a" onClick={()=>this.props.logout()}>Logout</DropdownItem>
                 </DropdownMenu>
               </Dropdown>
               <NavItem>
@@ -183,4 +205,4 @@ class Header extends React.Component {
   }
 }
 
-export default Header;
+export default Header = connect(null, mapDispatchToProps)(Header);

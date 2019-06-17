@@ -1,22 +1,65 @@
 import React, { Component } from 'react';
-import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
+import {
+  Card, CardTitle, CardBody,
+  Button,
+  Form, FormGroup, Label, Input,
+  Collapse,
+  Modal, ModalHeader, ModalBody, ModalFooter
+} from 'reactstrap';
 import { Link } from 'react-router-dom';
-import {getResourceThumbnailURL} from '../helpers/helpers';
+import {getResourceThumbnailURL,getResourceFullsizeURL} from '../helpers/helpers';
+import UploadFile from './upload-file';
 
-export default class ViewClasspiece extends Component {
+import axios from 'axios';
+import {APIPath} from '../static/constants';
+
+import {connect} from "react-redux";
+import {
+  toggleLightBox,setLightBoxSrc
+} from "../redux/actions/main-actions";
+
+function mapDispatchToProps(dispatch) {
+  return {
+    toggleLightBox: (value) => dispatch(toggleLightBox(value)),
+    setLightBoxSrc: (src) => dispatch(setLightBoxSrc(src))
+  }
+}
+
+class ViewResource extends Component {
   constructor(props) {
     super(props);
 
+    let resource = this.props.resource;
+    let newLabel = '';
+    let newDescription = '';
+    let newSystemType = 'undefined';
+    if (resource!==null) {
+      if (typeof resource.label!=="undefined" && resource.label!==null) {
+        newLabel = resource.label;
+      }
+      if (typeof resource.systemType!=="undefined" && resource.systemType!==null) {
+        newSystemType = resource.systemType;
+      }
+      if (typeof resource.description!=="undefined" && resource.description!==null) {
+        newDescription = resource.description;
+      }
+    }
+
     this.state = {
       zoom: 100,
-      label: this.props.resource.label,
-      detailsOpen: false,
+      detailsOpen: true,
       metadataOpen: false,
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,
       resourcesOpen: false,
+      label: newLabel,
+      systemType: newSystemType,
+      description: newDescription,
+      systemTypes: [],
+      updateFileModal: false,
     }
+    this.getSystemTypes = this.getSystemTypes.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
@@ -26,17 +69,41 @@ export default class ViewClasspiece extends Component {
     this.relatedPeople = this.relatedPeople.bind(this);
     this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.deleteRef = this.deleteRef.bind(this);
+    this.toggleUpdateFileModal = this.toggleUpdateFileModal.bind(this);
+    this.openLightBox = this.openLightBox.bind(this);
+  }
+
+  getSystemTypes() {
+    let context = this;
+    axios({
+        method: 'get',
+        url: APIPath+'resource-system-types',
+        crossDomain: true,
+      })
+  	  .then(function (response) {
+        let responseData = response.data;
+        if (responseData.status) {
+          context.setState({
+            systemTypes: responseData.data,
+          });
+        }
+  	  })
+  	  .catch(function (error) {
+  	  });
   }
 
   formSubmit(e) {
     e.preventDefault();
+
+    let updateData = {label: this.state.label, systemType: this.state.systemType, description: this.state.description};
+    this.props.update(updateData);
   }
 
   handleChange(e){
     let target = e.target;
     let value = target.type === 'checkbox' ? target.checked : target.value;
     let name = target.name;
-
     this.setState({
       [name]: value
     });
@@ -91,16 +158,20 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedEvents() {
+    if (this.props.resource===null || this.props.resource.length===0) {
+      return [];
+    }
     let references = this.props.resource.events;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
       if (reference.ref!==null) {
         let label = reference.ref.label;
-        let newRow = <div key={i}>
+        let newRow = <div key={i} className="ref-item">
           <Link to={"/event/"+reference.ref._id} href={"/event/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Event")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -109,6 +180,9 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedOrganisations() {
+    if (this.props.resource===null || this.props.resource.length===0) {
+      return [];
+    }
     let references = this.props.resource.organisations;
     let output = [];
     for (let i=0;i<references.length; i++) {
@@ -116,10 +190,11 @@ export default class ViewClasspiece extends Component {
       if (reference.ref!==null) {
         let label = reference.ref.label;
 
-        let newRow = <div key={i}>
-          <Link to={"/organisations/"+reference.ref._id} href={"/organisations/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+        let newRow = <div key={i} className="ref-item">
+          <Link to={"/organisation/"+reference.ref._id} href={"/organisation/"+reference.ref._id}>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Organisation")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -128,6 +203,9 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedPeople() {
+    if (this.props.resource===null || this.props.resource.length===0) {
+      return [];
+    }
     let references = this.props.resource.people;
     let output = [];
     for (let i=0;i<references.length; i++) {
@@ -137,11 +215,11 @@ export default class ViewClasspiece extends Component {
         if (reference.ref.lastName!=="") {
           label+= " "+reference.ref.lastName
         }
-
-        let newRow = <div key={i}>
+        let newRow = <div key={i} className="ref-item">
           <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
-            <i>{reference.refType}</i> <b>{label}</b>
+            <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
+          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Person")}><i className="fa fa-times" /></div>
         </div>
         output.push(newRow);
       }
@@ -150,22 +228,28 @@ export default class ViewClasspiece extends Component {
   }
 
   relatedResources() {
+    if (this.props.resource===null || this.props.resource.length===0) {
+      return [];
+    }
     let references = this.props.resource.resources;
     let output = [];
     for (let i=0;i<references.length; i++) {
       let reference = references[i];
-      let thumbnailPath = getResourceThumbnailURL(reference.ref);
-      let thumbnailImage = [];
-      if (thumbnailPath!==null) {
-        thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+      if (reference.ref!==null) {
+        let thumbnailPath = getResourceThumbnailURL(reference.ref);
+        let thumbnailImage = [];
+        if (thumbnailPath!==null) {
+          thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+        }
+        let newRow = <div key={i} className="img-thumbnail related-resource">
+            <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
+              <i>{reference.refLabel}</i>
+              {thumbnailImage}
+            </Link>
+            <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Resource")}><i className="fa fa-times" /></div>
+          </div>
+        output.push(newRow);
       }
-      let newRow = <div key={i} className="img-thumbnail related-resource">
-          <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
-            <i>{reference.refType}</i><br/>
-            {thumbnailImage}
-          </Link>
-        </div>
-      output.push(newRow);
     }
     return output;
   }
@@ -180,16 +264,115 @@ export default class ViewClasspiece extends Component {
     });
   }
 
+  toggleUpdateFileModal() {
+    this.setState({
+      updateFileModal: !this.state.updateFileModal
+    })
+  }
+
+  deleteRef(ref, refTerm, model) {
+    let context = this;
+    let params = {
+      items: [
+        {_id: this.props.resource._id, type: "Resource"},
+        {_id: ref, type: model}
+      ],
+      taxonomyTermId: refTerm,
+    }
+    axios({
+      method: 'delete',
+      url: APIPath+'reference',
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      context.props.reload();
+	  })
+	  .catch(function (error) {
+	  });
+  }
+
+  openLightBox(src) {
+    this.props.setLightBoxSrc(src);
+    this.props.toggleLightBox(true);
+  }
+
+  componentDidMount() {
+    this.getSystemTypes();
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.props.closeUploadModal) {
+      this.setState({
+        updateFileModal: false
+      })
+    }
+  }
+
   render() {
     let resource = this.props.resource;
 
     let thumbnailPath = getResourceThumbnailURL(resource);
     let thumbnailImage = [];
-    if (thumbnailPath!==null) {
-      thumbnailImage = <img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail"/>;
+    if (thumbnailPath!==null && resource.resourceType==="image") {
+      let fullsizePath = getResourceFullsizeURL(resource);
+      thumbnailImage = [<div onClick={()=>this.openLightBox(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>]; 
     }
+    let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
+    let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>
+
+    let updateFileModal = [];
+    if (resource===null) {
+      thumbnailImage = <UploadFile
+        _id={null}
+        systemType={this.state.systemType}
+        uploadResponse={this.props.uploadResponse}
+        label={this.state.label}
+        description={this.state.description}
+        />;
+      deleteBtn = [];
+      updateBtn = [];
+    }
+    else {
+      thumbnailImage.push(<Button style={{marginTop: "10px"}} color="info" className="resource-upload-btn" key="update-img-btn" onClick={this.toggleUpdateFileModal}><i className="fa fa-refresh" /> Update file</Button>);
+
+      updateFileModal = <Modal isOpen={this.state.updateFileModal} toggle={this.toggleUpdateFileModal} className={this.props.className}>
+          <ModalHeader toggle={this.toggleUpdateFileModal}>Update file</ModalHeader>
+          <ModalBody>
+            <div style={{position: 'relative', display: 'block',margin: '0 auto'}}>
+              <UploadFile
+                _id={this.props.resource._id}
+                systemType={this.state.systemType}
+                uploadResponse={this.props.uploadResponse}
+                label={this.state.label}
+                description={this.state.description}
+                />
+            </div>
+          </ModalBody>
+          <ModalFooter className="text-right">
+            <Button color="secondary" onClick={this.toggleUpdateFileModal}>Cancel</Button>
+          </ModalFooter>
+        </Modal>;
+    }
+
+    // system types
+    let systemTypesOptions = [];
+    for (let st=0;st<this.state.systemTypes.length; st++) {
+      let systemType = this.state.systemTypes[st];
+      let systemTypeOption = <option value={systemType._id} key={st}>{systemType._id}</option>;
+      systemTypesOptions.push(systemTypeOption);
+    }
+    let systemTypesSelect = <Input type="select" name="systemType" id="systemTypeInput" className="system-type-select" onChange={this.handleChange} value={this.state.systemType}>
+      {systemTypesOptions}
+    </Input>
+
     // metadata
-    let metadataOutput = this.parseMetadata(this.props.resource.metadata[0].image);
+    let metadataOutput = [];
+    if (resource!==null) {
+      if (typeof resource.metadata!=="undefined" && resource.metadata.length>0) {
+        metadataOutput = this.parseMetadata(resource.metadata[0].image);
+      }
+    }
 
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
@@ -221,6 +404,11 @@ export default class ViewClasspiece extends Component {
     let relatedPeople = this.relatedPeople();
     let relatedResources = this.relatedResources();
 
+    let metadataCard = " hidden";
+    if (metadataOutput.length>0) {
+      metadataCard = "";
+    }
+
     let relatedEventsCard = " hidden";
     if (relatedEvents.length>0) {
       relatedEventsCard = "";
@@ -237,6 +425,12 @@ export default class ViewClasspiece extends Component {
     if (relatedResources.length>0) {
       relatedResourcesCard = "";
     }
+    let errorContainerClass = " hidden";
+    if (this.props.errorVisible) {
+      errorContainerClass = "";
+    }
+    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -247,19 +441,31 @@ export default class ViewClasspiece extends Component {
             <Card>
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'detailsOpen')}>Details <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></CardTitle>
+                {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
                     <FormGroup>
                       <Label for="labelInput">Label</Label>
                       <Input type="text" name="label" id="labelInput" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>
                     </FormGroup>
-                    <Button color="primary" outline type="submit" size="sm"><i className="fa fa-save" /> Update</Button>
+                    <FormGroup>
+                     <Label for="systemTypeInput">Type</Label>
+                      {systemTypesSelect}
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="DescriptionInput">Label</Label>
+                      <Input type="textarea" name="description" id="DescriptionInput" placeholder="Resource description..." value={this.state.description} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <div className="text-right">
+                      {deleteBtn}
+                      {updateBtn}
+                    </div>
                   </Form>
                 </Collapse>
               </CardBody>
             </Card>
 
-            <Card>
+            <Card className={metadataCard}>
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'metadataOpen')}>Metadata<Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+metadataOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.metadataOpen}>
@@ -267,7 +473,6 @@ export default class ViewClasspiece extends Component {
                 </Collapse>
               </CardBody>
             </Card>
-
 
             <Card className={relatedEventsCard}>
               <CardBody>
@@ -308,7 +513,9 @@ export default class ViewClasspiece extends Component {
 
           </div>
         </div>
+        {updateFileModal}
       </div>
     )
   }
 }
+export default ViewResource = connect(null, mapDispatchToProps)(ViewResource);;
