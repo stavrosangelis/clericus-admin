@@ -45,7 +45,12 @@ class People extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      deleteModalOpen: false
+      deleteModalOpen: false,
+
+      searchInput: '',
+      advancedSearchInputs: [],
+      simpleSearch: false,
+      advancedSearch: false,
     }
     this.load = this.load.bind(this);
     this.updatePage = this.updatePage.bind(this);
@@ -59,6 +64,11 @@ class People extends Component {
     this.deletePeopleList = this.deletePeopleList.bind(this);
     this.deleteSelected = this.deleteSelected.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+    this.simpleSearch = this.simpleSearch.bind(this);
+    this.advancedSearch = this.advancedSearch.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
+    this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
+    this.updateAdvancedSearchInputs = this.updateAdvancedSearchInputs.bind(this);
   }
 
   load() {
@@ -69,49 +79,207 @@ class People extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit
+    };
+    if (this.state.simpleSearch) {
+      params.label = this.state.searchInput;
+    }
+    else if (this.state.advancedSearch) {
+      for (let i=0; i<this.state.advancedSearchInputs.length; i++) {
+        let searchInput = this.state.advancedSearchInputs[i];
+        params[searchInput.select] = searchInput.input;
+      }
     }
     let url = APIPath+'people';
     axios({
-        method: 'get',
-        url: url,
-        crossDomain: true,
-        params: params
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let people = responseData.data;
-        let newPeople = [];
-        for (let i=0;i<people.length; i++) {
-          let person = people[i];
-          person.checked = false;
-          newPeople.push(person);
-        }
-        let currentPage = 1;
-        if (responseData.currentPage>0) {
-          currentPage = responseData.currentPage;
-        }
-        // normalize the page number when the selected page is empty for the selected number of items per page
-        if (currentPage>1 && responseData.data.length===0) {
-          context.setState({
-            page: currentPage-1
-          });
-          setTimeout(function() {
-            context.load();
-          },10)
-        }
-        else {
-          context.setState({
-            loading: false,
-            tableLoading: false,
-            page: responseData.currentPage,
-            totalPages: responseData.totalPages,
-            people: newPeople
-          });
-        }
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      let people = responseData.data;
+      let newPeople = [];
+      for (let i=0;i<people.length; i++) {
+        let person = people[i];
+        person.checked = false;
+        newPeople.push(person);
+      }
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && responseData.data.length===0) {
+        context.setState({
+          page: currentPage-1
+        });
+        setTimeout(function() {
+          context.load();
+        },10)
+      }
+      else {
+        context.setState({
+          loading: false,
+          tableLoading: false,
+          page: responseData.currentPage,
+          totalPages: responseData.totalPages,
+          people: newPeople
+        });
+      }
+	  })
+	  .catch(function (error) {
+	  });
+  }
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+  simpleSearch(e) {
+    e.preventDefault();
+    if (this.state.searchInput<2) {
+      return false;
+    }
+    this.setState({
+      tableLoading: true
+    })
+    let context = this;
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit,
+      label: this.state.searchInput,
+    }
+    let url = APIPath+'people';
+    axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      let people = responseData.data;
+      let newPeople = [];
+      for (let i=0;i<people.length; i++) {
+        let person = people[i];
+        person.checked = false;
+        newPeople.push(person);
+      }
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && responseData.data.length===0) {
+        context.setState({
+          page: currentPage-1
+        });
+        setTimeout(function() {
+          context.load();
+        },10)
+      }
+      else {
+        context.setState({
+          loading: false,
+          tableLoading: false,
+          page: responseData.currentPage,
+          totalPages: responseData.totalPages,
+          people: newPeople,
+          simpleSearch: true,
+          advancedSearch: false,
+        });
+      }
+	  })
+	  .catch(function (error) {
+	  });
+  }
+
+  advancedSearch(e) {
+    e.preventDefault();
+    this.setState({
+      tableLoading: true
+    })
+    let context = this;
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit,
+    }
+    for (let i=0; i<this.state.advancedSearchInputs.length; i++) {
+      let searchInput = this.state.advancedSearchInputs[i];
+      params[searchInput.select] = searchInput.input;
+    }
+    let url = APIPath+'people';
+    axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      let people = responseData.data;
+      let newPeople = [];
+      for (let i=0;i<people.length; i++) {
+        let person = people[i];
+        person.checked = false;
+        newPeople.push(person);
+      }
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && responseData.data.length===0) {
+        context.setState({
+          page: currentPage-1
+        });
+        setTimeout(function() {
+          context.load();
+        },10)
+      }
+      else {
+        context.setState({
+          loading: false,
+          tableLoading: false,
+          page: responseData.currentPage,
+          totalPages: responseData.totalPages,
+          people: newPeople,
+          simpleSearch: false,
+          advancedSearch: true,
+        });
+      }
+	  })
+	  .catch(function (error) {
+	  });
+  }
+
+  clearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        searchInput: '',
+        simpleSearch: false,
+      })
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+
+  clearAdvancedSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        advancedSearchInputs: [],
+        advancedSearch: false,
+      })
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+
+  updateAdvancedSearchInputs(advancedSearchInputs) {
+    this.setState({
+      advancedSearchInputs: advancedSearchInputs,
+    })
   }
 
   updatePage(e) {
@@ -314,6 +482,13 @@ class People extends Component {
       {label: heading, icon: "pe-7s-users", active: true, path: ""}
     ];
 
+    let searchElements = [
+      {element: "firstName", label: "First name"},
+      {element: "lastName", label: "Last name"},
+      {element: "fnameSoundex", label: "First name soundex"},
+      {element: "lnameSoundex", label: "Last name soundex"},
+      {element: "description", label: "Description"},
+    ]
     let pageActions = <PageActions
       limit={this.state.limit}
       current_page={this.state.page}
@@ -323,6 +498,14 @@ class People extends Component {
       gotoPage={this.gotoPage}
       handleChange={this.handleChange}
       updateLimit={this.updateLimit}
+      pageType="people"
+      searchElements={searchElements}
+      searchInput={this.state.searchInput}
+      simpleSearch={this.simpleSearch}
+      advancedSearch={this.advancedSearch}
+      clearSearch={this.clearSearch}
+      clearAdvancedSearch={this.clearAdvancedSearch}
+      updateAdvancedSearchInputs={this.updateAdvancedSearchInputs}
     />
     let content = <div>
       {pageActions}
@@ -383,11 +566,11 @@ class People extends Component {
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
                         </div>
                       </th>*/}
-                      <th>#</th>
+                      <th style={{width: '40px'}}>#</th>
                       <th>Thumbnail</th>
                       <th>First Name</th>
                       <th>Last Name</th>
-                      <th></th>
+                      <th style={{width: '40px'}}></th>
                     </tr>
                   </thead>
                   <tbody>

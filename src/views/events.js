@@ -152,7 +152,7 @@ export default class Events extends Component {
       let thumbnailImage = [];
       let thumbnailURL = getEventThumbnailURL(item);
       if (thumbnailURL!==null) {
-        thumbnailImage = <img src={thumbnailURL} className="items-list-thumbnail img-fluid img-thumbnail" alt={label} />
+        thumbnailImage = <Link href={"/event/"+item._id} to={"/event/"+item._id}><img src={thumbnailURL} className="items-list-thumbnail img-fluid img-thumbnail" alt={label} /></Link>
       }
       let row = <tr key={i}>
         <td>
@@ -162,7 +162,10 @@ export default class Events extends Component {
           </div>
         </td>
         <td>{count}</td>
-        <td>{thumbnailImage} {label}</td>
+        <td>
+          {thumbnailImage}
+          <Link href={"/event/"+item._id} to={"/event/"+item._id}>{label}</Link>
+        </td>
         <td>{locationLabel}</td>
         <td>{timeLabel}</td>
         <td><Link href={"/event/"+item._id} to={"/event/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>

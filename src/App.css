@@ -1401,3 +1401,114 @@ header {
 .network-node, .network-line {
   cursor: pointer;
 }
+.more-toggle {
+  border: none;
+  margin: 0;
+  padding: 1px 5px;
+}
+.search-dropdown {
+  padding: 10px 5px 5px 5px !important;
+}
+.search-dropdown:hover, .search-dropdown:focus {
+  background-color: #fff !important;
+}
+.search-dropdown-inputgroup {
+  width: 100%;
+  width: 350px !important;
+}
+.dropdown-center {
+  margin-top: 0 !important;
+}
+.dropdown-center::before {
+  display: none !important;
+}
+.dropdown-center::after {
+  left: 30px !important;
+  right: auto !important;
+}
+.clear-search {
+  border-left: 0 none;
+  border-top: 1px solid #ddd;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+.clear-search:focus {
+  outline: none;
+  box-shadow: none;
+}
+.clear-search:hover {
+  border-left: 0 none;
+  border-top: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  background-color: #ccc
+}
+.toggle-search {
+  text-decoration: underline;
+  color: #333 !important;
+  cursor: pointer;
+  text-align: center;
+  margin: 10px 0;
+}
+.advanced-search-row {
+  width: 350px;
+  margin-bottom: 5px;
+}
+.advanced-search-row:first-child {
+  margin-bottom: 20px;
+}
+.advanced-search-row > div {
+  display: inline-block;
+}
+.advanced-search-input {
+  width: 210px;
+  vertical-align: top;
+  margin-left: -1px;
+  z-index:9;
+}
+.advanced-search-input > input {
+  border-radius: 0 !important;
+}
+.advanced-search-select {
+  width: 120px;
+  vertical-align: top;
+  border: 1px solid #ddd;
+}
+.advanced-search-select > select {
+  height: 28px !important;
+  border: 0 none !important;
+}
+.advanced-search-button {
+  width: 20px;
+  margin-left: -1px;
+  z-index:8;
+}
+.advanced-search-button > button {
+  height: 30px !important;
+  padding: 5px;
+  border-color: #ddd;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+.advanced-search-submit-row {
+  width: 350px;
+  padding: 5px;
+  display: block;
+  color: #333 !important;
+  height: 30px;
+  cursor: default;
+}
+.advanced-search-submit-row:hover {
+  background-color: #f5f5f5;
+}
+.advanced-search-submit-row > button {
+  float: right;
+  position: relative;
+  margin-top: -3px;
+  width: 24px;
+  height: 24px;
+  border: 0 none;
+  padding: 0;
+  line-height: 24px;
+  text-align: center;
+}

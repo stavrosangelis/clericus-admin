@@ -10,7 +10,7 @@ export function checkSession() {
     let token = localStorage.getItem('token');
     axios({
       method: 'post',
-      url: APIPath+'session',
+      url: APIPath+'admin-session',
       crossDomain: true,
       data: {token: token},
     })
@@ -52,16 +52,21 @@ export function login(email, password) {
     }
     axios({
       method: 'post',
-      url: APIPath+'login',
+      url: APIPath+'admin-login',
       crossDomain: true,
       data: postData
     })
-    .then(function (response) {
+    .then( async function (response) {
       let responseData = response.data;
       let payload = {};
       if (responseData.status) {
-        localStorage.setItem('token', responseData.data.token);
-        localStorage.setItem('user', JSON.stringify(responseData.data));
+        await new Promise(resolve=> {
+          resolve(localStorage.setItem('token', responseData.data.token));
+        });
+        await new Promise(resolve=> {
+          resolve(localStorage.setItem('user', JSON.stringify(responseData.data)));
+        });
+        axios.defaults.headers.common['Authorization'] = 'Bearer '+responseData.data.token;
         payload = {
           loginError: false,
           loginErrorText: '',
@@ -100,9 +105,13 @@ export function resetLoginRedirect() {
 }
 
 export function logout() {
-  return (dispatch,getState) => {
-    localStorage.setItem('token', null);
-    localStorage.setItem('user', null);
+  return async(dispatch,getState) => {
+    await new Promise(resolve=> {
+      resolve(localStorage.setItem('token', null))
+    });
+    await new Promise(resolve=> {
+      resolve(localStorage.setItem('user', null))
+    });
     let payload = {
       sessionActive: false,
       sessionUser: null
@@ -220,6 +229,7 @@ export function toggleLightBox(value) {
     });
   }
 }
+
 export function setLightBoxSrc(src) {
   return (dispatch,getState) => {
     let payload = {
@@ -229,5 +239,30 @@ export function setLightBoxSrc(src) {
       type: GENERIC_UPDATE,
       payload: payload
     });
+  }
+}
+
+export function loadUsergroups() {
+  return (dispatch,getState) => {
+    axios({
+      method: 'get',
+      url: APIPath+'user-groups',
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      let responseData = response.data;
+      if (responseData.status) {
+        let payload ={
+          userGroups: responseData.data.data,
+        };
+        dispatch({
+          type: GENERIC_UPDATE,
+          payload: payload
+        });
+      }
+	  })
+	  .catch(function (error) {
+      console.log(error)
+	  });
   }
 }

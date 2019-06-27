@@ -364,6 +364,7 @@ export default class AddPerson extends Component {
         for (let ie=0; ie<item.people.length; ie++) {
           let itemPerson = item.people[ie];
           if (
+            typeof this.state.refType!=="undefined" &&
             itemPerson.ref!==null && this.state.refType!==null
             && this.state.refType.value===itemPerson.refTerm
             && itemPerson.refLabel===this.state.refType.label

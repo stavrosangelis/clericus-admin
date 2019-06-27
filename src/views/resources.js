@@ -42,7 +42,8 @@ class Resources extends Component {
       limit: this.props.resourcesPagination.limit,
       totalPages: 0,
       totalItems: 0,
-      insertModalVisible: false
+      insertModalVisible: false,
+      searchInput: ''
     }
     this.getSystemTypes = this.getSystemTypes.bind(this);
     this.load = this.load.bind(this);
@@ -54,6 +55,8 @@ class Resources extends Component {
     this.setActiveSystemType = this.setActiveSystemType.bind(this);
     this.toggleInsertModal = this.toggleInsertModal.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+    this.search = this.search.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
   }
 
   getSystemTypes() {
@@ -82,53 +85,128 @@ class Resources extends Component {
     let context = this;
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      label: this.state.searchInput
     }
     let url = APIPath+'resources';
     if (this.state.activeSystemType!==null) {
       params.systemType = this.state.activeSystemType;
     }
     axios({
-        method: 'get',
-        url: url,
-        crossDomain: true,
-        params: params
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      let filesOutput = [];
+      for (let i=0; i<responseData.data.length; i++) {
+        let file = responseData.data[i];
+        filesOutput.push(context.fileOutput(i, file));
+      }
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && responseData.data.length===0) {
+        context.setState({
+          page: currentPage-1
+        });
+        setTimeout(function() {
+          context.load();
+        },10)
+      }
+      else {
+        context.setState({
+          loading: false,
+          tableLoading: false,
+          page: currentPage,
+          totalPages: responseData.totalPages,
+          totalItems: responseData.totalItems,
+          resources: filesOutput,
+        });
+      }
+
+
+	  })
+	  .catch(function (error) {
+	  });
+  }
+
+  search(e) {
+    e.preventDefault();
+    if (this.state.searchInput<2) {
+      return false;
+    }
+
+    this.setState({
+      tableLoading: true
+    })
+    let context = this;
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit,
+      label: this.state.searchInput
+    }
+    let url = APIPath+'resources';
+    if (this.state.activeSystemType!==null) {
+      params.systemType = this.state.activeSystemType;
+    }
+    axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      let filesOutput = [];
+      for (let i=0; i<responseData.data.length; i++) {
+        let file = responseData.data[i];
+        filesOutput.push(context.fileOutput(i, file));
+      }
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && responseData.data.length===0) {
+        context.setState({
+          page: currentPage-1
+        });
+        setTimeout(function() {
+          context.load();
+        },10)
+      }
+      else {
+        context.setState({
+          loading: false,
+          tableLoading: false,
+          page: currentPage,
+          totalPages: responseData.totalPages,
+          totalItems: responseData.totalItems,
+          resources: filesOutput,
+        });
+      }
+
+
+	  })
+	  .catch(function (error) {
+	  });
+  }
+
+  clearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        searchInput: ''
       })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let filesOutput = [];
-        for (let i=0; i<responseData.data.length; i++) {
-          let file = responseData.data[i];
-          filesOutput.push(context.fileOutput(i, file));
-        }
-        let currentPage = 1;
-        if (responseData.currentPage>0) {
-          currentPage = responseData.currentPage;
-        }
-        // normalize the page number when the selected page is empty for the selected number of items per page
-        if (currentPage>1 && responseData.data.length===0) {
-          context.setState({
-            page: currentPage-1
-          });
-          setTimeout(function() {
-            context.load();
-          },10)
-        }
-        else {
-          context.setState({
-            loading: false,
-            tableLoading: false,
-            page: currentPage,
-            totalPages: responseData.totalPages,
-            totalItems: responseData.totalItems,
-            resources: filesOutput,
-          });
-        }
-
-
-  	  })
-  	  .catch(function (error) {
-  	  });
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
   }
 
   fileOutput(i, file) {
@@ -277,6 +355,9 @@ class Resources extends Component {
         handleChange={this.handleChange}
         updateLimit={this.updateLimit}
         setActiveSystemType={this.setActiveSystemType}
+        search={this.search}
+        clearSearch={this.clearSearch}
+        searchInput={this.state.searchInput}
       />
       content = <div className="resources-container">
         {pageActions}

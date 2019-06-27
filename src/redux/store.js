@@ -23,7 +23,20 @@ export const defaultState = {
     limit:25,
     page:1
   },
-  eventsPagination: {},
+  eventsPagination: {
+    limit:25,
+    page:1
+  },
+  usersPagination: {
+    limit:25,
+    page:1
+  },
+  usergroupsPagination: {
+    limit:25,
+    page:1
+  },
+  userGroups: [],
+
   systemTypes: [],
   lightBoxOpen: false,
   lightBoxSrc: null,

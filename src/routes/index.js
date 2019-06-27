@@ -11,6 +11,10 @@ import Entities from "../views/entities";
 import Taxonomies from "../views/taxonomies";
 import Login from "../views/login";
 import Register from "../views/register";
+import Users from "../views/users";
+import User from "../views/user";
+import Usergroups from "../views/usergroups";
+import Usergroup from "../views/usergroup";
 
 import ParseClassPieces from '../views/tools/parse-class-pieces.js';
 import {ParseClassPiece} from '../views/tools/parse-class-piece.js';
@@ -173,6 +177,43 @@ var indexRoutes = [
         showMenu: false,
       },
     ]
-  }
+  },
+  {
+    path: "#",
+    name: "Users",
+    icon: "pe-7s-user",
+    component: null,
+    showMenu: true,
+    children: [
+      {
+        path: "/users",
+        name: "Users",
+        icon: "fa fa-circle-o",
+        component: Users,
+        showMenu: true,
+        children: [{
+          path: "/user/:_id",
+          name: "User",
+          icon: "fa fa-circle-o",
+          component: User,
+          showMenu: false,
+        }]
+      },
+      {
+        path: "/user-groups",
+        name: "User groups",
+        icon: "fa fa-circle-o",
+        component: Usergroups,
+        showMenu: true,
+        children: [{
+          path: "/user-group/:_id",
+          name: "Usergroup",
+          icon: "fa fa-circle-o",
+          component: Usergroup,
+          showMenu: false,
+        }]
+      }
+    ]
+  },
 ];
 export default indexRoutes;

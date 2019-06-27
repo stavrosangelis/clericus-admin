@@ -316,7 +316,7 @@ class ViewResource extends Component {
     let thumbnailImage = [];
     if (thumbnailPath!==null && resource.resourceType==="image") {
       let fullsizePath = getResourceFullsizeURL(resource);
-      thumbnailImage = [<div onClick={()=>this.openLightBox(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>]; 
+      thumbnailImage = [<div onClick={()=>this.openLightBox(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>];
     }
     let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
     let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>
@@ -453,7 +453,7 @@ class ViewResource extends Component {
                       {systemTypesSelect}
                     </FormGroup>
                     <FormGroup>
-                      <Label for="DescriptionInput">Label</Label>
+                      <Label for="DescriptionInput">Description</Label>
                       <Input type="textarea" name="description" id="DescriptionInput" placeholder="Resource description..." value={this.state.description} onChange={this.handleChange}/>
                     </FormGroup>
                     <div className="text-right">

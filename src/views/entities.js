@@ -35,7 +35,7 @@ class Entities extends React.Component {
       entityDefinition: '',
       entityExample: '',
       entityLabel: '',
-      entityParent: '',
+      entityParent: null,
       taxonomy: [],
       taxonomyTerms: [],
       detailsOpen: true,
@@ -48,6 +48,10 @@ class Entities extends React.Component {
       propertyErrorVisible: false,
       propertyErrorText: [],
       propertySaveBtn: <span><i className="fa fa-save"/> Save</span>,
+      updating: false,
+      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      errorVisible: false,
+      errorText: [],
     }
 
     this.load = this.load.bind(this);
@@ -71,7 +75,7 @@ class Entities extends React.Component {
     let context = this;
     axios({
         method: 'get',
-        url: APIPath+'entities',
+        url: APIPath+'entities-tree',
         crossDomain: true,
       })
     .then(function (response) {
@@ -102,7 +106,7 @@ class Entities extends React.Component {
       let entityDefinition = '';
       let entityExample = '';
       let entityLabel = '';
-      let entityParent = '';
+      let entityParent = null;
       if (responseData.definition!==null) {
         entityDefinition = responseData.definition;
       }
@@ -137,8 +141,91 @@ class Entities extends React.Component {
     });
   }
 
+
   formSubmit(e) {
     e.preventDefault();
+    if (this.state.updating) {
+      return false;
+    }
+    this.setState({
+      updating: true,
+      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
+    });
+    let postData = {
+      _id: this.state.entity._id,
+      label: this.state.entityLabel,
+      labelId: this.state.entity.labelId,
+      definition: this.state.entityDefinition,
+      example: this.state.entityExample,
+      properties: this.state.entity.properties
+    }
+    let parentValue = null;
+    if (this.state.entityParent!==null && this.state.entityParent.value!=='') {
+      parentValue = this.state.entityParent.value;
+    }
+    postData.parent = parentValue;
+    let context = this;
+    if (this.label==="") {
+      this.setState({
+        errorVisible: true,
+        errorText: <div>Please add a label to continue</div>,
+        updating: false,
+        updateBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
+      });
+      setTimeout(function() {
+        context.setState({
+          updateBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },2000);
+      return false;
+    }
+
+    axios({
+        method: 'post',
+        url: APIPath+'entity',
+        crossDomain: true,
+        data: postData,
+      })
+    .then(function (response) {
+      let responseData = response.data;
+      if (responseData.status) {
+        context.setState({
+          errorVisible: false,
+          errorText: [],
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>,
+        });
+        context.load();
+        context.loadEntity(context.state.entity._id);
+        context.props.loadDefaultEntities();
+        setTimeout(function() {
+          context.setState({
+            updateBtn: <span><i className="fa fa-save" /> Save</span>
+          });
+        },1000);
+      }
+      else {
+        let error = responseData.data.error;
+        let errorText = [];
+        for (let i=0; i<error.length; i++) {
+          errorText.push(<div key={i}>{error[i]}</div>);
+        }
+        context.setState({
+          errorVisible: true,
+          errorText: errorText,
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
+        });
+        setTimeout(function() {
+          context.setState({
+            propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
+          });
+        },2000);
+      }
+
+    })
+    .catch(function (error) {
+    });
   }
 
   propertySubmit(e) {
@@ -197,7 +284,7 @@ class Entities extends React.Component {
         data: postData,
       })
     .then(function (response) {
-      let responseData = response.data.data;
+      let responseData = response.data;
       if (responseData.status) {
         context.setState({
           propertySaving: false,
@@ -213,7 +300,7 @@ class Entities extends React.Component {
         },1000);
       }
       else {
-        let error = responseData.data.error;
+        let error = responseData.error;
         let errorText = [];
         for (let i=0; i<error.length; i++) {
           errorText.push(<div key={i}>{error[i]}</div>);
@@ -307,14 +394,22 @@ class Entities extends React.Component {
     return options;
   }
 
-  list(entities) {
+  list(entities, parentKey=null) {
     let output = [];
     for (let i=0; i<entities.length; i++) {
       let entity = entities[i];
       let item = <li key={i} onClick={()=>this.loadEntity(entity._id)}>{entity.label}</li>;
       output.push(item);
+      if (entity.children.length>0) {
+        let children = this.list(entity.children, i);
+        output.push(children);
+      }
     }
-    return <ul className="entities-list">{output}</ul>;
+    let itemKey = 0;
+    if (parentKey!==null) {
+      itemKey = parentKey;
+    }
+    return <ul className="entities-list" key={"list-"+itemKey}>{output}</ul>;
   }
 
   togglePropertyModal(property=null) {
@@ -483,7 +578,7 @@ class Entities extends React.Component {
 
       let deleteBtn = [];
       if (this.state.property!==null) {
-        deleteBtn = <Button color="danger" outline onClick={this.deleteProperty} className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>
+        deleteBtn = <Button color="danger" outline onClick={this.deleteProperty} className="pull-left" size="sm"><i className="fa fa-trash-o" /> Delete</Button>
       }
       let propertyModal = <Modal isOpen={this.state.propertyModalVisible} toggle={()=>this.togglePropertyModal(null)} className={this.props.className}>
           <ModalHeader toggle={()=>this.togglePropertyModal(null)}>{propertyModalTitle}</ModalHeader>
@@ -511,10 +606,19 @@ class Entities extends React.Component {
             </Form>
           </ModalBody>
           <ModalFooter className="modal-footer">
-            <Button color="primary" outline onClick={this.propertySubmit}>{this.state.propertySaveBtn}</Button>
+            <Button color="primary" outline size="sm" onClick={this.propertySubmit}>{this.state.propertySaveBtn}</Button>
             {deleteBtn}
           </ModalFooter>
         </Modal>
+
+      let errorContainerClass = " hidden";
+      if (this.state.errorVisible) {
+        errorContainerClass = "";
+      }
+      let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
+
+      let entityParentValue = entitiesList.find(el=>el.value===this.state.entityParent);
+
       content = <div>
         <div className="row">
           <div className="col-12">
@@ -531,6 +635,7 @@ class Entities extends React.Component {
                       <div onClick={this.toggleCollapse.bind(this, 'detailsOpen')}><b>Details</b> <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></div>
                       <Collapse isOpen={this.state.detailsOpen}>
                         <div style={{padding: "10px 0"}}>
+                          {errorContainer}
                           <Form onSubmit={this.formSubmit}>
                             <FormGroup>
                               <Label for="labelInput">Label</Label>
@@ -548,11 +653,14 @@ class Entities extends React.Component {
                               <Label>Parent Entity</Label>
                               <Select
                                 name="parent"
-                                value={this.state.entityParent}
+                                value={entityParentValue}
                                 onChange={(selectedOption)=>this.select2Change(selectedOption, "entityParent")}
                                 options={entitiesList}
                               />
                             </FormGroup>
+                            <div className="text-right">
+                              <Button outline color="info" size="sm" type="submit">{this.state.updateBtn}</Button>
+                            </div>
                           </Form>
                         </div>
                       </Collapse>

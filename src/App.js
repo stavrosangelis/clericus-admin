@@ -28,7 +28,7 @@ import {
   loadDefaultEntities,
   toggleLightBox,
   checkSession,
-  resetLoginRedirect
+  resetLoginRedirect,
 } from "./redux/actions/main-actions";
 
 // set default axios token;
@@ -66,13 +66,49 @@ class App extends Component {
       loginRedirect: false,
     }
 
-    this.openSidebar.bind(this);
+    this.openSidebar = this.openSidebar.bind(this);
+    this.parseRoutes = this.parseRoutes.bind(this);
+    this.parseChildrenRoutes = this.parseChildrenRoutes.bind(this);
   }
 
   openSidebar() {
     if (window.innerWidth > 992) {
       document.documentElement.classList.toggle("nav-open");
     }
+  }
+
+  parseRoutes() {
+    let routes = [];
+    for (let i=0; i<indexRoutes.length; i++) {
+      let route = indexRoutes[i];
+      let newRoute=[];
+      if (route.component!==null) {
+        newRoute = <Route path={route.path} key={i} component={route.component} />;
+      }
+      if (route.name==="Home") {
+        newRoute = <Route exact path={route.path} key={i} component={route.component} />;
+      }
+      routes.push(newRoute);
+      if (typeof route.children!=="undefined" && route.children.length>0) {
+        let childrenRoutes = this.parseChildrenRoutes(route.children, i);
+        routes.push(childrenRoutes);
+      }
+    }
+    let flattenedRoutes = [].concat.apply([], routes);
+    return flattenedRoutes;
+  }
+
+  parseChildrenRoutes(children, i) {
+    let routes = [];
+    for (let j=0;j<children.length; j++) {
+      let childRoute = children[j];
+      routes.push(<Route path={childRoute.path} key={i+"."+j} component={childRoute.component} />);
+      if (typeof childRoute.children!=="undefined" && childRoute.children.length>0) {
+        let childrenCRoutes = this.parseChildrenRoutes(childRoute.children,i+"."+j);
+        routes.push(childrenCRoutes);
+      }
+    }
+    return routes;
   }
 
   componentDidMount() {
@@ -92,23 +128,7 @@ class App extends Component {
   }
 
   render() {
-    let routes = [];
-    for (let r=0; r<indexRoutes.length; r++) {
-      let route = indexRoutes[r];
-      let newRoute;
-      if (route.component!==null) {
-        newRoute = <Route path={route.path} key={r} component={route.component} />;
-      }
-      if (route.name==="Home") {
-        newRoute = <Route exact path={route.path} key={r} component={route.component} />;
-      }
-      routes.push(newRoute);
-      let childrenRoutes = route.children;
-      for (let cr=0;cr<childrenRoutes.length; cr++) {
-        let childRoute = childrenRoutes[cr];
-        routes.push(<Route path={childRoute.path} key={r+"."+cr} component={childRoute.component} />);
-      }
-    }
+    let routes = this.parseRoutes();
     let lightBox = [];
     if (this.props.lightBoxSrc!==null && this.props.lightBoxOpen===true) {
       lightBox = <Lightbox
