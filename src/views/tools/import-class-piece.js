@@ -597,11 +597,18 @@ export default class ImportClassPieceToDB extends Component {
         let resourceToClasspieceRelation = <li key={1}>
           <span className="type-of">[resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /> <span className="relation">isPartOf</span> <span className="type-of">[classpiece]</span> {classpiece.label}</li>;
 
+        let resourceDioceseRelation = <li key={2}>
+          <span className="type-of">[person]</span> {label} <span className="relation">isRegisteredTo</span> <span className="type-of">[diocese]</span> {face.diocese}</li>;
+
         if (face.firstName!=="" || face.lastName!=="") {
           faceRelations.push(personToClasspieceRelation);
         }
 
         faceRelations.push(resourceToClasspieceRelation);
+
+        if (face.diocese.trim()!=="") {
+          faceRelations.push(resourceDioceseRelation);
+        }
 
         // duplicates
         let duplicatesRows = [];
@@ -648,7 +655,6 @@ export default class ImportClassPieceToDB extends Component {
               width: {face.default.width}px<br/>
               height: {face.default.height}px<br/>
               filetype: {face.default.type}<br/>
-              diocese: {face.diocese}<br/>
               {rotate}
             </div>
             <div className="import-to-db-duplicates">{duplicatesTitle}{duplicatesOutput}</div>

@@ -107,7 +107,7 @@ export default class UploadFile extends Component {
     if (typeof this.props.reverseReference!=="undefined") {
       postData.append("reverseReference", JSON.stringify(this.props.reverseReference));
     }
-    postData.append("systemType", this.props.systemType);
+    postData.append("systemType", JSON.stringify(this.props.systemType));
     var contentLength = postData.length;
     let context = this;
     axios({

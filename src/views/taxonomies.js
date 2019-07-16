@@ -203,8 +203,8 @@ export default class Taxonomies extends React.Component {
                 </FormGroup>
               </Form>
               <div className="footer-box">
-                <Button type="button" onClick={this.formSubmit} color="info" outline>{this.state.taxonomySaveBtn}</Button>
-                <Button className="pull-left" color="danger" outline><i className="fa fa-trash-o" /> Delete</Button>
+                <Button size="sm" type="button" onClick={this.formSubmit} color="info" outline>{this.state.taxonomySaveBtn}</Button>
+                <Button size="sm" className="pull-left" color="danger" outline><i className="fa fa-trash-o" /> Delete</Button>
               </div>
             </div>
           </div>
@@ -516,6 +516,8 @@ export default class Taxonomies extends React.Component {
       updateState.termScopeNote = '';
       updateState.termParentRef = '';
     }
+    updateState.taxonomyErrorVisible = false;
+    updateState.taxonomyErrorText = [];
     this.setState(updateState);
   }
 
@@ -617,8 +619,8 @@ export default class Taxonomies extends React.Component {
           </ModalBody>
           <ModalFooter>
             {btnDelete}
-            <Button color="info" outline onClick={this.editTermSubmit}>{this.state.updateTermBtn}</Button>
-            <Button color="secondary" className="pull-left" onClick={this.termModalToggle}>Cancel</Button>
+            <Button size="sm" color="info" outline onClick={this.editTermSubmit}>{this.state.updateTermBtn}</Button>
+            <Button size="sm" color="secondary" className="pull-left" onClick={this.termModalToggle}>Cancel</Button>
           </ModalFooter>
         </Modal>;
 

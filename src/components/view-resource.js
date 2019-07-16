@@ -18,6 +18,11 @@ import {
   toggleLightBox,setLightBoxSrc
 } from "../redux/actions/main-actions";
 
+const mapStateToProps = state => {
+  return {
+    systemTypes: state.systemTypes
+   };
+};
 function mapDispatchToProps(dispatch) {
   return {
     toggleLightBox: (value) => dispatch(toggleLightBox(value)),
@@ -56,10 +61,8 @@ class ViewResource extends Component {
       label: newLabel,
       systemType: newSystemType,
       description: newDescription,
-      systemTypes: [],
       updateFileModal: false,
     }
-    this.getSystemTypes = this.getSystemTypes.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
@@ -72,25 +75,6 @@ class ViewResource extends Component {
     this.deleteRef = this.deleteRef.bind(this);
     this.toggleUpdateFileModal = this.toggleUpdateFileModal.bind(this);
     this.openLightBox = this.openLightBox.bind(this);
-  }
-
-  getSystemTypes() {
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'resource-system-types',
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-        if (responseData.status) {
-          context.setState({
-            systemTypes: responseData.data,
-          });
-        }
-  	  })
-  	  .catch(function (error) {
-  	  });
   }
 
   formSubmit(e) {
@@ -152,7 +136,7 @@ class ViewResource extends Component {
         newRow = <div key={i}><div className="metadata-title">{metaKey}</div>{newRows}</div>
       }
       items.push(newRow);
-      i++
+      i++;
     }
     return items;
   }
@@ -297,15 +281,16 @@ class ViewResource extends Component {
     this.props.toggleLightBox(true);
   }
 
-  componentDidMount() {
-    this.getSystemTypes();
-  }
-
   componentDidUpdate(prevProps, prevState) {
     if (this.props.closeUploadModal) {
       this.setState({
         updateFileModal: false
       })
+    }
+    if (this.props.resource===null && this.state.systemType==="undefined" && this.props.systemType!==null && this.props.systemTypes.length>0) {
+      this.setState({
+        systemType: this.props.systemType
+      });
     }
   }
 
@@ -357,12 +342,13 @@ class ViewResource extends Component {
 
     // system types
     let systemTypesOptions = [];
-    for (let st=0;st<this.state.systemTypes.length; st++) {
-      let systemType = this.state.systemTypes[st];
-      let systemTypeOption = <option value={systemType._id} key={st}>{systemType._id}</option>;
+    for (let st=0;st<this.props.systemTypes.length; st++) {
+      let systemType = this.props.systemTypes[st];
+      let systemTypeOption = <option value={systemType._id} key={st}>{systemType.label}</option>;
       systemTypesOptions.push(systemTypeOption);
     }
-    let systemTypesSelect = <Input type="select" name="systemType" id="systemTypeInput" className="system-type-select" onChange={this.handleChange} value={this.state.systemType}>
+
+    let systemTypesSelect = <Input type="select" name="systemType" id="systemTypeInput" className="system-type-select" onChange={this.handleChange} value={this.state.systemType.ref}>
       {systemTypesOptions}
     </Input>
 
@@ -518,4 +504,4 @@ class ViewResource extends Component {
     )
   }
 }
-export default ViewResource = connect(null, mapDispatchToProps)(ViewResource);;
+export default ViewResource = connect(mapStateToProps, mapDispatchToProps)(ViewResource);;

@@ -155,7 +155,7 @@ export default class ViewPerson extends Component {
         let label = reference.ref.label;
 
         let newRow = <div key={i} className="ref-item">
-          <Link to={"/organisations/"+reference.ref._id} href={"/organisations/"+reference.ref._id}>
+          <Link to={"/organisation/"+reference.ref._id} href={"/organisation/"+reference.ref._id}>
             <i>{reference.refLabel}</i> <b>{label}</b>
           </Link>
           <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Organisation")}><i className="fa fa-times" /></div>

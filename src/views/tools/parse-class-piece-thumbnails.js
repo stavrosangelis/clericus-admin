@@ -368,24 +368,24 @@ export default class ParseClassPieceThumbnails extends Component {
     let context = this;
     let fileName = this.props.match.params.fileName;
     axios({
-        method: 'get',
-        url: APIPath+'meta-parse-class-piece?file='+fileName,
-        crossDomain: true,
+      method: 'get',
+      url: APIPath+'meta-parse-class-piece?file='+fileName,
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      context.setState({
+        saveThumbnailsStatus: false,
+        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
       })
-  	  .then(function (response) {
+      context.loadFaces();
+      setTimeout(function() {
         context.setState({
-          saveThumbnailsStatus: false,
-          saveThumbnailsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+          saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
         })
-        context.loadFaces();
-        setTimeout(function() {
-          context.setState({
-            saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
-          })
-        },2000)
-  	  })
-  	  .catch(function (error) {
-  	  });
+      },2000)
+	  })
+	  .catch(function (error) {
+	  });
   }
 
   // linking
@@ -454,6 +454,7 @@ export default class ParseClassPieceThumbnails extends Component {
   }
 
   linkingSelectionStart = (e) => {
+    let windowOffset = window.pageYOffset;
     if (!this.state.linkingActive || this.state.linkingSelectionActive) {
       return false;
     }
@@ -461,7 +462,7 @@ export default class ParseClassPieceThumbnails extends Component {
       let parent = document.getElementById("classpiece-container");
       let rect = [];
       let boundingRect = parent.getBoundingClientRect();
-      rect.top = ((e.pageY - boundingRect.y)*100)/parseInt(this.state.zoom,10);
+      rect.top = ((e.pageY - windowOffset - boundingRect.y)*100)/parseInt(this.state.zoom,10);
       rect.left = ((e.pageX - boundingRect.x)*100)/parseInt(this.state.zoom,10);
       this.setState({
         linkingSelection: true,
@@ -473,14 +474,14 @@ export default class ParseClassPieceThumbnails extends Component {
   linkingSelectionMove = (e) => {
     if (this.state.linkingActive && this.state.linkingSelection) {
       if (e.target.closest(".classpiece-container")) {
+        let windowOffset = window.pageYOffset;
         let stateRect = this.state.linkinSelectionRect;
         let rect = {top:stateRect.top, left:stateRect.left, width:0, height:0, transform: 'translate(0,0)'}
         // new mouse position
         let parent = document.getElementById("classpiece-container");
         let boundingRect = parent.getBoundingClientRect();
-        let mouseTop = ((e.pageY - boundingRect.y)*100)/parseInt(this.state.zoom,10);
+        let mouseTop = ((e.pageY - windowOffset - boundingRect.y)*100)/parseInt(this.state.zoom,10);
         let mouseLeft = ((e.pageX - boundingRect.x)*100)/parseInt(this.state.zoom,10);
-
 
         let width = mouseLeft - stateRect.left ;
         let height = mouseTop - stateRect.top;
@@ -513,11 +514,27 @@ export default class ParseClassPieceThumbnails extends Component {
     if (this.state.linkingSelectionActive) {
       return false;
     }
+    if (typeof this.state.linkinSelectionRect.width==="undefined" || this.state.linkinSelectionRect.width<40 || this.state.linkinSelectionRect.height<40) {
+      this.setState({
+        linkingSelection: false,
+        linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'},
+      })
+      return false;
+    }
     if (this.state.linkingActive && this.state.linkingSelection) {
       let selectedFace = this.getFaceInSelection();
+      let face = this.state.faces[selectedFace];
+      if (typeof face==="undefined") {
+        let errorModalText = <div>Please make certain that a person's thumbnail is part of your selection.</div>
+        this.toggleErrorModal(true, errorModalText);
+        this.setState({
+          linkingSelection: false,
+          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'}
+        })
+        return false;
+      }
 
       // check if thumbnail exists
-      let face = this.state.faces[selectedFace];
       if (typeof face.thumbnail==="undefined") {
         let errorModalText = <div>Please return to the <b>Selections</b> step and click on <b>Extract thumbnails</b> to continue.</div>
         this.toggleErrorModal(true, errorModalText);

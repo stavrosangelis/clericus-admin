@@ -159,8 +159,8 @@ export default class ViewOrganisation extends Component {
             label+= " "+reference.ref.lastName
           }
           let newRow = <div key={i} className="ref-item">
-            <Link to={"/organisation/"+reference.ref._id} href={"/organisation/"+reference.ref._id}>
-              <i>{reference.refType}</i> <b>{label}</b>
+            <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
+              <i>{reference.refLabel}</i> <b>{label}</b>
             </Link>
             <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Person")}><i className="fa fa-times" /></div>
           </div>

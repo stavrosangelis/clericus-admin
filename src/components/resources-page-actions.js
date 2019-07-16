@@ -48,7 +48,7 @@ export default class PageActions extends Component {
       if (this.props.activeSystemType===systemType._id) {
         active = true;
       }
-      let dropdownItem = <DropdownItem active={active} onClick={this.props.setActiveSystemType.bind(this,systemType._id )} key={dc}><span className="first-cap">{systemType._id}</span></DropdownItem>;
+      let dropdownItem = <DropdownItem active={active} onClick={this.props.setActiveSystemType.bind(this,systemType._id )} key={dc}><span className="first-cap">{systemType.label}</span></DropdownItem>;
       systemTypesDropdownItems.push(dropdownItem);
     }
     let systemTypesDropdown = <UncontrolledDropdown>

@@ -17,6 +17,7 @@ const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
     resourceEntity: state.resourceEntity,
+    systemTypes: state.systemTypes
    };
 };
 
@@ -64,7 +65,6 @@ class Resource extends Component {
     if (_id==="new") {
       this.setState({
         loading: false,
-        systemType: 'thumbnail',
         addReferencesVisible: false
       })
     }
@@ -152,25 +152,28 @@ class Resource extends Component {
     }
     let context = this;
     axios({
-        method: 'post',
-        url: APIPath+'resource',
-        crossDomain: true,
-        data: postData
-      })
-      .then(function (response) {
-        context.setState({
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
-        });
-
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update success</span>
-          });
-        },2000);
-      })
-      .catch(function (error) {
+      method: 'post',
+      url: APIPath+'resource',
+      crossDomain: true,
+      data: postData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }
+    })
+    .then(function (response) {
+      context.setState({
+        updating: false,
+        updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
       });
+
+      setTimeout(function() {
+        context.setState({
+          updateBtn: <span><i className="fa fa-save" /> Update success</span>
+        });
+      },2000);
+    })
+    .catch(function (error) {
+    });
   }
 
   toggleDeleteModal() {
@@ -242,6 +245,12 @@ class Resource extends Component {
     if (this.props.entitiesLoaded && !this.state.referencesLoaded) {
       this.loadReferenceLabelsNTypes();
     }
+    if (this.props.match.params._id==="new" && this.state.systemType===null && this.props.systemTypes.length>0) {
+      let defaultSystemType = this.props.systemTypes.find(item=>item.labelId==="Thumbnail");
+      this.setState({
+        systemType: {ref:defaultSystemType._id},
+      })
+    }
   }
 
   render() {
@@ -281,6 +290,7 @@ class Resource extends Component {
         errorText={this.state.errorText}
         closeUploadModal={this.state.closeUploadModal}
         reload={this.reload}
+        systemType={this.state.systemType}
         />;
       content = <div className="resources-container">
           {viewComponent}

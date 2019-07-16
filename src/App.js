@@ -145,7 +145,7 @@ class App extends Component {
       </Router>;
     if (this.props.sessionActive) {
       AppHTML = <Router basename='/'>
-        <div className="wrapper">
+        <div className="wrapper" id="main-wrapper">
           {loginRedirect}
           <Sidebar
             {...this.props}
@@ -153,7 +153,7 @@ class App extends Component {
             bgColor={this.state.backgroundColor}
             activeColor={this.state.activeColor}
           />
-          <div className="main-panel" ref="mainPanel">
+          <div className="main-panel" id="main-panel">
             <Header {...this.props} />
             <div className="content" id="content-container">
               <Switch>
