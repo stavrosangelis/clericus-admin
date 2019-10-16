@@ -7,11 +7,12 @@ import AddEventModal from './add-event';
 import AddOrganisationModal from './add-organisation';
 import AddPersonModal from './add-person';
 import AddResourceModal from './add-resource';
+import DeleteMany from './delete-many';
 import {parseReferenceLabels,parseReferenceTypes} from '../../helpers/helpers';
 import {useSelector} from "react-redux";
 import Notification from '../notification';
 
-const AddRelations = (props) => {
+const BatchActions = (props) => {
   const personEntity = useSelector(state => state.personEntity);
   const entitiesLoaded = useSelector(state => state.entitiesLoaded);
   const [modalsVisible,setModalsVisible] = useState({
@@ -25,6 +26,7 @@ const AddRelations = (props) => {
   const [referencesLoaded, setReferencesLoaded] = useState(false);
   let [notificationVisible, setNotificationVisible] = useState(false);
   let [notificationContent, setNotificationContent] = useState([]);
+  let [deleteManyVisible, setDeleteManyVisible] = useState(false);
 
   const toggleModal = (modal) => {
     if (props.items.length===0) {
@@ -43,6 +45,18 @@ const AddRelations = (props) => {
     }
     newModalsVisible[modal] = !newModalsVisible[modal];
     setModalsVisible(newModalsVisible);
+  }
+
+  const toggleDeleteMany = () => {
+    if (props.items.length===0) {
+      setNotificationVisible(true);
+      setNotificationContent(<div><i className="fa fa-exclamation-triangle" /> <span>Please select some items to continue</span></div>);
+      setTimeout(()=>{
+        setNotificationVisible(false);
+      },2000);
+      return false;
+    }
+    setDeleteManyVisible(!deleteManyVisible);
   }
 
   const loadReferenceLabelsNTypes = () => {
@@ -88,7 +102,7 @@ const AddRelations = (props) => {
           <DropdownItem className={personVisible} onClick={()=>toggleModal('personModal')}>... person</DropdownItem>
           <DropdownItem className={resourceVisible} onClick={()=>toggleModal('resourceModal')}>... resource</DropdownItem>
           <DropdownItem divider />
-          <DropdownItem>Delete selected</DropdownItem>
+          <DropdownItem onClick={()=>toggleDeleteMany()}>Delete selected</DropdownItem>
         </DropdownMenu>
       </UncontrolledButtonDropdown>
 
@@ -127,7 +141,16 @@ const AddRelations = (props) => {
         visible={modalsVisible.resourceModal}
         removeSelected={props.removeSelected}
         />
+
+      <DeleteMany
+        visible={deleteManyVisible}
+        toggle={toggleDeleteMany}
+        items={props.items}
+        type={props.type}
+        deleteSelected={props.deleteSelected}
+        removeSelected={props.removeSelected}
+      />
     </div>
   )
 }
-export default AddRelations;
+export default BatchActions;

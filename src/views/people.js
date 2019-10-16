@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import {
   Table,
-  Button,
   Card, CardBody,
-  Modal, ModalHeader, ModalBody, ModalFooter,
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
@@ -12,7 +10,7 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 import axios from 'axios';
 import PageActions from '../components/page-actions';
 import {getPersonThumbnailURL} from '../helpers/helpers'
-import AddRelations from '../components/add-batch-relations'
+import BatchActions from '../components/add-batch-relations'
 
 import {connect} from "react-redux";
 import {
@@ -46,7 +44,6 @@ class People extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      deleteModalOpen: false,
 
       searchInput: '',
       advancedSearchInputs: [],
@@ -61,8 +58,6 @@ class People extends Component {
     this.peopleTableRows = this.peopleTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
-    this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
-    this.deletePeopleList = this.deletePeopleList.bind(this);
     this.deleteSelected = this.deleteSelected.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
     this.simpleSearch = this.simpleSearch.bind(this);
@@ -407,71 +402,30 @@ class People extends Component {
     })
   }
 
-  toggleDeleteModal() {
-    this.setState({
-      deleteModalOpen: !this.state.deleteModalOpen
-    })
-  }
-
-  deletePeopleList(){
-    let people = this.state.people;
-    let rows = [];
-    for (let i=0;i<people.length; i++) {
-      let person = people[i];
-      if (person.checked) {
-        let countPage = parseInt(this.state.page,10)-1;
-        let count = (i+1) + (countPage*this.state.limit);
-        let label = person.firstName;
-        if (person.lastName!=="") {
-          label +=" "+person.lastName;
-        }
-        let thumbnailImage = [];
-        let thumbnailURL = getPersonThumbnailURL(person);
-        if (thumbnailURL!==null) {
-          thumbnailImage = <img src={thumbnailURL} className="people-list-thumbnail img-fluid img-thumbnail" alt={label} />
-        }
-        let row = <tr key={i}>
-          <td>{count}</td>
-          <td>{thumbnailImage}</td>
-          <td>{person.firstName}</td>
-          <td>{person.lastName}</td>
-        </tr>
-        rows.push(row);
-      }
-    }
-    return rows;
-  }
-
   deleteSelected() {
-    let people = this.state.people;
-    let newPeople = [];
-    for (let i=0; i<people.length; i++) {
-      let person = people[i];
-      if (person.checked) {
-        newPeople.push(person._id)
-      }
-    }
+    let selectedPeople = this.state.people.filter(item=>{
+      return item.checked;
+    }).map(item=>item._id);
     let context = this;
     let data = {
-      _ids: newPeople,
+      _ids: selectedPeople,
     }
-    let url = APIPath+'people';
+    let url = APIPath+'delete-people';
     axios({
-        method: 'delete',
-        url: url,
-        crossDomain: true,
-        data: data
+      method: 'post',
+      url: url,
+      crossDomain: true,
+      data: data
+    })
+	  .then(function (response) {
+      context.setState({
+        allChecked: false
       })
-  	  .then(function (response) {
-        context.setState({
-          allChecked: false,
-          deleteModalOpen: false,
-        })
-        context.load();
-
-  	  })
-  	  .catch(function (error) {
-  	  });
+      context.load();
+	  })
+	  .catch(function (error) {
+      console.log(error)
+	  });
   }
 
   removeSelected(_id=null) {
@@ -559,26 +513,12 @@ class People extends Component {
           return item.checked;
       });
 
-      let deletePeopleList = this.deletePeopleList();
-      let deleteConfirmModal = <Modal isOpen={this.state.deleteModalOpen} toggle={this.toggleDeleteModal}>
-          <ModalHeader toggle={this.toggleDeleteModal}>Confirm delete</ModalHeader>
-          <ModalBody>
-            <p>The following people will be deleted. Continue?</p>
-            <div className="delete-people-list-container">
-              <Table hover><tbody>{deletePeopleList}</tbody></Table>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="danger" onClick={this.deleteSelected}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggle}>Cancel</Button>
-          </ModalFooter>
-        </Modal>;
-
-      let batchActions = <AddRelations
+      let batchActions = <BatchActions
         items={selectedPeople}
         removeSelected={this.removeSelected}
         type="Person"
         relationProperties={[]}
+        deleteSelected={this.deleteSelected}
       />
 
 
@@ -630,17 +570,10 @@ class People extends Component {
                   {batchActions}
                 </div>
               </CardBody>
-              {/*<CardFooter>
-                <div className="text-right">
-                  <Button size="sm" onClick={this.toggleDeleteModal} outline color="danger"><i className="fa fa-trash-o" /> Delete selected</Button>
-                </div>
-              </CardFooter>*/}
-
             </Card>
           </div>
         </div>
         {pageActions}
-        {deleteConfirmModal}
         {addNewBtn}
       </div>
     }
