@@ -11,10 +11,6 @@ import {
   DropdownMenu,
   DropdownItem,
   Container,
-  InputGroup,
-  InputGroupText,
-  InputGroupAddon,
-  Input
 } from "reactstrap";
 
 import dashboardRoutes from "../routes/index";
@@ -154,25 +150,7 @@ class Header extends React.Component {
             navbar
             className="justify-content-end"
           >
-            <form>
-              <InputGroup className="no-border">
-                <Input placeholder="Search..." />
-                <InputGroupAddon addonType="append">
-                  <InputGroupText>
-                    <i className="nc-icon nc-zoom-split" />
-                  </InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-            </form>
             <Nav navbar>
-              <NavItem>
-                <Link to="#" className="nav-link btn-magnify">
-                  <i className="nc-icon nc-layout-11" />
-                  <p>
-                    <span className="d-lg-none d-md-block"></span>
-                  </p>
-                </Link>
-              </NavItem>
               <Dropdown
                 nav
                 isOpen={this.state.dropdownOpen}

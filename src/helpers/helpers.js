@@ -1,5 +1,7 @@
-import {domain,APIPath} from '../static/constants';
 import axios from 'axios';
+
+const domain = process.env.REACT_APP_DOMAIN;
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export const getPersonThumbnailURL = (person) => {
   if (person===null || typeof person.resources==="undefined" || person.resources.length===0) {
@@ -53,7 +55,7 @@ export const getResourceFullsizeURL = (resource) => {
 }
 
 export const getOrganisationThumbnailURL = (organisation) => {
-  if (organisation===null || typeof organisation.resources==="undefined" || organisation.resources===null || organisation.resources.length===0) { 
+  if (organisation===null || typeof organisation.resources==="undefined" || organisation.resources===null || organisation.resources.length===0) {
     return null;
   }
   let thumbnailResource = organisation.resources.filter((item)=>{return (item.refLabel==="hasRepresentationObject")});
@@ -98,13 +100,17 @@ export const addGenericReference = (reference) => {
 
 export const refTypesList = (refTypes) => {
   let options = [];
+  let _ids = [];
   for (let i=0;i<refTypes.length;i++) {
     let option = refTypes[i];
     let label = option.term.label;
     if (option.direction==="to") {
       label = option.term.inverseLabel;
     }
-    options.push({value: option.term._id, label: label});
+    if (_ids.indexOf(option.term._id)<0) {
+      options.push({value: option.term._id, label: label});
+    }
+    _ids.push(option.term._id);
   };
   return options;
 }

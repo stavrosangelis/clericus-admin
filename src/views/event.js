@@ -3,7 +3,6 @@ import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'rea
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 
 import ViewEvent from '../components/view-event';
 import AddRelation from '../components/add-relations';
@@ -19,6 +18,8 @@ const mapStateToProps = state => {
     eventEntity: state.eventEntity,
    };
 };
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 class Event extends Component {
   constructor(props) {
@@ -407,6 +408,7 @@ class Event extends Component {
         item={this.state.item}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
+        type="event"
       />
     }
     return(

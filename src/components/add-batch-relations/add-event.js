@@ -7,7 +7,7 @@ import {
 } from 'reactstrap';
 import axios from 'axios';
 import Select from 'react-select';
-import {addGenericReference,refTypesList} from '../../helpers/helpers';
+import {refTypesList} from '../../helpers/helpers';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class AddEvent extends Component {
@@ -34,7 +34,7 @@ export default class AddEvent extends Component {
       addingReference: false,
       addingReferenceErrorVisible: false,
       addingReferenceErrorText: [],
-      addingReferenceBtn: <span>Add</span>,
+      addingReferenceBtn: <span>Submit</span>,
     }
 
     this.loadEvents = this.loadEvents.bind(this);
@@ -45,12 +45,12 @@ export default class AddEvent extends Component {
     this.toggleAddNew = this.toggleAddNew.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
     this.submitReferences = this.submitReferences.bind(this);
-    this.addReference = this.addReference.bind(this);
+    this.addReferences = this.addReferences.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.validateEvent = this.validateEvent.bind(this);
     this.loadDefaultRefType = this.loadDefaultRefType.bind(this);
+    this.postReferences = this.postReferences.bind(this);
 
     this.listRef = React.createRef();
   }
@@ -188,7 +188,7 @@ export default class AddEvent extends Component {
       selectedEvent: null,
       addingReferenceErrorVisible: false,
       addingReferenceErrorText: [],
-      addingReferenceBtn: <span>Add</span>,
+      addingReferenceBtn: <span>Submit</span>,
     });
     this.props.toggleModal(modal);
   }
@@ -222,14 +222,14 @@ export default class AddEvent extends Component {
       addingReferenceBtn: <span><i>Adding...</i> <Spinner color="info" size="sm"/></span>,
     });
 
-    let addReference = await this.addReference();
+    let addReferences = await this.addReferences();
 
-    let addReferenceData = addReference.data;
-    if (addReferenceData.status===false) {
+    let addReferencesData = addReferences.data;
+    if (addReferencesData.status===false) {
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>{addReferenceData.error}</div>,
+        addingReferenceErrorText: <div>{addReferencesData.error}</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -238,21 +238,20 @@ export default class AddEvent extends Component {
       let context = this;
       this.setState({
         addingReference: false,
-        addingReferenceBtn: <span>Added successfully <i className="fa fa-check" /></span>
+        addingReferenceBtn: <span>Submitted successfully <i className="fa fa-check" /></span>
       });
-      this.props.reload();
       this.toggleModal('addEventModal')
 
       setTimeout(function() {
         context.setState({
-          addingReferenceBtn: <span>Add</span>
+          addingReferenceBtn: <span>Submit</span>
         });
       },2000);
     }
   }
 
-  addReference() {
-    if (typeof this.state.refType==="undefined") {
+  addReferences() {
+    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
       let response = {
         data: {
           status: false,
@@ -262,15 +261,34 @@ export default class AddEvent extends Component {
       return response;
     }
     else {
-      let newReference = {
-        items: [
-          {_id: this.state.selectedEvent, type: "Event"},
-          {_id: this.props.reference.ref, type: this.props.reference.type}
-        ],
-        taxonomyTermId: this.state.refType.value,
-      }
-      return addGenericReference(newReference);
+      let newReferences = this.props.items.map(item=> {
+        let newReference = {
+          items: [
+            {_id: this.state.selectedEvent, type: "Event"},
+            {_id: item._id, type: this.props.type}
+          ],
+          taxonomyTermId: this.state.refType.value,
+        }
+        return newReference;
+      });
+      return this.postReferences(newReferences);
     }
+  }
+
+  postReferences(references) {
+    return new Promise((resolve, reject) => {
+      axios({
+          method: 'post',
+          url: APIPath+'references',
+          crossDomain: true,
+          data: references
+        })
+      .then(function (response) {
+        resolve (response);
+      })
+      .catch(function (error) {
+      });
+    });
   }
 
   handleChange(e){
@@ -288,69 +306,9 @@ export default class AddEvent extends Component {
     })
   }
 
-  validateEvent() {
-    if (this.state.eventLabel==="") {
-      this.setState({
-        saving: false,
-        errorVisible: true,
-        errorText: <div>Please enter the event <b>Label</b> to continue!</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-      });
-      return false;
-    }
-    if (this.state.eventType==="") {
-      this.setState({
-        saving: false,
-        errorVisible: true,
-        errorText: <div>Please enter the <b>Type of event</b> to continue!</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-      });
-      return false;
-    }
-    if (this.state.eventTimeStartDate!=="" ||
-      this.state.eventTimeEndDate!=="" ||
-      this.state.eventTimeFormat!==""
-    ) {
-      if (this.state.eventTimeLabel==="") {
-        this.setState({
-          saving: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
-    }
-    if (this.state.eventLocationStreetAddress!=="" ||
-      this.state.eventLocationLocality!=="" ||
-      this.state.eventLocationRegion!=="" ||
-      this.state.eventLocationPostalCode!=="" ||
-      this.state.eventLocationCountry!=="" ||
-      this.state.eventLocationLatitude!=="" ||
-      this.state.eventLocationLongitude!=="" ||
-      this.state.eventLocationType!==""
-    ) {
-      if (this.state.eventLocationLabel==="") {
-        this.setState({
-          saving: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
-    }
-    this.setState({
-      saving: false,
-      errorVisible: false,
-      errorText: []
-    })
-    return true;
-  }
-
   loadDefaultRefType() {
     this.setState({
-      refType: refTypesList(this.props.refTypes)[0]
+      refType: refTypesList(this.props.refTypes.event)[0]
     })
   }
 
@@ -369,15 +327,40 @@ export default class AddEvent extends Component {
     if (prevState.searchItem!==this.state.searchItem) {
       this.searchEvents();
     }
-    if (prevProps.refTypes!==this.props.refTypes) {
-      this.loadDefaultRefType();
-    }
-    if (prevProps.item!==this.props.item) {
+    if (this.props.visible && !prevProps.visible && typeof this.props.refTypes.event!=="undefined") {
       this.loadDefaultRefType();
     }
   }
 
   render() {
+    let selectedItems = [];
+    if (this.props.type==="Person") {
+      selectedItems = this.props.items.map(item=> {
+        let name = "";
+        if (typeof item.honorificPrefix!=="undefined" && item.honorificPrefix!=="") {
+          name += item.honorificPrefix+" ";
+        }
+        if (typeof item.firstName!=="undefined" && item.firstName!=="") {
+          name += item.firstName+" ";
+        }
+        if (typeof item.middleName!=="undefined" && item.middleName!=="") {
+          name += item.middleName+" ";
+        }
+        if (typeof item.lastName!=="undefined" && item.lastName!=="") {
+          name += item.lastName+" ";
+        }
+        return <li key={item._id}>
+          <span>{name}</span>
+          <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
+        </li>
+      });
+    }
+    if (selectedItems.length>0) {
+      selectedItems = <div className="form-group">
+        <label>Selected items</label>
+        <ul className="selected-items-list">{selectedItems}</ul>
+      </div>
+    }
     let list = <div className="text-center"><Spinner color="secondary" /></div>;
     let loadingMoreVisible = "hidden";
     if (this.state.loadingPage) {
@@ -391,29 +374,13 @@ export default class AddEvent extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemEvents = [];
-      let item = this.props.item;
-      if (item!==null && typeof item.events!=="undefined" && item.events!==null) {
-        for (let ie=0; ie<item.events.length; ie++) {
-          let itemEvent = item.events[ie];
-          if (
-            itemEvent.ref!==null && this.state.refType!==null
-            && this.state.refType.value===itemEvent.refTerm
-            && itemEvent.refLabel===this.state.refType.label
-          ) {
-            itemEvents.push(itemEvent.ref._id);
-          }
-        }
-      }
+
       for (let i=0;i<this.state.list.length; i++) {
         let eventItem = this.state.list[i];
         let active = "";
         let exists = "";
         if (this.state.selectedEvent===eventItem._id) {
           active = " active";
-        }
-        if (itemEvents.indexOf(eventItem._id)>-1) {
-          exists = " exists"
         }
         let eventListItem = <div
           className={"event-list-item"+active+exists}
@@ -422,19 +389,23 @@ export default class AddEvent extends Component {
         list.push(eventListItem);
       }
     }
-    let refTypesListItems = refTypesList(this.props.refTypes);
 
     let addingReferenceErrorVisible = "hidden";
     if (this.state.addingReferenceErrorVisible) {
       addingReferenceErrorVisible = "";
     }
 
+    let refTypesListItems = [];
+    if (typeof this.props.refTypes.event!=="undefined") {
+      refTypesListItems = refTypesList(this.props.refTypes.event);
+    }
     let errorContainer = <Alert className={addingReferenceErrorVisible} color="danger">{this.state.addingReferenceErrorText}</Alert>;
     return (
       <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addEventModal')} className={this.props.className}>
-        <ModalHeader toggle={()=>this.toggleModal('addEventModal')}>Add Event Relation</ModalHeader>
+        <ModalHeader toggle={()=>this.toggleModal('addEventModal')}>Associate selected items with Event</ModalHeader>
         <ModalBody>
           {errorContainer}
+          {selectedItems}
           <FormGroup style={{marginTop: '15px'}}>
             <Label for="refType">Reference Type</Label>
             <Select
@@ -443,8 +414,10 @@ export default class AddEvent extends Component {
               options={refTypesListItems}
             />
           </FormGroup>
-          <hr/>
-          <h4>Select Event</h4>
+
+          <FormGroup>
+            <Label>Select Event</Label>
+          </FormGroup>
           <FormGroup className="autocomplete-search">
             <Input type="text" name="searchItem" placeholder="Search..." value={this.state.searchItem} onChange={this.handleChange}/>
             <div className="close-icon" onClick={()=>this.clearSearchEvents()}><i className="fa fa-times" /></div>
@@ -456,8 +429,8 @@ export default class AddEvent extends Component {
 
         </ModalBody>
         <ModalFooter className="modal-footer">
-          <Button color="info" outline onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
-          <Button color="secondary" outline onClick={()=>this.toggleModal('addEventModal')} className="pull-left">Cancel</Button>
+          <Button color="info" outline size="sm" onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
+          <Button color="secondary" outline size="sm" onClick={()=>this.toggleModal('addEventModal')} className="pull-left">Cancel</Button>
         </ModalFooter>
       </Modal>
     )

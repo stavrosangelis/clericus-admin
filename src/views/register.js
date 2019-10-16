@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import { Form, FormGroup, Label, Input, Button } from 'reactstrap';
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 import crypto from 'crypto-js';
 
 import {connect} from "react-redux";
+
+const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,

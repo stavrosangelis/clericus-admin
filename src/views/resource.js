@@ -3,7 +3,6 @@ import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'rea
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 
 import ViewResource from '../components/view-resource';
 import AddRelation from '../components/add-relations';
@@ -13,6 +12,7 @@ import {Redirect} from 'react-router-dom';
 import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
 
 import {connect} from "react-redux";
+const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
@@ -258,7 +258,7 @@ class Resource extends Component {
     if (this.state.resource!==null && typeof this.state.resource.label!=="undefined") {
       label = this.state.resource.label;
     }
-    let heading = "Resource \""+label+"\"";
+    let heading = label;
     if (this.props.match.params._id==="new") {
       heading = "Add new resource";
     }
@@ -307,8 +307,8 @@ class Resource extends Component {
           <ModalBody>
           The resource "{label}" will be deleted. Continue?
           </ModalBody>
-          <ModalFooter className="text-right">
-            <Button className="pull-left" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+          <ModalFooter className="text-left">
+            <Button className="pull-right" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
             <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
@@ -325,6 +325,7 @@ class Resource extends Component {
         item={this.state.resource}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
+        type="resource"
         />
     }
     return(
@@ -334,7 +335,7 @@ class Resource extends Component {
         <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <h2>Resource "{heading}"</h2>
           </div>
         </div>
         {content}

@@ -3,22 +3,23 @@ import {
   Table,
   Button,
   Card, CardBody,
-  Modal, ModalHeader, ModalBody, ModalFooter
+  Modal, ModalHeader, ModalBody, ModalFooter,
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 import PageActions from '../components/page-actions';
 import {getPersonThumbnailURL} from '../helpers/helpers'
+import AddRelations from '../components/add-batch-relations'
 
 import {connect} from "react-redux";
 import {
   setPaginationParams
 } from "../redux/actions/main-actions";
 
+const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     peoplePagination: state.peoplePagination,
@@ -69,6 +70,7 @@ class People extends Component {
     this.clearSearch = this.clearSearch.bind(this);
     this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
     this.updateAdvancedSearchInputs = this.updateAdvancedSearchInputs.bind(this);
+    this.removeSelected = this.removeSelected.bind(this);
   }
 
   load() {
@@ -364,12 +366,12 @@ class People extends Component {
         thumbnailImage = <img src={thumbnailURL} className="people-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
       let row = <tr key={i}>
-        {/*<td>
+        <td>
           <div className="select-checkbox-container">
-            <input type="checkbox" value={i} checked={people[i].checked} onChange={() => {return false}}/>
-            <span className="select-checkbox" onClick={this.toggleSelected.bind(this,i)}></span>
+            <input type="checkbox" value={i} checked={person.checked} onChange={() => {return false}}/>
+            <span className="select-checkbox" onClick={()=>this.toggleSelected(i)}></span>
           </div>
-        </td>*/}
+        </td>
         <td>{count}</td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{thumbnailImage}</Link></td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{person.firstName}</Link></td>
@@ -472,6 +474,21 @@ class People extends Component {
   	  });
   }
 
+  removeSelected(_id=null) {
+    if (_id==null) {
+      return false;
+    }
+    let newPeople = this.state.people.map(item=> {
+      if (item._id===_id) {
+        item.checked = false;
+      }
+      return item;
+    });
+    this.setState({
+      people: newPeople
+    });
+  }
+
   componentDidMount() {
     this.load();
   }
@@ -488,7 +505,8 @@ class People extends Component {
       {element: "fnameSoundex", label: "First name soundex"},
       {element: "lnameSoundex", label: "Last name soundex"},
       {element: "description", label: "Description"},
-    ]
+    ];
+
     let pageActions = <PageActions
       limit={this.state.limit}
       current_page={this.state.page}
@@ -507,6 +525,7 @@ class People extends Component {
       clearAdvancedSearch={this.clearAdvancedSearch}
       updateAdvancedSearchInputs={this.updateAdvancedSearchInputs}
     />
+
     let content = <div>
       {pageActions}
       <div className="row">
@@ -531,10 +550,14 @@ class People extends Component {
       else {
         peopleRows = this.peopleTableRows();
       }
-      /*let allChecked = "";
+      let allChecked = "";
       if (this.state.allChecked) {
         allChecked = "checked";
-      }*/
+      }
+
+      let selectedPeople = this.state.people.filter(item=>{
+          return item.checked;
+      });
 
       let deletePeopleList = this.deletePeopleList();
       let deleteConfirmModal = <Modal isOpen={this.state.deleteModalOpen} toggle={this.toggleDeleteModal}>
@@ -551,21 +574,32 @@ class People extends Component {
           </ModalFooter>
         </Modal>;
 
+      let batchActions = <AddRelations
+        items={selectedPeople}
+        removeSelected={this.removeSelected}
+        type="Person"
+        relationProperties={[]}
+      />
+
+
       content = <div className="people-container">
         {pageActions}
         <div className="row">
           <div className="col-12">
             <Card>
-              <CardBody>
-                <Table hover>
+              <CardBody className="people-card">
+                <div className="pull-right">
+                  {batchActions}
+                </div>
+                <Table hover className="people-table">
                   <thead>
                     <tr>
-                      {/*<th>
+                      <th>
                         <div className="select-checkbox-container default">
                           <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
                         </div>
-                      </th>*/}
+                      </th>
                       <th style={{width: '40px'}}>#</th>
                       <th>Thumbnail</th>
                       <th>First Name</th>
@@ -578,12 +612,12 @@ class People extends Component {
                   </tbody>
                   <tfoot>
                     <tr>
-                      {/*<th>
+                      <th>
                         <div className="select-checkbox-container default">
                           <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
                         </div>
-                      </th>*/}
+                      </th>
                       <th>#</th>
                       <th>Thumbnail</th>
                       <th>First Name</th>
@@ -592,6 +626,9 @@ class People extends Component {
                     </tr>
                   </tfoot>
                 </Table>
+                <div className="pull-right">
+                  {batchActions}
+                </div>
               </CardBody>
               {/*<CardFooter>
                 <div className="text-right">

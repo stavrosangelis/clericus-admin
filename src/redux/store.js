@@ -41,6 +41,8 @@ export const defaultState = {
   lightBoxOpen: false,
   lightBoxSrc: null,
 
+  peopleRoles: [],
+
   // entities properties
   entitiesLoaded:false,
   eventEntity: null,

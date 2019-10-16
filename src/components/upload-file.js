@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { UncontrolledTooltip, Progress, Button, Spinner } from 'reactstrap';
-import {APIPath} from '../static/constants';
 import axios from 'axios';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class UploadFile extends Component {
   constructor(props) {

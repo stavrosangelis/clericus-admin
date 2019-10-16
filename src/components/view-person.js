@@ -1,18 +1,22 @@
 import React, { Component } from 'react';
-import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
+import { Card, CardTitle, CardBody, Button, ButtonGroup, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
 import { Link } from 'react-router-dom';
 import {getPersonThumbnailURL,getPersonLabel,getResourceThumbnailURL} from '../helpers/helpers';
 import axios from 'axios';
-import {APIPath} from '../static/constants';
+import PersonAppelations from './person-alternate-appelations.js';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ViewPerson extends Component {
   constructor(props) {
     super(props);
 
     let person = this.props.person;
+    let status = 'private';
     let honorificPrefix = '';
     let firstName = '';
+    let middleName = '';
     let lastName = '';
+    let alternateAppelations = [];
     let description = '';
     if (person!==null) {
       if (typeof person.honorificPrefix!=="undefined" && person.honorificPrefix!==null) {
@@ -21,11 +25,20 @@ export default class ViewPerson extends Component {
       if (typeof person.firstName!=="undefined" && person.firstName!==null) {
         firstName = person.firstName;
       }
+      if (typeof person.middleName!=="undefined" && person.middleName!==null) {
+        middleName = person.middleName;
+      }
       if (typeof person.lastName!=="undefined" && person.lastName!==null) {
         lastName = person.lastName;
       }
+      if (typeof person.alternateAppelations!=="undefined" && person.alternateAppelations!==null) {
+        alternateAppelations = person.alternateAppelations;
+      }
       if (typeof person.description!=="undefined" && person.description!==null) {
         description = person.description;
+      }
+      if (typeof person.status!=="undefined" && person.status!==null) {
+        status = person.status;
       }
     }
 
@@ -37,9 +50,13 @@ export default class ViewPerson extends Component {
       peopleOpen: false,
       honorificPrefix: honorificPrefix,
       firstName: firstName,
+      middleName: middleName,
       lastName: lastName,
+      alternateAppelations: alternateAppelations,
       description: description,
+      status: status,
     }
+    this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
@@ -50,6 +67,12 @@ export default class ViewPerson extends Component {
     this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
+    this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
+    this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
+  }
+
+  updateStatus(value) {
+    this.setState({status:value});
   }
 
   formSubmit(e) {
@@ -57,8 +80,11 @@ export default class ViewPerson extends Component {
     let newData = {
       honorificPrefix: this.state.honorificPrefix,
       firstName: this.state.firstName,
+      middleName: this.state.middleName,
       lastName: this.state.lastName,
+      alternateAppelations: this.state.alternateAppelations,
       description: this.state.description,
+      status: this.state.status,
     }
     this.props.update(newData);
   }
@@ -203,12 +229,20 @@ export default class ViewPerson extends Component {
         let thumbnailPath = getResourceThumbnailURL(reference.ref);
         let thumbnailImage = [];
         if (thumbnailPath!==null) {
-          thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+          thumbnailImage = <div>
+            <img src={thumbnailPath} alt={reference.ref.label} className="img-fluid"/>
+            <label>{reference.ref.label}</label>
+          </div>
+        }
+        let relRoleText = "";
+        if (typeof reference.refRole!=="undefined" && reference.refRole!==null) {
+          relRoleText = <i>as {reference.refRole.label}</i>
         }
         let newRow = <div key={i} className="img-thumbnail related-resource">
             <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
               <i>{reference.refLabel}</i>
               {thumbnailImage}
+              {relRoleText}
             </Link>
             <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Resource")}><i className="fa fa-times" /></div>
           </div>
@@ -250,6 +284,53 @@ export default class ViewPerson extends Component {
 	  });
   }
 
+  updateAlternateAppelation(index, data) {
+    let person = this.props.person;
+    let alternateAppelations = person.alternateAppelations;
+    if (index==="new") {
+      alternateAppelations.push(data);
+    }
+    else if (index!==null) {
+      alternateAppelations[index] = data;
+    }
+    this.setState({
+      alternateAppelations: alternateAppelations
+    },()=> {
+      let newData = {
+        honorificPrefix: this.state.honorificPrefix,
+        firstName: this.state.firstName,
+        middleName: this.state.middleName,
+        lastName: this.state.lastName,
+        alternateAppelations: this.state.alternateAppelations,
+        description: this.state.description,
+        status: this.state.status,
+      }
+      this.props.update(newData);
+    });
+  }
+
+  removeAlternateAppelation(index) {
+    let person = this.props.person;
+    let alternateAppelations = person.alternateAppelations;
+    if (index!==null) {
+      alternateAppelations.splice(index,1);
+    }
+    this.setState({
+      alternateAppelations: alternateAppelations
+    },()=> {
+      let newData = {
+        honorificPrefix: this.state.honorificPrefix,
+        firstName: this.state.firstName,
+        middleName: this.state.middleName,
+        lastName: this.state.lastName,
+        alternateAppelations: this.state.alternateAppelations,
+        description: this.state.description,
+        status: this.state.status,
+      }
+      this.props.update(newData);
+    });
+  }
+
   render() {
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
@@ -274,6 +355,15 @@ export default class ViewPerson extends Component {
     let resourcesOpenActive = " active";
     if (!this.state.resourcesOpen) {
       resourcesOpenActive = "";
+    }
+    let statusPublic = "secondary";
+    let statusPrivate = "secondary";
+    let publicOutline = true;
+    let privateOutline = false;
+    if (this.state.status==="public") {
+      statusPublic = "success";
+      publicOutline = false;
+      privateOutline = true;
     }
 
     let metadataItems = this.parseMetadata();
@@ -319,6 +409,10 @@ export default class ViewPerson extends Component {
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
 
+    let personAppelationsData = [];
+    if (this.props.person!==null) {
+      personAppelationsData = this.props.person.alternateAppelations;
+    }
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -332,6 +426,12 @@ export default class ViewPerson extends Component {
                 {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
+                    <div className="text-right">
+                      <ButtonGroup>
+                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
+                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                      </ButtonGroup>
+                    </div>
                     <FormGroup>
                       <Label for="honorificPrefix">Honorific Prefix</Label>
                       <Input type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix} onChange={this.handleChange}/>
@@ -341,9 +441,21 @@ export default class ViewPerson extends Component {
                       <Input type="text" name="firstName" id="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
+                      <Label for="middleName">Middle name</Label>
+                      <Input type="text" name="middleName" id="middleName" placeholder="Person middle name prefix..." value={this.state.middleName} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <FormGroup>
                       <Label for="lastName">Last name</Label>
                       <Input type="text" name="lastName" id="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
                     </FormGroup>
+                    <div className="alternate-appelations">
+                      <div className="label">Alternate appelations</div>
+                      <PersonAppelations
+                        data={personAppelationsData}
+                        update={this.updateAlternateAppelation}
+                        remove={this.removeAlternateAppelation}
+                      />
+                    </div>
                     <FormGroup>
                       <Label for="description">Description</Label>
                       <Input type="textarea" name="description" id="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>

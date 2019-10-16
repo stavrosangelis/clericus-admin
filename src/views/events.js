@@ -11,10 +11,11 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../static/constants';
 import PageActions from '../components/page-actions';
 import {getEventThumbnailURL} from '../helpers/helpers'
 
+
+const APIPath = process.env.REACT_APP_APIPATH;
 export default class Events extends Component {
   constructor(props) {
     super(props);

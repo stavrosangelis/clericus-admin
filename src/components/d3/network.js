@@ -5,7 +5,8 @@ class NetworkGraph extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      data: []
+      data: [],
+      chart: []
     }
 
     this.drawGraph = this.drawGraph.bind(this);
@@ -114,8 +115,48 @@ class NetworkGraph extends Component {
     });
 
     const zoom_handler = d3.zoom()
+      .scaleExtent([0.1, 4])
       .on("zoom", this.zoomed);
     zoom_handler(svg);
+
+    /* add zoom and pan btn actions */
+    d3.select("#graph-zoom-in")
+      .on("click", function() {
+        zoom_handler.scaleBy(svg, 1.25);
+      });
+    d3.select("#graph-zoom-out")
+      .on("click", function() {
+        zoom_handler.scaleBy(svg, 0.75);
+      });
+
+    d3.select("#graph-pan-up")
+      .on("click", function() {
+        let currentTransform = d3.zoomTransform(svg);
+        let newX = currentTransform.x;
+        let newY = currentTransform.y - 50;
+        zoom_handler.translateBy(svg, newX, newY);
+      });
+    d3.select("#graph-pan-right")
+      .on("click", function() {
+        let currentTransform = d3.zoomTransform(svg);
+        let newX = currentTransform.x + 50;
+        let newY = currentTransform.y;
+        zoom_handler.translateBy(svg, newX, newY);
+      });
+    d3.select("#graph-pan-down")
+      .on("click", function() {
+        let currentTransform = d3.zoomTransform(svg);
+        let newX = currentTransform.x;
+        let newY = currentTransform.y + 50;
+        zoom_handler.translateBy(svg, newX, newY);
+      });
+    d3.select("#graph-pan-left")
+      .on("click", function() {
+        let currentTransform = d3.zoomTransform(svg);
+        let newX = currentTransform.x - 50;
+        let newY = currentTransform.y;
+        zoom_handler.translateBy(svg, newX, newY);
+      });
 
     return svg.node();
   }
@@ -204,9 +245,6 @@ class NetworkGraph extends Component {
     g.setAttribute("transform", d3.event.transform);
   }
 
-
-
-
   componentDidMount() {
     if (this.props.data!==null) {
       this.drawGraph();
@@ -219,9 +257,44 @@ class NetworkGraph extends Component {
     }
   }
 
+
   render() {
+    let zoomPanel = <div className="zoom-panel">
+          <div
+            id="graph-zoom-in"
+            className="zoom-action">
+            <i className="fa fa-plus" />
+          </div>
+          <div
+            id="graph-zoom-out"
+            className="zoom-action">
+            <i className="fa fa-minus" />
+          </div>
+      </div>
+
+    let panPanel = <div className="pan-container">
+      <div className="pan-action up" id="graph-pan-up">
+        <i className="fa fa-chevron-up" />
+      </div>
+
+      <div className="pan-action right" id="graph-pan-right">
+        <i className="fa fa-chevron-right" />
+      </div>
+
+      <div className="pan-action down" id="graph-pan-down">
+        <i className="fa fa-chevron-down" />
+      </div>
+
+      <div className="pan-action left" id="graph-pan-left">
+        <i className="fa fa-chevron-left" />
+      </div>
+    </div>
     return (
-      <div id="network-graph"></div>
+      <div>
+        <div id="network-graph"></div>
+        {zoomPanel}
+        {panPanel}
+      </div>
     )
   }
 }

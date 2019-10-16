@@ -2,9 +2,9 @@ import React, { Component } from 'react';
 import {Spinner,Collapse, Button, Modal, ModalHeader, ModalBody, ModalFooter} from 'reactstrap';
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../../static/constants';
 import ImportToDBToolbox from './right-sidebar-import-to-db';
 import {Breadcrumbs} from '../../components/breadcrumbs';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ImportClassPieceToDB extends Component {
   constructor(props) {

@@ -7,23 +7,25 @@ import {
 } from 'reactstrap';
 import axios from 'axios';
 import Select from 'react-select';
-import {addGenericReference,refTypesList} from '../../helpers/helpers';
+import {getResourceThumbnailURL,refTypesList} from '../../helpers/helpers';
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export default class AddEvent extends Component {
+export default class AddResource extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       loading: true,
       refType: null,
+      refRole: null,
       listVisible: true,
       addNewVisible: false,
       list: [],
       listPage: 1,
       listLimit: 25,
       listTotalPages: 0,
-      selectedEvent: null,
+      totalItems: 0,
+      selectedResource: null,
       loadMoreVisible: false,
       loadingPage: false,
       searchItem: '',
@@ -37,11 +39,11 @@ export default class AddEvent extends Component {
       addingReferenceBtn: <span>Add</span>,
     }
 
-    this.loadEvents = this.loadEvents.bind(this);
-    this.loadMoreEvents = this.loadMoreEvents.bind(this);
-    this.selectedEvent = this.selectedEvent.bind(this);
-    this.searchEvents = this.searchEvents.bind(this);
-    this.clearSearchEvents = this.clearSearchEvents.bind(this);
+    this.loadResources = this.loadResources.bind(this);
+    this.loadMoreResources = this.loadMoreResources.bind(this);
+    this.selectedResource = this.selectedResource.bind(this);
+    this.search = this.search.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
     this.toggleAddNew = this.toggleAddNew.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
     this.submitReferences = this.submitReferences.bind(this);
@@ -49,13 +51,13 @@ export default class AddEvent extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.validateEvent = this.validateEvent.bind(this);
     this.loadDefaultRefType = this.loadDefaultRefType.bind(this);
+    this.postReferences = this.postReferences.bind(this);
 
     this.listRef = React.createRef();
   }
 
-  loadEvents() {
+  loadResources() {
     let context = this;
     let params = {
       page: this.state.listPage,
@@ -64,23 +66,23 @@ export default class AddEvent extends Component {
     }
     axios({
         method: 'get',
-        url: APIPath+'events',
+        url: APIPath+'resources',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
       let responseData = response.data;
-      let events = responseData.data.data;
+      let items = responseData.data.data;
       let list = context.state.list;
       let listIds = [];
-      for (let j=0;j<list.length; j++) {
+      for (let j=0;j<listIds.length; j++) {
         listIds.push(list[j]._id);
       }
-      for (let i=0;i<events.length; i++) {
-        let eventItem = events[i];
-        if (listIds.indexOf(eventItem._id===-1)) {
-          eventItem.key =  eventItem._id;
-          list.push(eventItem);
+      for (let i=0;i<items.length; i++) {
+        let item = items[i];
+        if (listIds.indexOf(item._id===-1)) {
+          item.key = item._id;
+          list.push(item);
         }
       }
       let currentPage = 1;
@@ -91,12 +93,18 @@ export default class AddEvent extends Component {
       if (currentPage<responseData.data.totalPages) {
         loadMoreVisible = true;
       }
+      let showingItems = parseInt(context.state.listLimit,10)*parseInt(currentPage,10);
+      if (showingItems>parseInt(responseData.data.totalItems,10)) {
+        showingItems = responseData.data.totalItems;
+      }
       context.setState({
         list: list,
         loading: false,
         loadMoreVisible: loadMoreVisible,
         listTotalPages: responseData.data.totalPages,
         listPage: currentPage,
+        showingItems: showingItems,
+        totalItems: responseData.data.totalItems,
         loadingPage: false
       });
     })
@@ -104,7 +112,7 @@ export default class AddEvent extends Component {
     });
   }
 
-  loadMoreEvents() {
+  loadMoreResources() {
     let currentPage = this.state.listPage;
     let lastPage = this.state.listTotalPages;
     if (currentPage<lastPage) {
@@ -116,7 +124,7 @@ export default class AddEvent extends Component {
     }
   }
 
-  searchEvents() {
+  search() {
     this.setState({
       loading: true,
       list: []
@@ -127,18 +135,18 @@ export default class AddEvent extends Component {
     }
     axios({
         method: 'get',
-        url: APIPath+'events',
+        url: APIPath+'resources',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
       let responseData = response.data;
-      let events = responseData.data.data;
+      let items = responseData.data.data;
       let list = [];
-      for (let i=0;i<events.length; i++) {
-        let eventItem = events[i];
-        eventItem.key =  eventItem._id;
-        list.push(eventItem);
+      for (let i=0;i<items.length; i++) {
+        let item = items[i];
+        item.key = item._id;
+        list.push(item);
       }
       let currentPage = 1;
       if (responseData.data.currentPage>1) {
@@ -148,12 +156,18 @@ export default class AddEvent extends Component {
       if (currentPage<responseData.data.totalPages) {
         loadMoreVisible = true;
       }
+      let showingItems = parseInt(context.state.listLimit,10)*parseInt(currentPage,10);
+      if (showingItems>parseInt(responseData.data.totalItems,10)) {
+        showingItems = responseData.data.totalItems;
+      }
       context.setState({
         list: list,
         loading: false,
         loadMoreVisible: loadMoreVisible,
         listTotalPages: responseData.data.totalPages,
         listPage: currentPage,
+        showingItems: showingItems,
+        totalItems: responseData.data.totalItems,
         loadingPage: false
       });
     })
@@ -161,7 +175,7 @@ export default class AddEvent extends Component {
     });
   }
 
-  clearSearchEvents() {
+  clearSearch() {
     if (this.state.searchItem!=="") {
       this.setState({
         searchItem: '',
@@ -170,9 +184,9 @@ export default class AddEvent extends Component {
     }
   }
 
-  selectedEvent(_id) {
+  selectedResource(_id) {
     this.setState({
-      selectedEvent: _id
+      selectedResource: _id
     })
   }
 
@@ -185,7 +199,7 @@ export default class AddEvent extends Component {
 
   toggleModal(modal) {
     this.setState({
-      selectedEvent: null,
+      selectedResource: null,
       addingReferenceErrorVisible: false,
       addingReferenceErrorText: [],
       addingReferenceBtn: <span>Add</span>,
@@ -206,11 +220,11 @@ export default class AddEvent extends Component {
     if (this.state.addingReference) {
       return false;
     }
-    if (this.state.selectedEvent===null) {
+    if (this.state.selectedResource===null) {
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>Please select an event to continue</div>,
+        addingReferenceErrorText: <div>Please select a resource to continue</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -240,8 +254,7 @@ export default class AddEvent extends Component {
         addingReference: false,
         addingReferenceBtn: <span>Added successfully <i className="fa fa-check" /></span>
       });
-      this.props.reload();
-      this.toggleModal('addEventModal')
+      this.toggleModal('addResourceModal')
 
       setTimeout(function() {
         context.setState({
@@ -252,7 +265,7 @@ export default class AddEvent extends Component {
   }
 
   addReference() {
-    if (typeof this.state.refType==="undefined") {
+    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
       let response = {
         data: {
           status: false,
@@ -262,15 +275,34 @@ export default class AddEvent extends Component {
       return response;
     }
     else {
-      let newReference = {
-        items: [
-          {_id: this.state.selectedEvent, type: "Event"},
-          {_id: this.props.reference.ref, type: this.props.reference.type}
-        ],
-        taxonomyTermId: this.state.refType.value,
-      }
-      return addGenericReference(newReference);
+      let newReferences = this.props.items.map(item=> {
+        let newReference = {
+          items: [
+            {_id: this.state.selectedResource, type: "Resource"},
+            {_id: item._id, type: this.props.type}
+          ],
+          taxonomyTermId: this.state.refType.value,
+        }
+        return newReference;
+      });
+      return this.postReferences(newReferences);
     }
+  }
+
+  postReferences(references) {
+    return new Promise((resolve, reject) => {
+      axios({
+          method: 'post',
+          url: APIPath+'references',
+          crossDomain: true,
+          data: references
+        })
+      .then(function (response) {
+        resolve (response);
+      })
+      .catch(function (error) {
+      });
+    });
   }
 
   handleChange(e){
@@ -288,96 +320,61 @@ export default class AddEvent extends Component {
     })
   }
 
-  validateEvent() {
-    if (this.state.eventLabel==="") {
-      this.setState({
-        saving: false,
-        errorVisible: true,
-        errorText: <div>Please enter the event <b>Label</b> to continue!</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-      });
-      return false;
-    }
-    if (this.state.eventType==="") {
-      this.setState({
-        saving: false,
-        errorVisible: true,
-        errorText: <div>Please enter the <b>Type of event</b> to continue!</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-      });
-      return false;
-    }
-    if (this.state.eventTimeStartDate!=="" ||
-      this.state.eventTimeEndDate!=="" ||
-      this.state.eventTimeFormat!==""
-    ) {
-      if (this.state.eventTimeLabel==="") {
-        this.setState({
-          saving: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
-    }
-    if (this.state.eventLocationStreetAddress!=="" ||
-      this.state.eventLocationLocality!=="" ||
-      this.state.eventLocationRegion!=="" ||
-      this.state.eventLocationPostalCode!=="" ||
-      this.state.eventLocationCountry!=="" ||
-      this.state.eventLocationLatitude!=="" ||
-      this.state.eventLocationLongitude!=="" ||
-      this.state.eventLocationType!==""
-    ) {
-      if (this.state.eventLocationLabel==="") {
-        this.setState({
-          saving: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
-    }
-    this.setState({
-      saving: false,
-      errorVisible: false,
-      errorText: []
-    })
-    return true;
-  }
-
   loadDefaultRefType() {
     this.setState({
-      refType: refTypesList(this.props.refTypes)[0]
+      refType: refTypesList(this.props.refTypes.resource)[0]
     })
   }
 
   componentDidMount() {
-    this.loadEvents();
+    this.loadResources();
   }
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.listPage<this.state.listPage) {
-      this.loadEvents();
+      this.loadResources();
       let context = this;
       setTimeout(function() {
         context.listRef.current.scrollTop = context.listRef.current.scrollHeight;
       },100);
     }
     if (prevState.searchItem!==this.state.searchItem) {
-      this.searchEvents();
+      this.search();
     }
-    if (prevProps.refTypes!==this.props.refTypes) {
-      this.loadDefaultRefType();
-    }
-    if (prevProps.item!==this.props.item) {
+    if (this.props.visible && !prevProps.visible && typeof this.props.refTypes.resource!=="undefined") {
       this.loadDefaultRefType();
     }
   }
 
   render() {
+    let selectedItems = [];
+    if (this.props.type==="Person") {
+      selectedItems = this.props.items.map(item=> {
+        let name = "";
+        if (typeof item.honorificPrefix!=="undefined" && item.honorificPrefix!=="") {
+          name += item.honorificPrefix+" ";
+        }
+        if (typeof item.firstName!=="undefined" && item.firstName!=="") {
+          name += item.firstName+" ";
+        }
+        if (typeof item.middleName!=="undefined" && item.middleName!=="") {
+          name += item.middleName+" ";
+        }
+        if (typeof item.lastName!=="undefined" && item.lastName!=="") {
+          name += item.lastName+" ";
+        }
+        return <li key={item._id}>
+          <span>{name}</span>
+          <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
+        </li>
+      });
+    }
+    if (selectedItems.length>0) {
+      selectedItems = <div className="form-group">
+        <label>Selected items</label>
+        <ul className="selected-items-list">{selectedItems}</ul>
+      </div>
+    }
     let list = <div className="text-center"><Spinner color="secondary" /></div>;
     let loadingMoreVisible = "hidden";
     if (this.state.loadingPage) {
@@ -391,50 +388,68 @@ export default class AddEvent extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemEvents = [];
-      let item = this.props.item;
-      if (item!==null && typeof item.events!=="undefined" && item.events!==null) {
-        for (let ie=0; ie<item.events.length; ie++) {
-          let itemEvent = item.events[ie];
-          if (
-            itemEvent.ref!==null && this.state.refType!==null
-            && this.state.refType.value===itemEvent.refTerm
-            && itemEvent.refLabel===this.state.refType.label
-          ) {
-            itemEvents.push(itemEvent.ref._id);
-          }
-        }
-      }
+      let itemResources = [];
       for (let i=0;i<this.state.list.length; i++) {
-        let eventItem = this.state.list[i];
+        let item = this.state.list[i];
         let active = "";
         let exists = "";
-        if (this.state.selectedEvent===eventItem._id) {
+        if (this.state.selectedResource===item._id) {
           active = " active";
         }
-        if (itemEvents.indexOf(eventItem._id)>-1) {
+        if (itemResources.indexOf(item._id)>-1) {
           exists = " exists"
         }
-        let eventListItem = <div
-          className={"event-list-item"+active+exists}
-          key={eventItem._id}
-          onClick={()=>this.selectedEvent(eventItem._id)}>{eventItem.label}</div>;
-        list.push(eventListItem);
+        let thumbnail = <div className="img-responsive img-thumbnail">
+          <img src={getResourceThumbnailURL(item)} alt={item.label}/>
+          </div>;
+        let listItem = <div
+          className={"event-list-item event-list-resource"+active+exists}
+          key={item._id}
+          onClick={()=>this.selectedResource(item._id)}>
+            <div className="event-list-resource-body">
+              {thumbnail}
+              <div className="label">{item.label}</div>
+            </div>
+          </div>;
+        list.push(listItem);
       }
     }
-    let refTypesListItems = refTypesList(this.props.refTypes);
 
     let addingReferenceErrorVisible = "hidden";
     if (this.state.addingReferenceErrorVisible) {
       addingReferenceErrorVisible = "";
     }
 
+    let refTypesListItems = [];
+    if (typeof this.props.refTypes.resource!=="undefined") {
+      refTypesListItems = refTypesList(this.props.refTypes.resource);
+    }
+
     let errorContainer = <Alert className={addingReferenceErrorVisible} color="danger">{this.state.addingReferenceErrorText}</Alert>;
+
+    let referenceRole = [];
+    if (this.props.type==="person") {
+      let refRoleOptions = [{value: null, label: "-"}];
+      for (let i=0;i<this.props.peopleRoles.length;i++) {
+        let refRoleOption = this.props.peopleRoles[i];
+        refRoleOptions.push({value: refRoleOption._id, label: refRoleOption.label});
+
+      }
+      referenceRole = <FormGroup style={{marginTop: '15px'}}>
+        <Label for="refType">Reference Role</Label>
+        <Select
+          value={this.state.refRole}
+          onChange={(selectedOption)=>this.select2Change(selectedOption, "refRole")}
+          options={refRoleOptions}
+        />
+      </FormGroup>
+    }
     return (
-      <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addEventModal')} className={this.props.className}>
-        <ModalHeader toggle={()=>this.toggleModal('addEventModal')}>Add Event Relation</ModalHeader>
+      <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addResourceModal')} className={this.props.className}>
+        <ModalHeader toggle={()=>this.toggleModal('addResourceModal')}>Associate selected items with  Resource</ModalHeader>
         <ModalBody>
           {errorContainer}
+          {selectedItems}
           <FormGroup style={{marginTop: '15px'}}>
             <Label for="refType">Reference Type</Label>
             <Select
@@ -443,21 +458,26 @@ export default class AddEvent extends Component {
               options={refTypesListItems}
             />
           </FormGroup>
-          <hr/>
-          <h4>Select Event</h4>
+          {referenceRole}
+          <FormGroup>
+            <Label>Select Resource</Label>
+          </FormGroup>
           <FormGroup className="autocomplete-search">
             <Input type="text" name="searchItem" placeholder="Search..." value={this.state.searchItem} onChange={this.handleChange}/>
-            <div className="close-icon" onClick={()=>this.clearSearchEvents()}><i className="fa fa-times" /></div>
+            <div className="close-icon" onClick={()=>this.clearSearch()}><i className="fa fa-times" /></div>
           </FormGroup>
-          <div className="events-list-container" ref={this.listRef}>
+          <div className="events-list-container resources-list-container" ref={this.listRef}>
             {list}
           </div>
-          <Button className={loadMoreVisibleClass} color="secondary" outline size="sm" block onClick={()=>this.loadMoreEvents()}>Load more {loadingMore}</Button>
-
+          <Button className={loadMoreVisibleClass} color="secondary" outline size="sm" block onClick={()=>this.loadMoreResources()}>Load more {loadingMore}</Button>
+          <div className="list-legend">
+            <span className="heading">Showing:</span>
+            <span className="text">{this.state.showingItems}/{this.state.totalItems}</span>
+          </div>
         </ModalBody>
         <ModalFooter className="modal-footer">
-          <Button color="info" outline onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
-          <Button color="secondary" outline onClick={()=>this.toggleModal('addEventModal')} className="pull-left">Cancel</Button>
+          <Button color="info" outline size="sm" onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
+          <Button color="secondary" outline size="sm" onClick={()=>this.toggleModal('addResourceModal')} className="pull-left">Cancel</Button>
         </ModalFooter>
       </Modal>
     )

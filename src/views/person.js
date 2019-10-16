@@ -7,7 +7,6 @@ import {
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 
 import ViewPerson from '../components/view-person';
 import AddRelation from '../components/add-relations';
@@ -17,6 +16,8 @@ import {Redirect} from 'react-router-dom';
 import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
 
 import {connect} from "react-redux";
+const APIPath = process.env.REACT_APP_APIPATH;
+
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
@@ -144,15 +145,20 @@ class Person extends Component {
       updating: true,
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
     })
-    let postData = {
-      honorificPrefix: newData.honorificPrefix,
-      firstName: newData.firstName,
-      lastName: newData.lastName,
-      description: newData.description,
-    }
+    let postData = this.state.person;
+    postData.honorificPrefix = newData.honorificPrefix;
+    postData.firstName = newData.firstName;
+    postData.middleName = newData.middleName;
+    postData.lastName = newData.lastName;
+    postData.alternateAppelations = newData.alternateAppelations;
+    postData.description = newData.description;
+    postData.status = newData.status;
     let _id = this.props.match.params._id;
     if (_id!=="new") {
       postData._id = _id;
+    }
+    else {
+      delete postData._id;
     }
     let isValid = this.validatePerson(postData);
     if (isValid) {
@@ -346,8 +352,8 @@ class Person extends Component {
           <ModalBody>
           The person "{label}" will be deleted. Continue?
           </ModalBody>
-          <ModalFooter className="text-right">
-            <Button className="pull-left" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+          <ModalFooter className="text-left">
+            <Button className="pull-right" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
             <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
@@ -366,6 +372,7 @@ class Person extends Component {
         item={this.state.person}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
+        type="person"
         />
     }
     return(

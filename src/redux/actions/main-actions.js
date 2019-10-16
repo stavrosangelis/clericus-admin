@@ -3,7 +3,8 @@ import {
 } from "../constants/action-types";
 
 import axios from 'axios';
-import {APIPath} from '../../static/constants';
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export function checkSession() {
   return (dispatch,getState) => {
@@ -165,6 +166,31 @@ export function getSystemTypes() {
       if (responseData.status) {
         let payload ={
           systemTypes: responseData.data,
+        };
+        dispatch({
+          type: GENERIC_UPDATE,
+          payload: payload
+        });
+      }
+	  })
+	  .catch(function (error) {
+      console.log(error)
+	  });
+  }
+}
+
+export function getPeopleRoles() {
+  return (dispatch,getState) => {
+    axios({
+      method: 'get',
+      url: APIPath+'people-roles',
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      let responseData = response.data;
+      if (responseData.status) {
+        let payload ={
+          peopleRoles: responseData.data,
         };
         dispatch({
           type: GENERIC_UPDATE,

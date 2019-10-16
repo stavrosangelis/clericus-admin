@@ -1,7 +1,6 @@
 import React from "react";
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../static/constants';
 import {
   Card, CardBody,
   Button, Badge,
@@ -12,6 +11,7 @@ import {
 import Select from 'react-select';
 
 import {Breadcrumbs} from '../components/breadcrumbs';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 
 export default class Taxonomies extends React.Component {
@@ -572,7 +572,7 @@ export default class Taxonomies extends React.Component {
       let btnDelete = [];
       if (this.state.termId!=="") {
         modalTitle = "Edit term";
-        btnDelete = <Button color="danger" outline onClick={() => this.deleteTerm(this.state.termId)}><i className="fa fa-trash-o" /> Delete</Button>
+        btnDelete = <Button color="danger" size="sm" outline onClick={() => this.deleteTerm(this.state.termId)}><i className="fa fa-trash-o" /> Delete</Button>
       }
 
       let errorContainerClass = " hidden";

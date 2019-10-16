@@ -6,9 +6,9 @@ import {
   Spinner
 } from 'reactstrap';
 import axios from 'axios';
-import {APIPath} from '../../static/constants';
 import Select from 'react-select';
 import {addGenericReference,refTypesList} from '../../helpers/helpers';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class AddPerson extends Component {
   constructor(props) {

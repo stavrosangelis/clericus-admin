@@ -16,6 +16,7 @@ const mapStateToProps = state => {
     organisationEntity: state.organisationEntity,
     personEntity: state.personEntity,
     resourceEntity: state.resourceEntity,
+    peopleRoles: state.peopleRoles,
    };
 };
 
@@ -76,6 +77,7 @@ class AddReference extends Component {
 
         <AddEventModal
           item={this.props.item}
+          type={this.props.type}
           refTypes={this.props.referencesTypes.event}
           reload={this.props.reload}
           toggleModal={this.toggleModal}
@@ -84,6 +86,7 @@ class AddReference extends Component {
 
         <AddOrganisationModal
           item={this.props.item}
+          type={this.props.type}
           refTypes={this.props.referencesTypes.organisation}
           reload={this.props.reload}
           toggleModal={this.toggleModal}
@@ -92,6 +95,7 @@ class AddReference extends Component {
 
         <AddPersonModal
           item={this.props.item}
+          type={this.props.type}
           refTypes={this.props.referencesTypes.person}
           reload={this.props.reload}
           toggleModal={this.toggleModal}
@@ -100,6 +104,8 @@ class AddReference extends Component {
 
         <AddResourceModal
           item={this.props.item}
+          type={this.props.type}
+          peopleRoles={this.props.peopleRoles}
           refTypes={this.props.referencesTypes.resource}
           reload={this.props.reload}
           toggleModal={this.toggleModal}

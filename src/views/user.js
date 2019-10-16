@@ -12,12 +12,11 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 import crypto from 'crypto-js';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 
 import {Redirect} from 'react-router-dom';
 
 import {connect} from "react-redux";
-
+const APIPath = process.env.REACT_APP_APIPATH;
 
 class User extends Component {
   constructor(props) {

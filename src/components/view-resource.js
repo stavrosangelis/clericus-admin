@@ -11,29 +11,20 @@ import {getResourceThumbnailURL,getResourceFullsizeURL} from '../helpers/helpers
 import UploadFile from './upload-file';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
+
+import Viewer from './image-viewer'
 
 import {connect} from "react-redux";
-import {
-  toggleLightBox,setLightBoxSrc
-} from "../redux/actions/main-actions";
 
+const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     systemTypes: state.systemTypes
    };
 };
-function mapDispatchToProps(dispatch) {
-  return {
-    toggleLightBox: (value) => dispatch(toggleLightBox(value)),
-    setLightBoxSrc: (src) => dispatch(setLightBoxSrc(src))
-  }
-}
-
 class ViewResource extends Component {
   constructor(props) {
     super(props);
-
     let resource = this.props.resource;
     let newLabel = '';
     let newDescription = '';
@@ -62,6 +53,7 @@ class ViewResource extends Component {
       systemType: newSystemType,
       description: newDescription,
       updateFileModal: false,
+      imageViewerVisible: false
     }
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -74,7 +66,7 @@ class ViewResource extends Component {
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
     this.toggleUpdateFileModal = this.toggleUpdateFileModal.bind(this);
-    this.openLightBox = this.openLightBox.bind(this);
+    this.toggleImageViewer = this.toggleImageViewer.bind(this);
   }
 
   formSubmit(e) {
@@ -276,9 +268,10 @@ class ViewResource extends Component {
 	  });
   }
 
-  openLightBox(src) {
-    this.props.setLightBoxSrc(src);
-    this.props.toggleLightBox(true);
+  toggleImageViewer(src) {
+    this.setState({
+      imageViewerVisible: !this.state.imageViewerVisible
+    })
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -296,12 +289,13 @@ class ViewResource extends Component {
 
   render() {
     let resource = this.props.resource;
-
+    let imgViewer = [];
     let thumbnailPath = getResourceThumbnailURL(resource);
     let thumbnailImage = [];
     if (thumbnailPath!==null && resource.resourceType==="image") {
       let fullsizePath = getResourceFullsizeURL(resource);
-      thumbnailImage = [<div onClick={()=>this.openLightBox(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>];
+      thumbnailImage = [<div onClick={()=>this.toggleImageViewer(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>];
+      imgViewer = <Viewer visible={this.state.imageViewerVisible} path={fullsizePath} label={this.state.label} toggle={this.toggleImageViewer}/>
     }
     let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
     let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>
@@ -421,6 +415,7 @@ class ViewResource extends Component {
       <div className="row">
         <div className="col-xs-12 col-sm-6">
           {thumbnailImage}
+          {imgViewer}
         </div>
         <div className="col-xs-12 col-sm-6">
           <div className="resource-details">
@@ -504,4 +499,4 @@ class ViewResource extends Component {
     )
   }
 }
-export default ViewResource = connect(mapStateToProps, mapDispatchToProps)(ViewResource);;
+export default ViewResource = connect(mapStateToProps, [])(ViewResource);;

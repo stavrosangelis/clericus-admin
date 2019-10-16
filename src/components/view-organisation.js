@@ -3,7 +3,7 @@ import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Colla
 import { Link } from 'react-router-dom';
 import {getOrganisationThumbnailURL,getResourceThumbnailURL} from '../helpers/helpers';
 import axios from 'axios';
-import {APIPath} from '../static/constants';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ViewOrganisation extends Component {
   constructor(props) {

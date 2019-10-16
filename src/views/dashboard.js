@@ -1,7 +1,6 @@
 import React from "react";
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../static/constants';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -13,6 +12,7 @@ import {
 } from "reactstrap";
 
 
+const APIPath = process.env.REACT_APP_APIPATH;
 class Dashboard extends React.Component {
   constructor(props) {
     super(props);

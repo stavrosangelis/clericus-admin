@@ -8,13 +8,14 @@ import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 import PageActions from '../components/page-actions';
 
 import {connect} from "react-redux";
 import {
   setPaginationParams
 } from "../redux/actions/main-actions";
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 const mapStateToProps = state => {
   return {

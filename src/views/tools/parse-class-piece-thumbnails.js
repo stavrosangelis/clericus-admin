@@ -6,9 +6,9 @@ import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../../static/constants';
 import ParseClassPieceToolbox from './right-sidebar-toolbox';
 import ContextualMenu from '../../components/parse-class-piece-contextual-menu';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ParseClassPieceThumbnails extends Component {
   constructor(props) {
@@ -41,9 +41,12 @@ export default class ParseClassPieceThumbnails extends Component {
       linkinSelectionRect: {top:0, left:0, width:0, height:0, transform: 'translate: (0,0)'},
 
       draggableText: '',
+      inputhonorificprefix: '',
       inputfirstname: '',
+      inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputtype: 'student',
 
       updatePersonStatus: false,
       updatePersonBtn: <span><i className="fa fa-save"></i> Update person</span>,
@@ -416,9 +419,12 @@ export default class ParseClassPieceThumbnails extends Component {
       selectionFaces: null,
       selectionText: [],
       draggableText: '',
+      inputhonorificprefix: '',
       inputfirstname: '',
+      inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputtype: 'student',
       saveSelectedModal: false
     });
   }
@@ -552,19 +558,32 @@ export default class ParseClassPieceThumbnails extends Component {
         if (selectedFace!==null || selectedText.length>0) {
           saveSelectedModal = true;
         }
+
         let stateFaces = this.state.faces;
         let selectedFaceData = stateFaces[selectedFace];
+        let inputhonorificprefix = '';
         let inputfirstname = '';
+        let inputmiddlename = '';
         let inputlastname = '';
         let inputdiocese = '';
+        let inputtype = '';
+        if (typeof selectedFaceData.honorificPrefix!=="undefined") {
+          inputhonorificprefix = selectedFaceData.honorificPrefix;
+        }
         if (typeof selectedFaceData.firstName!=="undefined") {
           inputfirstname = selectedFaceData.firstName;
+        }
+        if (typeof selectedFaceData.middleName!=="undefined") {
+          inputmiddlename = selectedFaceData.middleName;
         }
         if (typeof selectedFaceData.lastName!=="undefined") {
           inputlastname = selectedFaceData.lastName;
         }
         if (typeof selectedFaceData.diocese!=="undefined") {
           inputdiocese = selectedFaceData.diocese;
+        }
+        if (typeof selectedFaceData.type!=="undefined") {
+          inputtype = selectedFaceData.type;
         }
 
         this.setState({
@@ -573,9 +592,12 @@ export default class ParseClassPieceThumbnails extends Component {
           saveSelectedModal: saveSelectedModal,
           linkingSelection: false,
           linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'},
+          inputhonorificprefix: inputhonorificprefix,
           inputfirstname: inputfirstname,
+          inputmiddlename: inputmiddlename,
           inputlastname: inputlastname,
           inputdiocese: inputdiocese,
+          inputtype: inputtype,
         })
       }
       else {
@@ -753,9 +775,12 @@ export default class ParseClassPieceThumbnails extends Component {
     let selectedFace = this.state.selectionFaces;
 
     let selectedPerson = faces[selectedFace];
+    selectedPerson.honorificPrefix = this.state.inputhonorificprefix;
     selectedPerson.firstName = this.state.inputfirstname;
+    selectedPerson.middleName = this.state.inputmiddlename;
     selectedPerson.lastName = this.state.inputlastname;
     selectedPerson.diocese = this.state.inputdiocese;
+    selectedPerson.type = this.state.inputtype;
 
     faces[selectedFace] = selectedPerson;
     this.setState({
@@ -764,9 +789,12 @@ export default class ParseClassPieceThumbnails extends Component {
       updatePersonStatus: false,
       updatePersonBtn: <span><i className="fa fa-save"></i> Update person</span>,
       draggableText: '',
+      inputhonorificprefix: '',
       inputfirstname: '',
+      inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputtype: 'student',
     });
   }
 
@@ -1237,6 +1265,18 @@ export default class ParseClassPieceThumbnails extends Component {
                 </div>
                 <div className="col-xs-12 col-sm-6 col-md-8">
                   <div className="form-group">
+                    <label>Honorific Prefix</label>
+                    <input
+                      onChange={this.handleChange}
+                      value={this.state.inputhonorificprefix}
+                      data-target="inputhonorificprefix"
+                      onDrop={this.dragStopText.bind(this)}
+                      onDragEnter={this.dragEnterText.bind(this)}
+                      onDragOver={this.dragOverText.bind(this)}
+                      onDragLeave={this.dragLeaveText.bind(this)}
+                      type="text" className="form-control" name="inputhonorificprefix" />
+                  </div>
+                  <div className="form-group">
                     <label>First Name</label>
                     <input
                       onChange={this.handleChange}
@@ -1247,6 +1287,19 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
                       type="text" className="form-control" name="inputfirstname" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Middle Name</label>
+                    <input
+                      onChange={this.handleChange}
+                      value={this.state.inputmiddlename}
+                      data-target="inputmiddlename"
+                      onDrop={this.dragStopText.bind(this)}
+                      onDragEnter={this.dragEnterText.bind(this)}
+                      onDragOver={this.dragOverText.bind(this)}
+                      onDragLeave={this.dragLeaveText.bind(this)}
+                      type="text" className="form-control" name="inputmiddlename" />
                   </div>
                   <div className="form-group">
                     <label>Last Name</label>
@@ -1271,6 +1324,16 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
                       type="text" className="form-control" name="inputdiocese" />
+                  </div>
+                  <div className="form-group">
+                    <label>Type</label>
+                    <select name="inputtype" className="form-control"
+                      onChange={this.handleChange}
+                      value={this.state.inputtype}>
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="guestofhonor">Guest of honor</option>
+                    </select>
                   </div>
                   {thumbnailText}
                 </div>

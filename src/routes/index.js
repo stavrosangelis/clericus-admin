@@ -20,9 +20,9 @@ import ParseClassPieces from '../views/tools/parse-class-pieces.js';
 import {ParseClassPiece} from '../views/tools/parse-class-piece.js';
 import ParseClassPieceThumbnails from '../views/tools/parse-class-piece-thumbnails.js';
 import ImportClassPieceToDB from '../views/tools/import-class-piece.js';
+import DocumentOCR from '../views/tools/document-ocr.js';
 
 import Graph from '../views/graph.js';
-import Graph2 from '../views/graph-2.js';
 
 var indexRoutes = [
   {
@@ -166,16 +166,16 @@ var indexRoutes = [
         path: "/graph",
         name: "Network graph",
         icon: "fa fa-circle-o",
-        component: Graph2,
+        component: Graph,
+        showMenu: true,
+      },{
+        path: "/ocr-document",
+        name: "OCR Document",
+        icon: "fa fa-circle-o",
+        component: DocumentOCR,
         showMenu: true,
       },
-      {
-        path: "/graph-2",
-        name: "Graph",
-        icon: "fa fa-circle-o",
-        component: Graph,
-        showMenu: false,
-      },
+
     ]
   },
   {

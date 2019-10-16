@@ -7,7 +7,6 @@ import {
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 
 import ViewOrganisation from '../components/view-organisation';
 import AddRelation from '../components/add-relations';
@@ -17,6 +16,9 @@ import {Redirect} from 'react-router-dom';
 import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
 
 import {connect} from "react-redux";
+
+const APIPath = process.env.REACT_APP_APIPATH;
+
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
@@ -355,6 +357,7 @@ class Organisation extends Component {
         item={this.state.organisation}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
+        type="organisation"
       />
 
     }

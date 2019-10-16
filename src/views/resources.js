@@ -6,13 +6,13 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 import PageActions from '../components/resources-page-actions';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
 import {getResourceThumbnailURL} from '../helpers/helpers';
 
 import {connect} from "react-redux";
 import {
   setPaginationParams
 } from "../redux/actions/main-actions";
+const APIPath = process.env.REACT_APP_APIPATH;
 
 const mapStateToProps = state => {
   return {

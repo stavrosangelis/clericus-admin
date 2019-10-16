@@ -6,7 +6,7 @@ import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../../static/constants';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export class ParseClassPiece extends Component {
   constructor(props) {

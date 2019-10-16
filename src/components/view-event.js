@@ -10,7 +10,7 @@ import Select from 'react-select';
 import {getResourceThumbnailURL} from '../helpers/helpers';
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ViewEvent extends Component {
   constructor(props) {

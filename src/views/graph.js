@@ -1,5 +1,4 @@
 import React, {Component} from 'react';
-import { Graph } from 'react-d3-graph';
 import {
   Card, CardBody,
   CardTitle
@@ -7,7 +6,9 @@ import {
 import { Link } from "react-router-dom";
 
 import axios from 'axios';
-import {APIPath} from '../static/constants';
+import NetworkGraph from '../components/d3/network';
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 class GraphView extends Component {
   constructor(props) {
@@ -15,6 +16,8 @@ class GraphView extends Component {
     this.state = {
       data: null,
       loading: true,
+      width: 600,
+      height: 500,
       eventsLoad: true,
       organisationsLoad: true,
       peopleLoad: true,
@@ -27,7 +30,6 @@ class GraphView extends Component {
     }
 
     this.load = this.load.bind(this);
-    this.loadGraph = this.loadGraph.bind(this);
     this.updateCanvasSize = this.updateCanvasSize.bind(this);
     this.toggleGraphData = this.toggleGraphData.bind(this);
     this.toggleDetailsCard = this.toggleDetailsCard.bind(this);
@@ -54,59 +56,42 @@ class GraphView extends Component {
       context.setState({
         loading: false,
         data: responseData
-      });
-      setTimeout(function(){
+      },()=> {
         context.updateCanvasSize();
-      },250);
+      });
 	  })
 	  .catch(function (error) {
       console.log(error);
 	  });
   }
 
-  loadGraph() {
-    const data = this.state.data;
-    const myConfig = {
-      'width': 600,
-      'height': 600,
-      'maxZoom': 8,
-      'minZoom': 0.1,
-      'focusZoom': 1,
-      'collapsible': false,
-      'focusAnimationDuration': 0.001,
-      'nodeHighlightBehavior': true,
-      'automaticRearrangeAfterDropNode': false,
-      node: {
-        //color: 'lightgreen',
-        labelProperty: 'label',
-        strokeWidth: 1.5,
-        strokeColor: 'blue',
-        highlightColor: '#e2e234',
-        highlightStrokeColor: '#e2e234',
-        highlightStrokeWidth: 5,
-      },
-      link: {
-        highlightColor: 'lightblue',
-        labelProperty: 'label',
-        renderLabel: false
-      },
-      d3: {
-        alphaTarget: 0.05,
-        gravity: -100,
-        linkLength: 200,
-        linkStrength: 1
-      },
-    };
-    let graph = <Graph
-        id="graph-id" // id is mandatory, if no id is defined rd3g will throw an error
-        data={data}
-        config={myConfig}
-        onClickNode={this.clickNode}
-        //onClickNode={(id)=>this.clickNode(id)}
-        onClickLink={(source,target)=>this.clickLink(source,target)}
-    />;
+  updateCanvasSize() {
+    if (this.state.data!==null) {
+      let container = document.getElementById('graph-container');
+      let width = container.offsetWidth-2;
+      let windowHeight = window.innerHeight - 60;
+      if (windowHeight>630) {
+        container.style.height = (windowHeight-133)+"px";
+      }
+      else {
+        container.style.height = "400px";
+      }
+      let height = container.offsetHeight-2;
+      this.setState({
+        width: width,
+        height: height,
+      })
+    }
 
-    return graph;
+  }
+
+  toggleGraphData(type) {
+    this.setState({
+      [type]:!this.state[type],
+      reloadGraph: true,
+      data: null,
+      loading: true,
+    })
   }
 
   clickNode(nodeId) {
@@ -163,39 +148,6 @@ class GraphView extends Component {
     this.toggleDetailsCard(true);
   };
 
-  updateCanvasSize() {
-    if (this.state.data!==null) {
-      let contentContainer = document.getElementById('content-container');
-      let container = document.getElementById('graph-container');
-      let width = container.offsetWidth-2;
-      if (contentContainer.offsetHeight>630) {
-        container.style.height = (contentContainer.offsetHeight-30)+"px";
-
-      }
-      else {
-        container.style.height = "600px";
-      }
-      let height = container.offsetHeight-2;
-      setTimeout(function() {
-        let canvas = container.childNodes[0].childNodes[0];
-        if (canvas.tagName==="svg") {
-          canvas.style.width = width+"px";
-          canvas.style.height = height+"px";
-        }
-      },500);
-    }
-  }
-
-  toggleGraphData(type) {
-    this.setState({
-      [type]:!this.state[type],
-      reloadGraph: true,
-      detailsCardVisible: false,
-      data: null,
-      loading: true,
-    })
-  }
-
   toggleDetailsCard(value=null) {
     if (value===null) {
       value = !this.state.detailsCardVisible;
@@ -224,12 +176,6 @@ class GraphView extends Component {
   }
 
   render() {
-    let graph = [];
-    if (!this.state.loading && this.state.data!==null) {
-      if (this.state.data!==null) {
-        graph = this.loadGraph();
-      }
-    }
     let eventsClass = "",organisationsClass="",peopleClass="",resourcesClass="";
     if (this.state.eventsLoad) {
       eventsClass = " active";
@@ -253,7 +199,6 @@ class GraphView extends Component {
       <div className={resourcesClass} onClick={()=> this.toggleGraphData("resourcesLoad")}>
         <div className="icon square"></div> Resource</div>
     </div>
-
     let detailsCardVisibleClass = " hidden";
     if (this.state.detailsCardVisible) {
       detailsCardVisibleClass = "";
@@ -267,9 +212,17 @@ class GraphView extends Component {
         {this.state.detailsCardContent}
       </CardBody>
     </Card>
+
+
     return (
       <div className="graph-container" id="graph-container">
-        {graph}
+        <NetworkGraph
+          data={this.state.data}
+          width={this.state.width}
+          height={this.state.height}
+          clickNode={this.clickNode}
+          clickLink={this.clickLink}
+          />
         {legend}
         {detailsCard}
       </div>

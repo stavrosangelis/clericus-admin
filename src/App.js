@@ -11,9 +11,6 @@ import './assets/fonts/font-awesome/css/font-awesome.min.css';
 import "./assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css";
 import './App.css';
 
-import Lightbox from 'react-image-lightbox';
-import 'react-image-lightbox/style.css';
-
 // routes
 import indexRoutes from "./routes/index";
 import Login from "./views/login";
@@ -25,8 +22,8 @@ import Sidebar from "./components/sidebar";
 import {connect} from "react-redux";
 import {
   getSystemTypes,
+  getPeopleRoles,
   loadDefaultEntities,
-  toggleLightBox,
   checkSession,
   resetLoginRedirect,
 } from "./redux/actions/main-actions";
@@ -40,8 +37,6 @@ if (typeof authToken!=="undefined" && authToken!==null) {
 
 const mapStateToProps = state => {
   return {
-    lightBoxOpen: state.lightBoxOpen,
-    lightBoxSrc: state.lightBoxSrc,
     sessionActive: state.sessionActive,
     loginRedirect: state.loginRedirect
    };
@@ -50,8 +45,8 @@ const mapStateToProps = state => {
 function mapDispatchToProps(dispatch) {
   return {
     getSystemTypes: () => dispatch(getSystemTypes()),
+    getPeopleRoles: () => dispatch(getPeopleRoles()),
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
-    toggleLightBox: (value) => dispatch(toggleLightBox(value)),
     checkSession: () => dispatch(checkSession()),
     resetLoginRedirect: ()=>dispatch(resetLoginRedirect()),
   }
@@ -119,6 +114,7 @@ class App extends Component {
     if (!prevProps.sessionActive && this.props.sessionActive) {
       this.openSidebar();
       this.props.getSystemTypes();
+      this.props.getPeopleRoles();
       this.props.loadDefaultEntities();
       loadProgressBar();
     }
@@ -129,18 +125,11 @@ class App extends Component {
 
   render() {
     let routes = this.parseRoutes();
-    let lightBox = [];
-    if (this.props.lightBoxSrc!==null && this.props.lightBoxOpen===true) {
-      lightBox = <Lightbox
-        mainSrc={this.props.lightBoxSrc}
-        onCloseRequest={() => this.props.toggleLightBox("false")}
-      />;
-    }
     let loginRedirect = [];
     if (this.props.loginRedirect) {
       loginRedirect = <Redirect to='/' />
     }
-    let AppHTML =  <Router basename='/'>
+    let AppHTML =  <Router basename={process.env.REACT_APP_BASENAME}>
         <Login />
       </Router>;
     if (this.props.sessionActive) {
@@ -162,7 +151,6 @@ class App extends Component {
             </div>
             <Footer fluid extraClass="main-footer"/>
           </div>
-          {lightBox}
         </div>
       </Router>
     }

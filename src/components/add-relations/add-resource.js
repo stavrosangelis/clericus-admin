@@ -6,9 +6,9 @@ import {
   Spinner
 } from 'reactstrap';
 import axios from 'axios';
-import {APIPath} from '../../static/constants';
 import Select from 'react-select';
 import {getResourceThumbnailURL,addGenericReference,refTypesList} from '../../helpers/helpers';
+const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class AddResource extends Component {
   constructor(props) {
@@ -17,6 +17,7 @@ export default class AddResource extends Component {
     this.state = {
       loading: true,
       refType: null,
+      refRole: null,
       listVisible: true,
       addNewVisible: false,
       list: [],
@@ -388,6 +389,23 @@ export default class AddResource extends Component {
 
     let errorContainer = <Alert className={addingReferenceErrorVisible} color="danger">{this.state.addingReferenceErrorText}</Alert>;
 
+    let referenceRole = [];
+    if (this.props.type==="person") {
+      let refRoleOptions = [{value: null, label: "-"}];
+      for (let i=0;i<this.props.peopleRoles.length;i++) {
+        let refRoleOption = this.props.peopleRoles[i];
+        refRoleOptions.push({value: refRoleOption._id, label: refRoleOption.label});
+
+      }
+      referenceRole = <FormGroup style={{marginTop: '15px'}}>
+        <Label for="refType">Reference Role</Label>
+        <Select
+          value={this.state.refRole}
+          onChange={(selectedOption)=>this.select2Change(selectedOption, "refRole")}
+          options={refRoleOptions}
+        />
+      </FormGroup>
+    }
     return (
       <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addResourceModal')} className={this.props.className}>
         <ModalHeader toggle={()=>this.toggleModal('addResourceModal')}>Add Resource Relation</ModalHeader>
@@ -401,6 +419,7 @@ export default class AddResource extends Component {
               options={refTypesListItems}
             />
           </FormGroup>
+          {referenceRole}
           <hr/>
           <h4>Select Resource</h4>
           <FormGroup className="autocomplete-search">

@@ -1,7 +1,6 @@
 import React from "react";
 import axios from 'axios';
 import {loadProgressBar} from 'axios-progress-bar';
-import {APIPath} from '../static/constants';
 import {
   Card,CardBody,
   Collapse,
@@ -23,6 +22,8 @@ function mapDispatchToProps(dispatch) {
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
   }
 }
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 class Entities extends React.Component {
   constructor(props) {
