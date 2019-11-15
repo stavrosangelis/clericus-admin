@@ -11,7 +11,7 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import PageActions from '../components/page-actions';
-import {getOrganisationThumbnailURL} from '../helpers/helpers'
+import {getThumbnailURL} from '../helpers/helpers'
 
 import {connect} from "react-redux";
 import {
@@ -173,7 +173,7 @@ class Organisations extends Component {
       let count = (i+1) + (countPage*this.state.limit);
       let label = organisation.label;
       let thumbnailImage = [];
-      let thumbnailURL = getOrganisationThumbnailURL(organisation);
+      let thumbnailURL = getThumbnailURL(organisation);
       if (thumbnailURL!==null) {
         thumbnailImage = <img src={thumbnailURL} className="organisations-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
@@ -237,7 +237,7 @@ class Organisations extends Component {
           label +=" "+organisation.lastName;
         }
         let thumbnailImage = [];
-        let thumbnailURL = getOrganisationThumbnailURL(organisation);
+        let thumbnailURL = getThumbnailURL(organisation);
         if (thumbnailURL!==null) {
           thumbnailImage = <img src={thumbnailURL} className="organisations-list-thumbnail img-fluid img-thumbnail" alt={label} />
         }

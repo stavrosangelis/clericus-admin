@@ -290,10 +290,10 @@ export default class AddPerson extends Component {
     else {
       let newReference = {
         items: [
+          {_id: this.props.reference.ref, type: this.props.reference.type},
           {_id: this.state.selectedPerson, type: "Person"},
-          {_id: this.props.reference.ref, type: this.props.reference.type}
         ],
-        taxonomyTermId: this.state.refType.value,
+        taxonomyTermLabel: this.state.refType.label,
       }
       return addGenericReference(newReference);
     }
@@ -358,35 +358,31 @@ export default class AddPerson extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemPeople = [];
       let item = this.props.item;
+      let itemPeople = [];
       if (item!==null && typeof item.people!=="undefined" && item.people!==null) {
-        for (let ie=0; ie<item.people.length; ie++) {
-          let itemPerson = item.people[ie];
-          if (
-            typeof this.state.refType!=="undefined" &&
-            itemPerson.ref!==null && this.state.refType!==null
-            && this.state.refType.value===itemPerson.refTerm
-            && itemPerson.refLabel===this.state.refType.label
-          ) {
-            itemPeople.push(itemPerson.ref._id);
-          }
-        }
+        itemPeople = item.people.map(org=> {return {ref:org.ref._id,term: org.term.label}});
       }
       for (let i=0;i<this.state.list.length; i++) {
-        let item = this.state.list[i];
+        let lItem = this.state.list[i];
         let active = "";
         let exists = "";
-        if (this.state.selectedPerson===item._id) {
+        if (this.state.selectedPerson===lItem._id) {
           active = " active";
         }
-        if (itemPeople.indexOf(item._id)>-1) {
+        let isRelated = itemPeople.find(org=> {
+          if (typeof this.state.refType!=="undefined" && this.state.refType!==null && org.ref===lItem._id && org.term===this.state.refType.value) {
+            return true;
+          }
+          return false
+        })
+        if (isRelated) {
           exists = " exists"
         }
         let listItem = <div
           className={"event-list-item"+active+exists}
-          key={item._id}
-          onClick={()=>this.selectedPerson(item._id)}>{item.label}</div>;
+          key={lItem._id}
+          onClick={()=>this.selectedPerson(lItem._id)}>{lItem.label}</div>;
         list.push(listItem);
       }
     }

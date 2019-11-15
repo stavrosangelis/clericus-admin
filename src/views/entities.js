@@ -1,6 +1,5 @@
 import React from "react";
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import {
   Card,CardBody,
   Collapse,
@@ -12,6 +11,7 @@ import {
 import {Breadcrumbs} from '../components/breadcrumbs';
 import Select from 'react-select';
 import {connect} from "react-redux";
+import {addGenericReference} from '../helpers/helpers';
 
 import {
   loadDefaultEntities
@@ -66,7 +66,6 @@ class Entities extends React.Component {
     this.entitiesList = this.entitiesList.bind(this);
     this.propertiesList = this.propertiesList.bind(this);
     this.loadTaxonomy = this.loadTaxonomy.bind(this);
-    this.loadTaxonomyTerms = this.loadTaxonomyTerms.bind(this);
     this.termsList = this.termsList.bind(this);
     this.list = this.list.bind(this);
     this.togglePropertyModal = this.togglePropertyModal.bind(this);
@@ -76,7 +75,7 @@ class Entities extends React.Component {
     let context = this;
     axios({
         method: 'get',
-        url: APIPath+'entities-tree',
+        url: APIPath+'entities',
         crossDomain: true,
       })
     .then(function (response) {
@@ -182,7 +181,7 @@ class Entities extends React.Component {
     }
 
     axios({
-        method: 'post',
+        method: 'put',
         url: APIPath+'entity',
         crossDomain: true,
         data: postData,
@@ -206,7 +205,7 @@ class Entities extends React.Component {
         },1000);
       }
       else {
-        let error = responseData.data.error;
+        let error = responseData.error;
         let errorText = [];
         for (let i=0; i<error.length; i++) {
           errorText.push(<div key={i}>{error[i]}</div>);
@@ -219,7 +218,7 @@ class Entities extends React.Component {
         });
         setTimeout(function() {
           context.setState({
-            propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
+            updateBtn: <span><i className="fa fa-save" /> Save</span>
           });
         },2000);
       }
@@ -229,7 +228,7 @@ class Entities extends React.Component {
     });
   }
 
-  propertySubmit(e) {
+  async propertySubmit(e) {
     e.preventDefault();
     let context = this;
     if (this.state.propertySaving) {
@@ -239,7 +238,7 @@ class Entities extends React.Component {
       propertySaving: true,
       propertySaveBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner size="sm" color="info" /></span>
     })
-    if (this.state.propertyTerm.value==="") {
+    if (this.state.propertyTerm==="" || this.state.propertyTerm.value==="") {
       this.setState({
         propertySaving: false,
         propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
@@ -248,12 +247,12 @@ class Entities extends React.Component {
       });
       setTimeout(function() {
         context.setState({
-          propertySaving: <span><i className="fa fa-save" /> Save</span>
+          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
         });
       },2000);
       return false;
     }
-    if (this.state.propertyEntityRef.value==="") {
+    if (this.state.propertyEntityRef==="" || this.state.propertyEntityRef.value==="") {
       this.setState({
         propertySaving: false,
         propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
@@ -262,89 +261,89 @@ class Entities extends React.Component {
       });
       setTimeout(function() {
         context.setState({
-          propertySaving: <span><i className="fa fa-save" /> Save</span>
+          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
         });
       },2000);
       return false;
     }
-    let postData = {
-      _id: this.state.entity._id,
-      property: {
-        term: this.state.propertyTerm.value,
-        direction: 'from',
-        entityRef: this.state.propertyEntityRef.value
+    this.setState({
+      propertySaving: false,
+    });
+
+    let newReference = {
+      items: [
+        {_id: this.state.entity._id, type: "Entity"},
+        {_id: this.state.propertyEntityRef.value, type: "Entity"}
+      ],
+      taxonomyTermId: this.state.propertyTerm.value,
+    }
+    let addReference = await addGenericReference(newReference);
+    if (addReference.data.status) {
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>,
+        propertyModalVisible: false
+      });
+      this.loadEntity(this.state.entity._id);
+      this.props.loadDefaultEntities();
+      setTimeout(function() {
+        context.setState({
+          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },1000);
+    }
+    else {
+      let error = addReference.error;
+      let errorText = [];
+      for (let i=0; i<error.length; i++) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
+        propertyErrorVisible: true,
+        propertyErrorText: errorText
+      });
+      setTimeout(function() {
+        context.setState({
+          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },2000);
+    }
+  }
+
+  deleteProperty() {
+    let context = this;
+    let newReference = {
+      items: [
+        {_id: this.state.entity._id, type: "Entity"},
+        {_id: this.state.propertyEntityRef.value, type: "Entity"}
+      ],
+      taxonomyTermId: this.state.propertyTerm.value,
+    }
+    if (this.state.property.term.direction==="to") {
+      newReference = {
+        items: [
+          {_id: this.state.propertyEntityRef.value, type: "Entity"},
+          {_id: this.state.entity._id, type: "Entity"}
+        ],
+        taxonomyTermId: this.state.propertyTerm.value,
       }
     }
-    if (this.state.property!==null) {
-      postData.property._id = this.state.property._id;
-    }
     axios({
-        method: 'post',
-        url: APIPath+'entity-property',
+        method: 'delete',
+        url: APIPath+'reference',
         crossDomain: true,
-        data: postData,
+        data: newReference,
       })
     .then(function (response) {
       let responseData = response.data;
       if (responseData.status) {
         context.setState({
-          propertySaving: false,
-          propertySaveBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>,
-          propertyModalVisible: false
-        });
-        context.loadEntity(context.state.entity._id);
-        context.props.loadDefaultEntities();
-        setTimeout(function() {
-          context.setState({
-            propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },1000);
-      }
-      else {
-        let error = responseData.error;
-        let errorText = [];
-        for (let i=0; i<error.length; i++) {
-          errorText.push(<div key={i}>{error[i]}</div>);
-        }
-        context.setState({
-          propertySaving: false,
-          propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-          propertyErrorVisible: true,
-          propertyErrorText: errorText
-        });
-        setTimeout(function() {
-          context.setState({
-            propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },2000);
-      }
-
-    })
-    .catch(function (error) {
-    });
-  }
-
-  deleteProperty() {
-    let context = this;
-    let entityId = this.state.entity._id;
-    let propertyId = this.state.property._id;
-    let params = {
-      _id: entityId,
-      propertyId: propertyId
-    }
-    axios({
-        method: 'delete',
-        url: APIPath+'entity-property',
-        crossDomain: true,
-        params: params,
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      if (responseData.status) {
-        context.setState({
           property: null,
           propertyModalVisible: false
         });
+
         context.loadEntity(context.state.entity._id);
         context.props.loadDefaultEntities();
       }
@@ -401,7 +400,7 @@ class Entities extends React.Component {
       let entity = entities[i];
       let item = <li key={i} onClick={()=>this.loadEntity(entity._id)}>{entity.label}</li>;
       output.push(item);
-      if (entity.children.length>0) {
+      if (typeof entity.children!=="undefined" && entity.children.length>0) {
         let children = this.list(entity.children, i);
         output.push(children);
       }
@@ -414,10 +413,7 @@ class Entities extends React.Component {
   }
 
   togglePropertyModal(property=null) {
-    let visible = true;
-    if (this.state.propertyModalVisible) {
-      visible = false;
-    }
+    let visible = !this.state.propertyModalVisible;
     let update = {propertyModalVisible: visible};
     if (visible) {
       let propertyTerm = '';
@@ -451,32 +447,11 @@ class Entities extends React.Component {
       })
     .then(function (response) {
       let responseData = response.data.data;
-      context.loadTaxonomyTerms(responseData._id);
       context.setState({
         loading: false,
         taxonomy: responseData,
+        taxonomyTerms: responseData.taxonomyterms
       })
-    })
-    .catch(function (error) {
-    });
-  }
-
-  loadTaxonomyTerms(_id) {
-    let context = this;
-    let params = {
-      taxonomyRef: _id
-    }
-    axios({
-        method: 'get',
-        url: APIPath+'taxonomy-terms-tree',
-        crossDomain: true,
-        params: params,
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      context.setState({
-        taxonomyTerms: responseData
-      });
     })
     .catch(function (error) {
     });
@@ -488,14 +463,6 @@ class Entities extends React.Component {
       let term = terms[i];
       let option = {value: term._id, label: sep+" "+term.label};
       options.push(option);
-      if (term.children.length>0) {
-        let newSep = sep+"-";
-        let children = this.termsList(term.children, newSep);
-        for (let j=0; j<children.length; j++) {
-          let child = children[j];
-          options.push(child);
-        }
-      }
     }
     return options;
   }
@@ -505,12 +472,15 @@ class Entities extends React.Component {
     if (entity!==null) {
       for (let i=0; i<entity.properties.length; i++) {
         let property = entity.properties[i];
-        let label = "";
-        if (property.direction==="from") {
-          label = property.term.label;
+        let label = property.term.label;
+        let taxonomyTerm = this.state.taxonomyTerms.find(item=>item.label===label);
+        property.term.direction = "from";
+        if (typeof taxonomyTerm==="undefined") {
+          taxonomyTerm = this.state.taxonomyTerms.find(item=>item.inverseLabel===label);
+          property.term.direction = "to";
         }
-        else {
-          label = property.term.inverseLabel;
+        if (typeof taxonomyTerm!=="undefined") {
+          property.term._id = taxonomyTerm._id;
         }
         let item = <li key={i} onClick={()=>this.togglePropertyModal(property)}><span className="property-term">{label}</span> <span className="property-entity">{property.entityRef.label}</span></li>;
         output.push(item);
@@ -525,7 +495,6 @@ class Entities extends React.Component {
   componentDidMount() {
     this.load();
     this.loadTaxonomy();
-    loadProgressBar();
   }
 
   render() {
@@ -581,6 +550,10 @@ class Entities extends React.Component {
       if (this.state.property!==null) {
         deleteBtn = <Button color="danger" outline onClick={this.deleteProperty} className="pull-left" size="sm"><i className="fa fa-trash-o" /> Delete</Button>
       }
+      let propertySaveBtn = [];
+      if(this.state.property===null) {
+        propertySaveBtn = <Button color="primary" outline size="sm" onClick={this.propertySubmit}>{this.state.propertySaveBtn}</Button>
+      }
       let propertyModal = <Modal isOpen={this.state.propertyModalVisible} toggle={()=>this.togglePropertyModal(null)} className={this.props.className}>
           <ModalHeader toggle={()=>this.togglePropertyModal(null)}>{propertyModalTitle}</ModalHeader>
           <ModalBody>
@@ -607,7 +580,7 @@ class Entities extends React.Component {
             </Form>
           </ModalBody>
           <ModalFooter className="modal-footer">
-            <Button color="primary" outline size="sm" onClick={this.propertySubmit}>{this.state.propertySaveBtn}</Button>
+            {propertySaveBtn}
             {deleteBtn}
           </ModalFooter>
         </Modal>

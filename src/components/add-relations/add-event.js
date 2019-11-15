@@ -264,10 +264,10 @@ export default class AddEvent extends Component {
     else {
       let newReference = {
         items: [
+          {_id: this.props.reference.ref, type: this.props.reference.type},
           {_id: this.state.selectedEvent, type: "Event"},
-          {_id: this.props.reference.ref, type: this.props.reference.type}
         ],
-        taxonomyTermId: this.state.refType.value,
+        taxonomyTermLabel: this.state.refType.label,
       }
       return addGenericReference(newReference);
     }
@@ -391,19 +391,10 @@ export default class AddEvent extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemEvents = [];
       let item = this.props.item;
+      let itemEvents = [];
       if (item!==null && typeof item.events!=="undefined" && item.events!==null) {
-        for (let ie=0; ie<item.events.length; ie++) {
-          let itemEvent = item.events[ie];
-          if (
-            itemEvent.ref!==null && this.state.refType!==null
-            && this.state.refType.value===itemEvent.refTerm
-            && itemEvent.refLabel===this.state.refType.label
-          ) {
-            itemEvents.push(itemEvent.ref._id);
-          }
-        }
+        itemEvents = item.events.map(org=> {return {ref:org.ref._id,term: org.term.label}});
       }
       for (let i=0;i<this.state.list.length; i++) {
         let eventItem = this.state.list[i];
@@ -412,7 +403,13 @@ export default class AddEvent extends Component {
         if (this.state.selectedEvent===eventItem._id) {
           active = " active";
         }
-        if (itemEvents.indexOf(eventItem._id)>-1) {
+        let isRelated = itemEvents.find(org=> {
+          if (this.state.refType!==null && org.ref===eventItem._id && org.term===this.state.refType.value) {
+            return true;
+          }
+          return false
+        })
+        if (isRelated) {
           exists = " exists"
         }
         let eventListItem = <div

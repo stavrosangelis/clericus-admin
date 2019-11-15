@@ -62,18 +62,36 @@ class NetworkGraph extends Component {
     const g = svg.append("g")
         .attr("class", "zoom-container");
 
-    const link = g.append("g")
-        .selectAll("line")
-        .data(links)
-        .enter().append("line")
-        //.attr("stroke-width", d => Math.sqrt(d.value))
+    const link = g.selectAll('line')
+      .data(links)
+      .enter().append("line")
+      .attr("class", "network-line")
+      .attr("fill", "none")
+      .attr("stroke-width", 1)
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.5)
+    /*g.append("g")
+        .attr("fill", "none")
         .attr("stroke-width", 1)
         .attr("stroke", "#999")
         .attr("stroke-opacity", 0.5)
-        .attr("class", "network-line")
+        .select("path")
+        //.data(links)
+        //.join("path")
+        .attr("d", pathData)
         .on("click", d=>{
           context.props.clickLink(d.source.id, d.target.id);
-        });
+        })
+
+        /*.enter()
+        .append("line")
+        .on("click", d=>{
+          context.props.clickLink(d.source.id, d.target.id);
+        })
+        .attr("d", d3.linkRadial()
+          .angle(d => d.x)
+          .radius(d => d.y)
+        );*/
 
     const node = g.selectAll("circle")
       .data(nodes)
@@ -91,17 +109,30 @@ class NetworkGraph extends Component {
       });
 
       node.append("circle")
-        .attr("stroke", d=>d.color)
-        .attr("stroke-width", 1.5)
+        .attr("stroke", d=>d.strokeColor)
+        .attr("stroke-width", 0.5)
         .attr("r", d=>this.calcNodeSize(d.count, sizeRatio))
         .attr("fill", d=>d.color)
         .attr("class", "network-circle");
 
+      node.append("clipPath")
+        .attr("id", d => "clip-path-"+d.id);
+
       node.append("text")
-          .attr("class", "node-text")
-          .attr("dx", 12)
-          .attr("dy", ".35em")
-          .text(d => d.label);
+          .attr("clip-path", d => "clip-path-"+d.id)
+          .selectAll("tspan")
+          .data(d => d.label.split(/(?=[A-Z][^A-Z])/g))
+          .join("tspan")
+          .attr("text-anchor", "middle")
+          .attr("font-size", "5pt")
+          .attr("font-family", "sans-serif")
+          .attr("fill", "#fff")
+          .attr("x", 0)
+          .attr("y", (d, i, nodes) => {
+            let y = i - nodes.length / 2 + 0.8+"em";
+            return  y
+          })
+          .text(d => d);
 
     simulation.on("tick", () => {
       link
@@ -109,7 +140,6 @@ class NetworkGraph extends Component {
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
-
       node
         .attr("transform", d=> "translate(" + d.x  + "," + d.y + ")")
     });
@@ -244,7 +274,6 @@ class NetworkGraph extends Component {
     let g = document.getElementsByClassName("zoom-container")[0];
     g.setAttribute("transform", d3.event.transform);
   }
-
   componentDidMount() {
     if (this.props.data!==null) {
       this.drawGraph();
@@ -292,8 +321,10 @@ class NetworkGraph extends Component {
     return (
       <div>
         <div id="network-graph"></div>
-        {zoomPanel}
-        {panPanel}
+        <div className="graph-actions">
+          {panPanel}
+          {zoomPanel}
+        </div>
       </div>
     )
   }

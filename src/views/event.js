@@ -187,7 +187,7 @@ class Event extends Component {
     if (isValid) {
       let context = this;
       axios({
-          method: 'post',
+          method: 'put',
           url: APIPath+'event',
           crossDomain: true,
           data: postData

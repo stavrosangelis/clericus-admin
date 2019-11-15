@@ -1,14 +1,10 @@
 import React, { Component } from 'react';
 import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
-
 import axios from 'axios';
-
 import ViewResource from '../components/view-resource';
 import AddRelation from '../components/add-relations';
-
 import {Redirect} from 'react-router-dom';
-
 import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
 
 import {connect} from "react-redux";
@@ -152,7 +148,7 @@ class Resource extends Component {
     }
     let context = this;
     axios({
-      method: 'post',
+      method: 'put',
       url: APIPath+'resource',
       crossDomain: true,
       data: postData,
@@ -185,29 +181,23 @@ class Resource extends Component {
   delete() {
     let context = this;
     let _id = this.props.match.params._id;
-    if (_id==="new") {
-      this.setState({
-        loading: false,
-        systemType: 'thumbnail'
-      })
-    }
-    else {
-      axios({
-          method: 'delete',
-          url: APIPath+'resource?_id='+_id,
-          crossDomain: true,
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          if (responseData.data.ok===1) {
-            context.setState({
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	  });
-    }
+    let params = {_id: _id};
+    axios({
+      method: 'delete',
+      url: APIPath+'resource',
+      crossDomain: true,
+      params: params
+    })
+    .then(function (response) {
+      let responseData = response.data;
+      if (responseData.status) {
+        context.setState({
+          redirect: true
+        });
+      }
+    })
+    .catch(function (error) {
+    });
   }
 
   reload() {

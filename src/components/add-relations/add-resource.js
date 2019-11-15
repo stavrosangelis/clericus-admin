@@ -277,10 +277,10 @@ export default class AddResource extends Component {
     else {
       let newReference = {
         items: [
+          {_id: this.props.reference.ref, type: this.props.reference.type},
           {_id: this.state.selectedResource, type: "Resource"},
-          {_id: this.props.reference.ref, type: this.props.reference.type}
         ],
-        taxonomyTermId: this.state.refType.value,
+        taxonomyTermLabel: this.state.refType.label,
       }
       return addGenericReference(newReference);
     }
@@ -344,39 +344,34 @@ export default class AddResource extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemResources = [];
       let item = this.props.item;
+      let itemResources = [];
       if (item!==null && typeof item.resources!=="undefined" && item.resources!==null) {
-        for (let ie=0; ie<item.resources.length; ie++) {
-          let itemResource = item.resources[ie];
-          if (
-            typeof itemResource!=="undefined" &&
-            itemResource.ref!==null &&
-            typeof this.state.refType!=="undefined" && this.state.refType!==null
-            && this.state.refType.value===itemResource.refTerm
-            && itemResource.refLabel===this.state.refType.label
-          ) {
-            itemResources.push(itemResource.ref._id);
-          }
-        }
+        itemResources = item.resources.map(org=> {return {ref:org.ref._id,term: org.term.label}});
       }
       for (let i=0;i<this.state.list.length; i++) {
-        let item = this.state.list[i];
+        let lItem = this.state.list[i];
         let active = "";
         let exists = "";
-        if (this.state.selectedResource===item._id) {
+        if (this.state.selectedResource===lItem._id) {
           active = " active";
         }
-        if (itemResources.indexOf(item._id)>-1) {
+        let isRelated = itemResources.find(org=> {
+          if (typeof this.state.refType!=="undefined" && this.state.refType!==null && org.ref===lItem._id && org.term===this.state.refType.value) {
+            return true;
+          }
+          return false;
+        })
+        if (isRelated) {
           exists = " exists"
         }
         let thumbnail = <div className="img-responsive img-thumbnail">
-          <img src={getResourceThumbnailURL(item)} alt={item.label}/>
+          <img src={getResourceThumbnailURL(lItem)} alt={lItem.label}/>
           </div>;
         let listItem = <div
           className={"event-list-item event-list-resource"+active+exists}
-          key={item._id}
-          onClick={()=>this.selectedResource(item._id)}>{thumbnail} <div className="label">{item.label}</div></div>;
+          key={lItem._id}
+          onClick={()=>this.selectedResource(lItem._id)}>{thumbnail} <div className="label">{lItem.label}</div></div>;
         list.push(listItem);
       }
     }
@@ -426,7 +421,7 @@ export default class AddResource extends Component {
             <Input type="text" name="searchItem" placeholder="Search..." value={this.state.searchItem} onChange={this.handleChange}/>
             <div className="close-icon" onClick={()=>this.clearSearch()}><i className="fa fa-times" /></div>
           </FormGroup>
-          <div className="events-list-container" ref={this.listRef}>
+          <div className="resources-list-container" ref={this.listRef}>
             {list}
           </div>
           <Button className={loadMoreVisibleClass} color="secondary" outline size="sm" block onClick={()=>this.loadMoreResources()}>Load more {loadingMore}</Button>

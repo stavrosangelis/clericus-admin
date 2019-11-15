@@ -16,9 +16,10 @@ class Footer extends React.Component {
             <nav className="footer-nav">
               <ul>
                 <li>
-                  <a href="#" target="_blank">
+                  {/*<a href="#" target="_blank">*/}
                     <img src={logo} className="footer-logo" alt="Maynooth University / Arts & Humanities Institute (MUAHI)" />
-                    <span>Maynooth University / Arts & Humanities Institute (MUAHI)</span></a>
+                    <span>Maynooth University / Arts & Humanities Institute (MUAHI)</span>
+                  {/*</a>*/}
                 </li>
               </ul>
             </nav>

@@ -5,9 +5,13 @@ import {
   Form, FormGroup, Label, Input,
   Collapse,
 } from 'reactstrap';
-import { Link } from 'react-router-dom';
 import Select from 'react-select';
-import {getResourceThumbnailURL} from '../helpers/helpers';
+import {
+  loadRelatedEvents,
+  loadRelatedOrganisations,
+  loadRelatedPeople,
+  loadRelatedResources
+} from '../helpers/helpers';
 
 import axios from 'axios';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -101,10 +105,6 @@ export default class ViewEvent extends Component {
     this.select2Change = this.select2Change.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
-    this.relatedEvents = this.relatedEvents.bind(this);
-    this.relatedOrganisations = this.relatedOrganisations.bind(this);
-    this.relatedPeople = this.relatedPeople.bind(this);
-    this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
   }
@@ -188,39 +188,36 @@ export default class ViewEvent extends Component {
     })
   }
 
-  loadEventTypes() {
-    let context = this;
+  async loadEventTypes() {
     let params = {systemType: "eventTypes"};
-    let eventTypes = [];
-    axios({
+    let eventTypes = await axios({
         method: 'get',
-        url: APIPath+'system-taxonomy-tree',
+        url: APIPath+'taxonomy',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
       let responseData = response.data.data;
-      eventTypes = responseData.data;
-      context.setState({
-        eventTypes: eventTypes,
-      });
-      return eventTypes;
-    })
-    .then((eventTypes) => {
-      let selectedEventType = context.props.item.eventType;
+      let taxonomyterms = responseData.taxonomyterms;
+      return taxonomyterms;
+    });
+    let stateUpdate = {
+      eventTypes: eventTypes,
+    }
+
+    if (this.props.item!==null) {
       let eventType = '';
-      if (context.props.eventType!=="undefined") {
+      if (typeof this.props.item.eventType!=="undefined" && this.props.item.eventType!==null) {
+        let selectedEventType = this.props.item.eventType;
         let selectedEventItem = eventTypes.find(value => value._id===selectedEventType);
         eventType = {value: selectedEventItem._id, label: selectedEventItem.label};
       }
-      let form = context.state.form;
+      let form = this.state.form;
       form.eventType = eventType;
-      context.setState({
-        form: form
-      })
-    })
-    .catch(function (error) {
-    });
+      stateUpdate.form = form;
+    }
+
+    this.setState(stateUpdate);
   }
 
   eventTypesList(eventTypes) {
@@ -310,103 +307,6 @@ export default class ViewEvent extends Component {
     return items;
   }
 
-  relatedEvents() {
-    if (this.props.item===null) {
-      return [];
-    }
-    let references = this.props.item.events;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.label;
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/event/"+reference.ref._id} href={"/event/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Event")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedOrganisations() {
-    if (this.props.item===null) {
-      return [];
-    }
-    let references = this.props.item.organisations;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.label;
-
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/organisations/"+reference.ref._id} href={"/organisations/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Organisation")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedPeople() {
-    if (this.props.item===null) {
-      return [];
-    }
-    let references = this.props.item.people;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.firstName;
-        if (reference.ref.lastName!=="") {
-          label+= " "+reference.ref.lastName
-        }
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Person")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedResources() {
-    if (this.props.item===null) {
-      return [];
-    }
-    let references = this.props.item.resources;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let thumbnailPath = getResourceThumbnailURL(reference.ref);
-        let thumbnailImage = [];
-        if (thumbnailPath!==null) {
-          thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
-        }
-        let newRow = <div key={i} className="img-thumbnail related-resource">
-            <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
-              <i>{reference.refLabel}</i>
-              {thumbnailImage}
-            </Link>
-            <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Resource")}><i className="fa fa-times" /></div>
-          </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
   toggleCollapse(name) {
     let value = true;
     if (this.state[name]==="undefined" || this.state[name]) {
@@ -424,13 +324,13 @@ export default class ViewEvent extends Component {
         {_id: this.props.item._id, type: "Event"},
         {_id: ref, type: model}
       ],
-      taxonomyTermId: refTerm,
+      taxonomyTermLabel: refTerm,
     }
     axios({
       method: 'delete',
       url: APIPath+'reference',
       crossDomain: true,
-      params: params
+      data: params
     })
 	  .then(function(response) {
       context.props.reload();
@@ -496,10 +396,10 @@ export default class ViewEvent extends Component {
       itemsOpenActive = "";
     }
 
-    let relatedEvents = this.relatedEvents();
-    let relatedOrganisations = this.relatedOrganisations();
-    let relatedPeople = this.relatedPeople();
-    let relatedResources = this.relatedResources();
+    let relatedEvents = loadRelatedEvents(this.props.item, this.deleteRef);
+    let relatedOrganisations = loadRelatedOrganisations(this.props.item, this.deleteRef);
+    let relatedPeople = loadRelatedPeople(this.props.item, this.deleteRef);
+    let relatedResources = loadRelatedResources(this.props.item, this.deleteRef);
 
     let metadataCard = " hidden";
     if (metadataOutput.length>0) {

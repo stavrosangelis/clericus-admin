@@ -9,6 +9,8 @@ const Viewer = (props) => {
   const [scale, setScale] = useState(1);
   const [top, setTop] = useState(0);
   const [left, setLeft] = useState(0);
+  const [width, setWidth] = useState();
+  const [height, setHeight] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
@@ -22,33 +24,42 @@ const Viewer = (props) => {
     let windowWidth = window.innerWidth;
     let windowHeight = window.innerHeight;
     let img = imgRef.current;
+    let newScale = 1;
     if (img!==null) {
-      let currentWidth = img.width;
-      let currentHeight = img.height;
-      //let newHeight = currentHeight;
+      let currentWidth = img.naturalWidth;
+      let currentHeight = img.naturalHeight;
       let newWidth = currentWidth;
-      let newScale = scale;
-
+      let newHeight = currentHeight;
+      let ratio = 0;
       if (currentHeight>windowHeight) {
+        newHeight = windowHeight;
+        ratio = currentHeight/windowHeight;
+        newWidth = currentWidth/ratio;
         newScale = windowHeight/currentHeight;
-        //newHeight = currentHeight*newScale;
-        newWidth = currentWidth*newScale;
       }
 
       if (newWidth>windowWidth) {
-        newScale = windowWidth/newWidth;
-        //newHeight = currentHeight*newScale;
-        newWidth = currentWidth*newScale;
+        newWidth = windowWidth;
+        ratio = currentWidth/windowWidth;
+        newHeight = currentHeight/ratio;
+        newScale = windowWidth/currentWidth;
       }
       // center image
-      let newLeft = 0+"px";
+      let newLeft = "-"+(currentWidth - windowWidth)/2+"px";
+      let newTop = "-"+(currentHeight-windowHeight)/2+"px";
       // center left
-      if (newWidth<windowWidth) {
+      if (currentWidth<windowWidth) {
         newLeft = (windowWidth - newWidth)/2+"px";
       }
+      if (currentHeight<windowHeight) {
+        newTop = (windowHeight - newHeight)/2+"px";
+      }
+
       setLeft(newLeft)
-      setTop(0)
+      setTop(newTop)
       setScale(newScale)
+      setWidth(currentWidth)
+      setHeight(currentHeight)
       setDimensionsLoaded(true)
     }
   }
@@ -69,8 +80,6 @@ const Viewer = (props) => {
   }
 
   const updateZoom = (value) => {
-    let windowWidth = window.innerWidth;
-    let windowHeight = window.innerHeight;
     let newScale = parseFloat(scale,10).toFixed(1);
     if (value==="plus") {
       if (newScale<2){
@@ -82,25 +91,8 @@ const Viewer = (props) => {
         newScale = parseFloat(newScale,10) - 0.1;
       }
     }
-    setScale(newScale);
-    setTimeout(()=> {
-      // calculate new position left and top
-      let img = imgRef.current;
-      let imgDimensions = img.getBoundingClientRect();
-      let imgHeight = imgDimensions.height;
-      let imgWidth = imgDimensions.width;
-      let newLeft = 0;
-      let newTop = 0;
-      if (windowWidth>imgWidth) {
-        newLeft = (windowWidth-imgWidth)/2;
-        setLeft(newLeft+"px")
-      }
-      if (windowHeight>imgHeight) {
-        newTop = (windowHeight-imgHeight)/2;
-        setTop(newTop+"px")
-      }
-    },1)
 
+    setScale(newScale);
   }
 
   const updatePan = (direction) => {
@@ -152,16 +144,18 @@ const Viewer = (props) => {
       let newX = e.pageX-x;
       let newY = e.pageY-y;
       let newStyle = img.style;
-      let transformOrigin = newStyle.transformOrigin.split(" ");
-      let transformOriginX = transformOrigin[0];
-      let transformOriginY = transformOrigin[1];
-      transformOriginX = transformOriginX.replace("px", "");
-      transformOriginX = parseFloat(transformOriginX, 10);
-      transformOriginY = transformOriginY.replace("px", "");
-      transformOriginY = parseFloat(transformOriginY, 10);
+      let transform = newStyle.transform.split(" ");
+      let translateX = transform[0];
+      let translateY = transform[1];
+      translateX = translateX.replace("translateX(", "");
+      translateX = translateX.replace(")px", "");
+      translateX = parseFloat(translateX, 10);
+      translateY = translateY.replace("translateY(", "");
+      translateY = translateY.replace(")px", "");
+      translateY = parseFloat(translateY, 10);
 
-      let newTransformOriginX = transformOriginX+newX;
-      let newTransformOriginY = transformOriginY+newY;
+      let newTranslateX = translateX+newX;
+      let newTranslateY = translateY+newY;
 
       if (e.pageX>windowWidth || e.pageY>windowHeight || e.pageX<0 || e.pageY<=60 ||
         (e.pageY<=220 && e.pageX>=windowWidth-65)
@@ -173,8 +167,8 @@ const Viewer = (props) => {
       else {
         setX(e.pageX);
         setY(e.pageY);
-        setLeft(newTransformOriginX+"px");
-        setTop(newTransformOriginY+"px");
+        setLeft(newTranslateX+"px");
+        setTop(newTranslateY+"px");
       }
     }
     window.addEventListener("mousemove", imgDrag);
@@ -205,8 +199,9 @@ const Viewer = (props) => {
   let imgPath = props.path;
   if (imgPath!==null) {
     let imgStyle = {
-      transform: "scale("+scale+") translate("+left+","+top+")" ,
-      transformOrigin: left+" "+top,
+      width: width,
+      height: height,
+      transform: "translateX("+left+") translateY("+top+") scaleX("+scale+") scaleY("+scale+")"
     }
     img = <img
       style={imgStyle}
@@ -218,6 +213,7 @@ const Viewer = (props) => {
       onMouseDown={(e)=>imgDragStart(e)}
       onMouseUp={(e)=>imgDragEnd(e)}
       onDragEnd={(e)=>imgDragEnd(e)}
+      onDoubleClick={(e)=>updateZoom("plus")}
       draggable={false}
       />
   }

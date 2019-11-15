@@ -40,9 +40,9 @@ export default class ParseClassPieceToolbox extends Component {
 
     let selectAllTooltip = <Tooltip className="toolbox-tooltip" placement="auto" isOpen={this.state.tooltipSelectAll} target='tooltip-selectAll' toggle={this.toggleTooltip.bind(this, 'tooltipSelectAll')} autohide={false}>Select all items</Tooltip>;
 
-    let identifyDuplicatesTooltip = <Tooltip className="toolbox-tooltip" placement="auto" isOpen={this.state.tooltipIdentifyDuplicates} target='tooltip-identifyDuplicates' toggle={this.toggleTooltip.bind(this, 'tooltipIdentifyDuplicates')} autohide={false}>Cross reference the identified items with the database to see if there are possible duplicates</Tooltip>;
+    let identifyDuplicatesTooltip = <Tooltip className="toolbox-tooltip" placement="auto" isOpen={this.state.tooltipIdentifyDuplicates} target='tooltip-identifyDuplicates' toggle={this.toggleTooltip.bind(this, 'tooltipIdentifyDuplicates')} autohide={false}>Cross reference the identified items with the repository to see if there are possible duplicates</Tooltip>;
 
-    let importSelectedTooltip = <Tooltip className="toolbox-tooltip" placement="auto" isOpen={this.state.tooltipImportSelected} target='tooltip-importSelected' toggle={this.toggleTooltip.bind(this, 'tooltipImportSelected')} autohide={false}>Import all selected items to the database</Tooltip>;
+    let importSelectedTooltip = <Tooltip className="toolbox-tooltip" placement="auto" isOpen={this.state.tooltipImportSelected} target='tooltip-importSelected' toggle={this.toggleTooltip.bind(this, 'tooltipImportSelected')} autohide={false}>Import all selected items to the repository</Tooltip>;
 
     return (
       <div className="fixed-plugin">

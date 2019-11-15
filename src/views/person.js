@@ -146,6 +146,9 @@ class Person extends Component {
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
     })
     let postData = this.state.person;
+    if (this.state.person===null) {
+      postData = {};
+    }
     postData.honorificPrefix = newData.honorificPrefix;
     postData.firstName = newData.firstName;
     postData.middleName = newData.middleName;
@@ -164,23 +167,37 @@ class Person extends Component {
     if (isValid) {
       let context = this;
       axios({
-        method: 'post',
+        method: 'put',
         url: APIPath+'person',
         crossDomain: true,
         data: postData
       })
       .then(function (response) {
-        let responseData = response.data.data;
-        let newState = {
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-          reload: true
-        };
-        if (_id==="new") {
-          newState.redirectReload = true;
-          newState.newId = responseData.data._id;
+        let responseData = response.data;
+        if (responseData.status) {
+          let newState = {
+            updating: false,
+            updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+            reload: true
+          };
+          if (_id==="new") {
+            newState.redirectReload = true;
+            newState.newId = responseData.data._id;
+          }
+          context.setState(newState);
         }
-        context.setState(newState);
+        else {
+          let errorText = [];
+          for (let i=0; i<responseData.errors.length; i++) {
+            let error = responseData.errors[i];
+            errorText.push(<div key={i}>{error.msg}</div>)
+          }
+          context.setState({
+            errorVisible: true,
+            errorText: errorText,
+            updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>,
+          });
+        }
         setTimeout(function() {
           context.setState({
             updateBtn: <span><i className="fa fa-save" /> Update</span>
@@ -228,30 +245,23 @@ class Person extends Component {
   delete() {
     let context = this;
     let _id = this.props.match.params._id;
-    if (_id==="new") {
-      this.setState({
-        loading: false
-      })
-    }
-    else {
-      let params = {_id: _id};
-      axios({
-          method: 'delete',
-          url: APIPath+'person',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          if (responseData.data.ok===1) {
-            context.setState({
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	  });
-    }
+    let params = {_id: _id};
+    axios({
+      method: 'delete',
+      url: APIPath+'person',
+      crossDomain: true,
+      params: params
+    })
+    .then(function (response) {
+      let responseData = response.data;
+      if (responseData.status) {
+        context.setState({
+          redirect: true
+        });
+      }
+    })
+    .catch(function (error) {
+    });
   }
 
   reload() {
@@ -353,8 +363,8 @@ class Person extends Component {
           The person "{label}" will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-left">
-            <Button className="pull-right" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button className="pull-right" color="danger" size="sm" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+            <Button color="secondary" size="sm" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
     }

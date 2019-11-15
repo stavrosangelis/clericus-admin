@@ -34,6 +34,8 @@ class User extends Component {
       errorVisible: false,
       errorText: [],
       closeUploadModal: false,
+      deleteErrorVisible: false,
+      deleteErrorText: [],
 
       firstName: '',
       lastName: '',
@@ -51,6 +53,7 @@ class User extends Component {
       passwordUpdateBtn: <span><i className="fa fa-save" /> Update</span>,
     }
     this.load = this.load.bind(this);
+    this.loadUser = this.loadUser.bind(this);
     this.update = this.update.bind(this);
     this.validateUser = this.validateUser.bind(this);
     this.validatePassword = this.validatePassword.bind(this);
@@ -64,42 +67,62 @@ class User extends Component {
     this.usergroupsOptions = this.usergroupsOptions.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
-    if (_id==="new") {
-      this.setState({
-        loading: false
-      })
+    let userData = null;
+    if (_id!=="new") {
+      userData = await this.loadUser(_id);
     }
-    else {
-    let params = {_id: _id};
-      axios({
-        method: 'get',
-        url: APIPath+'user',
-        crossDomain: true,
-        params: params
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let usergroupValue = context.state.usergroups.find(item=>item._id===responseData.usergroup);
-        let usergroupOption = {value: usergroupValue._id, label: usergroupValue.name};
-        context.setState({
-          loading: false,
-          reload: false,
-          user: responseData,
-          firstName: responseData.firstName,
-          lastName: responseData.lastName,
-          email: responseData.email,
-          usergroup: usergroupOption,
-        });
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let userGroupsData = await this.loadUsergroups();
+    let stateUpdate = {
+      loading: false
+    };
+    let usergroups = [];
+    if (userGroupsData.status) {
+      usergroups = userGroupsData.data.data;
+      stateUpdate.usergroups = usergroups;
+      if (userData===null) {
+        let defaultUsergroup = usergroups.find(item=>item.isDefault===true);
+        let defaultOption = {value: defaultUsergroup._id, label: defaultUsergroup.label};
+        stateUpdate.usergroup = defaultOption;
+      }
     }
+    if (userData!==null && userData.status) {
+      let user = userData.data;
+      let usergroupValue = usergroups.find(item=>item._id===user.usergroup._id);
+      let usergroupOption = {value: usergroupValue._id, label: usergroupValue.label};
+      stateUpdate.user = user;
+      stateUpdate.firstName = user.firstName;
+      stateUpdate.lastName = user.lastName;
+      stateUpdate.email = user.email;
+      stateUpdate.usergroup = usergroupOption;
+      stateUpdate.reload = false;
+      if (!user.hasPassword) {
+        stateUpdate.errorVisible = true;
+        stateUpdate.errorText = <div>This user account will not be usable until you set a password.</div>;
+      }
+    }
+    this.setState(stateUpdate);
   }
 
-  update() {
+  async loadUser(_id) {
+    let params = {_id: _id};
+    let userData = await axios({
+      method: 'get',
+      url: APIPath+'user',
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    return userData;
+  }
+
+  async update(e) {
+    e.preventDefault();
     if (this.state.updating) {
       return false;
     }
@@ -119,33 +142,46 @@ class User extends Component {
     }
     let isValid = this.validateUser(postData);
     if (isValid) {
-      let context = this;
-      axios({
-        method: 'post',
+      let updateData = await axios({
+        method: 'put',
         url: APIPath+'user',
         crossDomain: true,
         data: postData
       })
       .then(function (response) {
-        let responseData = response.data.data;
-        let newState = {
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-          reload: true
-        };
-        if (_id==="new") {
-          newState.redirectReload = true;
-          newState.newId = responseData.data._id;
-        }
-        context.setState(newState);
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update</span>
-          });
-        },2000);
+        return response.data;
       })
       .catch(function (error) {
       });
+      let newState = {};
+      if (updateData.status) {
+        newState = {
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+        };
+        if (_id==="new") {
+          newState.redirectReload = true;
+          newState.newId = updateData.data._id;
+          newState.reload = true;
+        }
+      }
+      else {
+        let errorText = <div><b>{updateData.error.name}</b>: {updateData.error.code}</div>;
+        newState = {
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>,
+          errorVisible: true,
+          errorText: errorText,
+        };
+      }
+
+      this.setState(newState);
+      let context = this;
+      setTimeout(function() {
+        context.setState({
+          updateBtn: <span><i className="fa fa-save" /> Update</span>
+        });
+      },2000);
     }
   }
 
@@ -258,32 +294,30 @@ class User extends Component {
     })
   }
 
-  delete() {
-    let context = this;
+  async delete() {
     let _id = this.props.match.params._id;
-    if (_id==="new") {
+    let params = {_id: _id};
+    let deleteUser = await axios({
+      method: 'delete',
+      url: APIPath+'user',
+      crossDomain: true,
+      data: params
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if (deleteUser.status) {
       this.setState({
-        loading: false
-      })
+        redirect: true
+      });
     }
     else {
-      let params = {_id: _id};
-      axios({
-          method: 'delete',
-          url: APIPath+'user',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          if (responseData.data.ok===1) {
-            context.setState({
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	  });
+      this.setState({
+        deleteErrorVisible: true,
+        deleteErrorText: deleteUser.error[0],
+      });
     }
   }
 
@@ -317,30 +351,19 @@ class User extends Component {
     });
   }
 
-  loadUsergroups() {
-    let context = this;
-    axios({
+  async loadUsergroups() {
+    let usergroupsData = await axios({
       method: 'get',
       url: APIPath+'user-groups',
       crossDomain: true,
     })
 	  .then(function (response) {
-      let responseData = response.data;
-      if (responseData.status) {
-        let stateUpdate = {
-          usergroups: responseData.data.data,
-        }
-        if (context.state.user===null) {
-          let defaultUsergroup = responseData.data.data.find(item=>item.isDefault===true);
-          let defaultOption = {value: defaultUsergroup._id, label: defaultUsergroup.name};
-          stateUpdate.usergroup = defaultOption;
-        }
-        context.setState(stateUpdate);
-      }
+      return response.data;
 	  })
 	  .catch(function (error) {
       console.log(error)
 	  });
+    return usergroupsData;
   }
 
   usergroupsOptions() {
@@ -348,20 +371,14 @@ class User extends Component {
     let usergroups = this.state.usergroups;
     for (let i=0; i<usergroups.length; i++) {
       let usergroup = usergroups[i];
-      let option = {value: usergroup._id, label: usergroup.name};
+      let option = {value: usergroup._id, label: usergroup.label};
       options.push(option);
     }
     return options;
   }
 
   componentDidMount() {
-    return new Promise(()=> {
-      this.loadUsergroups();
-    }).then(()=> {
-      this.load();
-    })
-
-
+    this.load();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -372,7 +389,7 @@ class User extends Component {
       this.load();
     }
     if (this.state.reload) {
-      this.load();
+      this.loadUser(this.props.match.params._id);
     }
     if (this.state.redirect) {
       this.setState({
@@ -426,9 +443,15 @@ class User extends Component {
       if (this.state.errorVisible) {
         errorContainerClass = "";
       }
+      let deleteErrorContainerClass = " hidden";
+      if (this.state.deleteErrorVisible) {
+        deleteErrorContainerClass = "";
+      }
       let usergroupsOptions = this.usergroupsOptions();
 
       let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
+
+      let deleteErrorContainer = <div className={"error-container"+deleteErrorContainerClass}>{this.state.deleteErrorText}</div>
 
       let editPasswordToggle = [];
       let deleteBtn = [];
@@ -498,10 +521,13 @@ class User extends Component {
 
       deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal}>
           <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
-          <ModalBody>The user "{label}" will be deleted. Continue?</ModalBody>
+          <ModalBody>
+            {deleteErrorContainer}
+            <p>The user "{label}" will be deleted. Continue?</p>
+          </ModalBody>
           <ModalFooter className="text-right">
-            <Button className="pull-left" color="danger" outline onClick={()=>this.delete()}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={()=>this.delete()}><i className="fa fa-trash-o" /> Delete</Button>
+            <Button size="sm" className="pull-left" color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
 
@@ -529,7 +555,7 @@ class User extends Component {
             </Form>
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button color="secondary" onClick={()=>this.updatePassword()}>{this.state.passwordUpdateBtn}</Button>
+            <Button color="secondary" size="sm" onClick={()=>this.updatePassword()}>{this.state.passwordUpdateBtn}</Button>
           </ModalFooter>
         </Modal>;
     }

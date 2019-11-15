@@ -15,6 +15,7 @@
 .DS_Store
 .env.local
 .env.development
+.env.neo4j
 .env.test.local
 .env.production
 

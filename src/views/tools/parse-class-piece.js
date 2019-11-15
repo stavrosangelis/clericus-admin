@@ -5,7 +5,6 @@ import { Redirect } from 'react-router';
 import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export class ParseClassPiece extends Component {
@@ -63,7 +62,7 @@ export class ParseClassPiece extends Component {
           createThumbnailsBtnStatus = true;
           analyzeStep = 1;
         }
-        if (file.faces!==null && file.text!==null) {
+        if (file.facesThumbnails && file.text!==null) {
           importDataBtnStatus = true;
         }
         context.setState({
@@ -185,7 +184,6 @@ export class ParseClassPiece extends Component {
   }
 
   componentDidMount() {
-    loadProgressBar();
     this.loadFile();
   }
 

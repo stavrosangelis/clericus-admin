@@ -1,6 +1,5 @@
 import React from "react";
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import {
   Card, CardBody,
   Button, Badge,
@@ -9,6 +8,7 @@ import {
   Spinner
 } from "reactstrap";
 import Select from 'react-select';
+import {addGenericReference} from '../helpers/helpers';
 
 import {Breadcrumbs} from '../components/breadcrumbs';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -31,6 +31,7 @@ export default class Taxonomies extends React.Component {
       termInverseLabel: '',
       termScopeNote: '',
       termParentRef: '',
+      termCount: 0,
       termSaving: false,
       errorVisible: false,
       errorText: [],
@@ -56,6 +57,8 @@ export default class Taxonomies extends React.Component {
     this.select2Change = this.select2Change.bind(this);
     this.termModalToggle = this.termModalToggle.bind(this);
     this.deleteTerm = this.deleteTerm.bind(this);
+    this.linkNewTermToTaxonomy = this.linkNewTermToTaxonomy.bind(this);
+    this.deleteTaxonomy = this.deleteTaxonomy.bind(this);
   }
 
   load() {
@@ -76,20 +79,21 @@ export default class Taxonomies extends React.Component {
     });
   }
 
-  loadItem(_id=null) {
+  async loadItem(_id=null) {
     if (_id===null) {
       this.setState({
         taxonomy: [],
         taxonomyLabel: '',
         taxonomyDescription: '',
+        taxonomyErrorVisible: false,
+        taxonomyErrorText: [],
       });
       return false;
     }
-    let context = this;
     let params = {
       _id: _id
     }
-    axios({
+    let taxonomy = await axios({
         method: 'get',
         url: APIPath+'taxonomy',
         crossDomain: true,
@@ -97,22 +101,24 @@ export default class Taxonomies extends React.Component {
       })
     .then(function (response) {
       let responseData = response.data.data;
-      let newLabel = "";
-      let newDescription = "";
-      if (responseData.label!==null) {
-        newLabel = responseData.label;
-      }
-      if (responseData.description!==null) {
-        newDescription = responseData.description;
-      }
-      context.setState({
-        taxonomy: responseData,
-        taxonomyLabel: newLabel,
-        taxonomyDescription: newDescription,
-      });
-      context.loadTermsTree(_id);
+      return responseData;
     })
     .catch(function (error) {
+    });
+
+    let newLabel = "";
+    let newDescription = "";
+    if (taxonomy.label!==null) {
+      newLabel = taxonomy.label;
+    }
+    if (taxonomy.description!==null) {
+      newDescription = taxonomy.description;
+    }
+    this.setState({
+      taxonomy: taxonomy,
+      taxonomyLabel: newLabel,
+      taxonomyDescription: newDescription,
+      taxonomyTerms: taxonomy.taxonomyterms
     });
   }
 
@@ -186,7 +192,7 @@ export default class Taxonomies extends React.Component {
                 <Label>Terms</Label>
                 {termsOutput}
                 <div className="footer-box">
-                  <Button size="sm" color="info" onClick={this.termModalToggle}>Add term <i className="fa fa-plus" /></Button>
+                  <Button size="sm" color="info" onClick={()=>this.termModalToggle()}>Add term <i className="fa fa-plus" /></Button>
                 </div>
               </FormGroup>
             </div>
@@ -204,7 +210,7 @@ export default class Taxonomies extends React.Component {
               </Form>
               <div className="footer-box">
                 <Button size="sm" type="button" onClick={this.formSubmit} color="info" outline>{this.state.taxonomySaveBtn}</Button>
-                <Button size="sm" className="pull-left" color="danger" outline><i className="fa fa-trash-o" /> Delete</Button>
+                <Button size="sm" className="pull-left" color="danger" outline onClick={this.deleteTaxonomy}><i className="fa fa-trash-o" /> Delete</Button>
               </div>
             </div>
           </div>
@@ -312,13 +318,13 @@ export default class Taxonomies extends React.Component {
       postData._id = this.state.taxonomy._id;
     }
     axios({
-        method: 'post',
-        url: APIPath+'taxonomy',
-        crossDomain: true,
-        data: postData,
-      })
+      method: 'put',
+      url: APIPath+'taxonomy',
+      crossDomain: true,
+      data: postData,
+    })
     .then(function (response) {
-      let responseData = response.data.data;
+      let responseData = response.data;
       if (responseData.status) {
         context.setState({
           taxonomySaving: false,
@@ -356,7 +362,7 @@ export default class Taxonomies extends React.Component {
     });
   }
 
-  editTermSubmit(e) {
+  async editTermSubmit(e) {
     e.preventDefault();
     let context = this;
     if (this.state.termSaving) {
@@ -408,55 +414,87 @@ export default class Taxonomies extends React.Component {
     if (this.state.termParentRef!=="") {
       postData.parentRef = this.state.termParentRef;
     }
-    axios({
-        method: 'post',
+    let putData = await axios({
+        method: 'put',
         url: APIPath+'taxonomy-term',
         crossDomain: true,
         data: postData,
       })
     .then(function (response) {
       let responseData = response.data.data;
-      if (responseData.status) {
-        context.setState({
-          termSaving: false,
-          termModalVisible: false,
-          termId: '',
-          termLabel: '',
-          termInverseLabel: '',
-          termScopeNote: '',
-          termParentRef: '',
-          updateTermBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
-        });
-        context.load();
-        context.loadItem(context.state.taxonomy._id);
-        setTimeout(function() {
-          context.setState({
-            updateTermBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },1000);
-      }
-      else {
-        let error = responseData.error;
-        let errorText = [];
-        for (let i=0; i<error.length; i++) {
-          errorText.push(<div key={i}>{error[i]}</div>);
-        }
-        context.setState({
-          termSaving: false,
-          updateTermBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-          errorVisible: true,
-          errorText: errorText
-        });
-        setTimeout(function() {
-          context.setState({
-            updateTermBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },2000);
-      }
-
+      return responseData;
     })
     .catch(function (error) {
     });
+    if (putData.status) {
+      this.setState({
+        termSaving: false,
+        termModalVisible: false,
+        termId: '',
+        termLabel: '',
+        termInverseLabel: '',
+        termScopeNote: '',
+        termParentRef: '',
+        updateTermBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
+      });
+      if (this.state.termId==="") {
+        await this.linkNewTermToTaxonomy(putData.data._id);
+      }
+      await this.load();
+      await this.loadItem(this.state.taxonomy._id);
+      setTimeout(function() {
+        context.setState({
+          updateTermBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },1000);
+    }
+    else {
+      let error = putData.error;
+      let errorText = [];
+      for (let i=0; i<error.length; i++) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        termSaving: false,
+        updateTermBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
+        errorVisible: true,
+        errorText: errorText
+      });
+      setTimeout(function() {
+        context.setState({
+          updateTermBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },2000);
+    }
+  }
+
+  async linkNewTermToTaxonomy(newTermId) {
+    let hasChildTerm = await axios({
+        method: 'get',
+        url: APIPath+'taxonomy-term',
+        crossDomain: true,
+        params: {labelId: "hasChild"},
+      })
+    .then( async(response) => {
+      let responseData = response.data;
+      if (responseData.status) {
+        return responseData.data;
+      }
+      else {
+        return responseData.error;
+      }
+    })
+    .catch(function (error) {
+    });
+    let newReference = {
+      items: [
+        {_id: this.state.taxonomy._id, type: "Taxonomy"},
+        {_id: newTermId, type: "TaxonomyTerm"}
+      ],
+      taxonomyTermId: hasChildTerm._id,
+    }
+    let addReference = await addGenericReference(newReference);
+    return addReference;
   }
 
   handleChange(e){
@@ -475,38 +513,11 @@ export default class Taxonomies extends React.Component {
   }
 
   termModalToggle(term=null) {
-    let visible = true;
-    if (this.state.termModalVisible) {
-      visible = false;
-    }
+    let visible = !this.state.termModalVisible;
     let updateState = {termModalVisible: visible};
     if (visible) {
       if (term!==null) {
-        let termId = "";
-        if (typeof term._id!=="undefined" && term._id!==null) {
-          termId = term._id;
-        }
-        let termLabel = "";
-        if (typeof term.label!=="undefined" && term.label!==null) {
-          termLabel = term.label;
-        }
-        let termInverseLabel = "";
-        if (typeof term.inverseLabel!=="undefined" && term.inverseLabel!==null) {
-          termInverseLabel = term.inverseLabel;
-        }
-        let scopeNote = "";
-        if (typeof term.scopeNote!=="undefined" && term.scopeNote!==null) {
-          scopeNote = term.scopeNote;
-        }
-        let parentRef = "";
-        if (typeof term.parentRef!=="undefined" && term.parentRef!==null) {
-          parentRef = term.parentRef;
-        }
-        updateState.termId = termId;
-        updateState.termLabel = termLabel;
-        updateState.termInverseLabel = termInverseLabel;
-        updateState.termScopeNote = scopeNote;
-        updateState.termParentRef = parentRef;
+        this.loadTerm(term);
       }
     }
     else {
@@ -515,10 +526,60 @@ export default class Taxonomies extends React.Component {
       updateState.termInverseLabel = '';
       updateState.termScopeNote = '';
       updateState.termParentRef = '';
+      updateState.termCount = 0;
     }
     updateState.taxonomyErrorVisible = false;
     updateState.taxonomyErrorText = [];
+    updateState.errorVisible = false;
+    updateState.errorText= "";
     this.setState(updateState);
+  }
+
+  loadTerm(term) {
+    let context = this;
+    let params = {
+      _id: term._id
+    }
+    axios({
+        method: 'get',
+        url: APIPath+'taxonomy-term',
+        crossDomain: true,
+        params: params,
+      })
+    .then(function (response) {
+      let responseTerm = response.data.data;
+      let termId = "";
+      if (typeof responseTerm._id!=="undefined" && responseTerm._id!==null) {
+        termId = responseTerm._id;
+      }
+      let termLabel = "";
+      if (typeof responseTerm.label!=="undefined" && responseTerm.label!==null) {
+        termLabel = responseTerm.label;
+      }
+      let termInverseLabel = "";
+      if (typeof responseTerm.inverseLabel!=="undefined" && responseTerm.inverseLabel!==null) {
+        termInverseLabel = responseTerm.inverseLabel;
+      }
+      let scopeNote = "";
+      if (typeof responseTerm.scopeNote!=="undefined" && responseTerm.scopeNote!==null) {
+        scopeNote = responseTerm.scopeNote;
+      }
+      let count = "";
+      if (typeof responseTerm.count!=="undefined" && responseTerm.count!==null) {
+        count = parseInt(responseTerm.count,10);
+      }
+      let parentRef = "";
+      context.setState({
+        termId: termId,
+        termLabel: termLabel,
+        termInverseLabel: termInverseLabel,
+        termScopeNote: scopeNote,
+        termParentRef: parentRef,
+        termCount: count,
+      });
+    })
+    .catch(function (error) {
+    });
   }
 
   deleteTerm(_id) {
@@ -528,23 +589,69 @@ export default class Taxonomies extends React.Component {
         method: 'delete',
         url: APIPath+'taxonomy-term',
         crossDomain: true,
-        params: params,
+        data: params,
       })
     .then(function (response) {
-      //let responseData = response.data.data;
-      context.setState({
-        termModalVisible: false,
-      });
-      context.load();
-      context.loadItem(context.state.taxonomy._id);
+      let responseData = response.data;
+      if (responseData.status) {
+        context.setState({
+          termModalVisible: false,
+        });
+        context.load();
+        context.loadItem(context.state.taxonomy._id);
+      }
+      else {
+        let error = responseData.error;
+        let errorText = [];
+        for (let i=0; i<error.length; i++) {
+          errorText.push(<div key={i}>{error[i]}</div>);
+        }
+        context.setState({
+          errorVisible: true,
+          errorText: errorText
+        });
+      }
     })
     .catch(function (error) {
     });
   }
 
+  async deleteTaxonomy() {
+    if (typeof this.state.taxonomy._id==="undefined" || this.state.taxonomy._id==="") {
+      return false;
+    }
+    let params = {_id: this.state.taxonomy._id}
+    let deleteTax = await axios({
+        method: 'delete',
+        url: APIPath+'taxonomy',
+        crossDomain: true,
+        data: params,
+      })
+    .then(function (response) {
+      let responseData = response.data;
+      return responseData;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+    if (deleteTax.status) {
+      this.load();
+    }
+    else {
+      let error = deleteTax.error;
+      let errorText = [];
+      for (let i=0; i<error.length; i++) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        taxonomyErrorVisible: true,
+        taxonomyErrorText: errorText
+      });
+    }
+  }
+
   componentDidMount() {
     this.load();
-    loadProgressBar();
   }
 
   render() {
@@ -572,7 +679,7 @@ export default class Taxonomies extends React.Component {
       let btnDelete = [];
       if (this.state.termId!=="") {
         modalTitle = "Edit term";
-        btnDelete = <Button color="danger" size="sm" outline onClick={() => this.deleteTerm(this.state.termId)}><i className="fa fa-trash-o" /> Delete</Button>
+        btnDelete = <Button color="danger" size="sm" outline onClick={() => this.deleteTerm(this.state.termId)} className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>
       }
 
       let errorContainerClass = " hidden";
@@ -589,10 +696,15 @@ export default class Taxonomies extends React.Component {
         scopeNoteValue = this.state.termScopeNote;
       }
 
+      let termCount = [];
+      if (this.state.termCount>0) {
+        termCount = <div className="text-right"><b>Relations count</b>: {this.state.termCount}</div>
+      }
       let addTermModal = <Modal isOpen={this.state.termModalVisible} toggle={this.termModalToggle} className={this.props.className}>
           <ModalHeader toggle={this.termModalToggle}>{modalTitle}</ModalHeader>
           <ModalBody>
             {errorContainer}
+            {termCount}
             <Form onSubmit={this.editTermSubmit}>
               <FormGroup>
                 <Label for="termLabelInput">Label</Label>
@@ -620,7 +732,6 @@ export default class Taxonomies extends React.Component {
           <ModalFooter>
             {btnDelete}
             <Button size="sm" color="info" outline onClick={this.editTermSubmit}>{this.state.updateTermBtn}</Button>
-            <Button size="sm" color="secondary" className="pull-left" onClick={this.termModalToggle}>Cancel</Button>
           </ModalFooter>
         </Modal>;
 

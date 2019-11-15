@@ -5,7 +5,6 @@ import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import ParseClassPieceToolbox from './right-sidebar-toolbox';
 import ContextualMenu from '../../components/parse-class-piece-contextual-menu';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -41,6 +40,8 @@ export default class ParseClassPieceThumbnails extends Component {
       linkinSelectionRect: {top:0, left:0, width:0, height:0, transform: 'translate: (0,0)'},
 
       draggableText: '',
+      dragover: false,
+      draggedElem: null,
       inputhonorificprefix: '',
       inputfirstname: '',
       inputmiddlename: '',
@@ -112,30 +113,28 @@ export default class ParseClassPieceThumbnails extends Component {
     this.toggleErrorModal = this.toggleErrorModal.bind(this);
   }
 
-  loadFile = () => {
+  loadFile = async() => {
     let fileName = this.props.match.params.fileName;
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'list-class-piece?file='+fileName,
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let file = responseData[0];
-        let fileOutput = <img src={file.fullsize} alt={file.name}
-          draggable="false" />;
-        context.setState({
-          fileInfo: file,
-          file: fileOutput,
-        });
-        context.loadFaces();
-        context.loadText();
-        context.loadSettings();
+    let file = await axios({
+      method: 'get',
+      url: APIPath+'list-class-piece?file='+fileName,
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      return response.data.data[0];
+	  })
+	  .catch(function (error) {
+	  });
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let fileOutput = <img src={file.compressed} alt={file.name}
+      draggable="false" />;
+    this.setState({
+      fileInfo: file,
+      file: fileOutput,
+    });
+    this.loadFaces();
+    this.loadText();
+    this.loadSettings();
   }
 
   loadFaces = () => {
@@ -173,25 +172,33 @@ export default class ParseClassPieceThumbnails extends Component {
   	  });
   }
 
-  loadText = () => {
+  loadText = async () => {
     let textFile = this.state.fileInfo.text;
-    let context = this;
-    axios({
-        method: 'get',
-        url: textFile,
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-
-        context.setState({
-          texts: responseData,
-          loading: false
-        });
-
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let texts = await axios({
+      method: 'get',
+      url: textFile,
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      let textData = response.data.lines;
+      let words = [];
+      for (let key in textData) {
+        let line = textData[key];
+        if (typeof line.words!=="undefined") {
+          for (let wordKey in line.words) {
+            let word = line.words[wordKey];
+            words.push(word);
+          }
+        }
+      }
+      return words;
+	  })
+	  .catch(function (error) {
+	  });
+    this.setState({
+      texts: texts,
+      loading: false
+    });
   }
 
   loadSettings = () => {
@@ -205,7 +212,7 @@ export default class ParseClassPieceThumbnails extends Component {
     })
   }
 
-  updateFaces = () => {
+  updateFaces = async() => {
     if (this.state.storeSelectionsStatus) {
       return false;
     }
@@ -213,34 +220,45 @@ export default class ParseClassPieceThumbnails extends Component {
       storeSelectionsStatus: true,
       storeSelectionsBtn: <span><i className="fa fa-save"></i> Storing selections... <Spinner size="sm" color="secondary" /></span>
     })
-    let context = this;
     let fileName = this.props.match.params.fileName;
     let postData = {
       file: fileName,
       faces: this.state.faces
     };
-    axios({
-        method: 'post',
-        url: APIPath+'update-class-piece-faces?file='+fileName,
-        crossDomain: true,
-        data: postData,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      })
-  	  .then(function (response) {
-        context.setState({
-          storeSelectionsStatus: false,
-          storeSelectionsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
-        })
-        setTimeout(function() {
-          context.setState({
-            storeSelectionsBtn: <span><i className="fa fa-save"></i> Store selections</span>
-          })
-        },2000)
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let update = await axios({
+      method: 'post',
+      url: APIPath+'update-class-piece-faces?file='+fileName,
+      crossDomain: true,
+      data: postData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    let stateUpdate = {};
+    if (update.status) {
+      stateUpdate = {
+        storeSelectionsStatus: false,
+        storeSelectionsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+      };
+    }
+    else {
+      stateUpdate = {
+        storeSelectionsStatus: false,
+        storeSelectionsBtn: <span><i className="fa fa-save"></i> Error <i className="fa fa-times"></i></span>
+      };
+    }
+    this.setState(stateUpdate);
+    let context = this;
+    setTimeout(()=>{
+      context.setState({
+        storeSelectionsBtn: <span><i className="fa fa-save"></i> Store selections</span>
+      });
+    },2000);
   }
 
   dragFace = (e,d,i) => {
@@ -248,31 +266,17 @@ export default class ParseClassPieceThumbnails extends Component {
     let currentFace = faces[i];
     let width = d.newWidth;
     let height = d.newHeight;
-
     let leftX = parseInt(d.x,10);
     let topY = parseInt(d.y,10);
+    let calcFaceRectangle = {
+      width: width,
+      height: height,
+      left: leftX,
+      top: topY,
+    }
 
-    let calcLeftX = leftX;
-    calcLeftX = parseInt(calcLeftX,10);
-    let calcRightX = calcLeftX + parseInt(width,10);
-    calcRightX = parseInt(calcRightX,10);
-    let calcTopY = topY;
-    calcTopY = parseInt(calcTopY,10);
-    let calcBottomY = calcTopY + parseInt(height,10);
-    calcBottomY = parseInt(calcBottomY,10);
-
-    let caltTl = {x: calcLeftX, y:calcTopY};
-    let calcTr = {x: calcRightX, y:calcTopY};
-    let calcBr = {x: calcRightX, y:calcBottomY};
-    let calcBl = {x: calcLeftX, y:calcBottomY};
-    let calcVertices = [];
-    calcVertices.push(caltTl);
-    calcVertices.push(calcTr);
-    calcVertices.push(calcBr);
-    calcVertices.push(calcBl);
-
-    let newFace = currentFace;
-    newFace.boundingPoly.vertices = calcVertices;
+    let newFace = Object.assign({}, currentFace);
+    newFace.faceRectangle = calcFaceRectangle;
     faces[i] = newFace;
     this.setState({
       faces: faces
@@ -284,27 +288,18 @@ export default class ParseClassPieceThumbnails extends Component {
     let currentFace = faces[i];
     let width = ref.style.width;
     let height = ref.style.height;
-
     let leftX = parseInt(position.x,10);
     let topY = parseInt(position.y,10);
-    let rightX = leftX + parseInt(width,10);
-    let bottomY = topY+ parseInt(height,10);
-    rightX = parseInt(rightX,10);
-    bottomY = parseInt(bottomY,10);
-
-    let caltTl = {x: leftX, y:topY};
-    let calcTr = {x: rightX, y:topY};
-    let calcBr = {x: rightX, y:bottomY};
-    let calcBl = {x: leftX, y:bottomY};
-    let calcVertices = [];
-    calcVertices.push(caltTl);
-    calcVertices.push(calcTr);
-    calcVertices.push(calcBr);
-    calcVertices.push(calcBl);
+    let calcFaceRectangle = {
+      width: width,
+      height: height,
+      left: leftX,
+      top: topY,
+    }
 
     let rotate = delta.degree;
-    let newFace = currentFace;
-    newFace.boundingPoly.vertices = calcVertices;
+    let newFace = Object.assign({}, currentFace);
+    newFace.faceRectangle = calcFaceRectangle;
     newFace.rotate = rotate;
     faces[i] = newFace;
     this.setState({
@@ -360,35 +355,46 @@ export default class ParseClassPieceThumbnails extends Component {
     }
   }
 
-  saveFacesThumbnails = () => {
+  saveFacesThumbnails = async () => {
     if (this.state.saveThumbnailsStatus) {
       return false;
     }
     this.setState({
       saveThumbnailsStatus: true,
       saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extracting thumbnails... <Spinner size="sm" color="secondary" /></span>
-    })
-    let context = this;
+    });
     let fileName = this.props.match.params.fileName;
-    axios({
+    let update = await axios({
       method: 'get',
       url: APIPath+'meta-parse-class-piece?file='+fileName,
       crossDomain: true,
     })
 	  .then(function (response) {
-      context.setState({
-        saveThumbnailsStatus: false,
-        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
-      })
-      context.loadFaces();
-      setTimeout(function() {
-        context.setState({
-          saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
-        })
-      },2000)
+      return response.data;
 	  })
 	  .catch(function (error) {
 	  });
+    let updateState = {};
+    if (update.status) {
+      updateState = {
+        saveThumbnailsStatus: false,
+        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+      };
+    }
+    else {
+      updateState = {
+        saveThumbnailsStatus: false,
+        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Error <i className="fa fa-times"></i></span>
+      };
+    }
+    this.setState(updateState);
+    this.loadFaces();
+    let context = this;
+    setTimeout(()=>{
+      context.setState({
+        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
+      })
+    },2000);
   }
 
   // linking
@@ -615,13 +621,17 @@ export default class ParseClassPieceThumbnails extends Component {
     let selectedFaces = [];
     for (let i=0; i<this.state.faces.length; i++) {
       let linkingFaceBox = this.state.faces[i];
-      let vertices = linkingFaceBox.boundingPoly.vertices;
+      let faceRectangle = linkingFaceBox.faceRectangle;
 
       // create css shape
-      let left = vertices[0].x;
-      let right = vertices[1].x;
-      let top = vertices[0].y;
-      let bottom = vertices[2].y;
+      let width = faceRectangle.width.replace("px", "");
+      width = parseInt(width,10);
+      let height = faceRectangle.height.replace("px", "");
+      height = parseInt(height,10);
+      let left = faceRectangle.left;
+      let top = faceRectangle.top;
+      let right = left+width;
+      let bottom = top+height;
 
       // normal selection
       let selectionWidth = selection.width;
@@ -663,13 +673,13 @@ export default class ParseClassPieceThumbnails extends Component {
     let selectedTexts = [];
     for (let j=0; j<this.state.texts.length; j++) {
       let linkingTextBox = this.state.texts[j];
-      let vertices = linkingTextBox.boundingPoly.vertices;
+      let boundingBox = linkingTextBox.boundingBox;
 
       // create css shape
-      let left = vertices[0].x;
-      let right = vertices[1].x;
-      let top = vertices[0].y;
-      let bottom = vertices[2].y;
+      let left = boundingBox[0];
+      let right = boundingBox[2];
+      let top = boundingBox[1];
+      let bottom = boundingBox[5];
 
       // normal selection
       let selectionWidth = selection.width;
@@ -701,7 +711,6 @@ export default class ParseClassPieceThumbnails extends Component {
         selectedTexts.push(j);
       }
     }
-
     return selectedTexts;
   }
 
@@ -715,6 +724,8 @@ export default class ParseClassPieceThumbnails extends Component {
   }
 
   dragStopText = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     let target = e.target.getAttribute("data-target");
     let targetText = this.state[target];
     let space = '';
@@ -723,10 +734,9 @@ export default class ParseClassPieceThumbnails extends Component {
     }
     let newTargetText = targetText+space+this.state.draggableText;
     this.setState({
-      [target]: newTargetText
+      [target]: newTargetText,
+      draggedElem:null
     })
-    e.preventDefault();
-    e.stopPropagation();
     return false;
   }
 
@@ -737,16 +747,19 @@ export default class ParseClassPieceThumbnails extends Component {
   }
 
   dragEnterText = (e) => {
-    this.setState({
-      dragover: true
-    });
     e.preventDefault();
     e.stopPropagation();
+    let target = e.target.getAttribute("data-target");
+    this.setState({
+      dragover: true,
+      draggedElem:target
+    });
   }
 
   dragLeaveText = (e) => {
     this.setState({
-      dragover: false
+      dragover: false,
+      draggedElem:null
     });
     e.preventDefault();
     return false;
@@ -961,7 +974,6 @@ export default class ParseClassPieceThumbnails extends Component {
   }
 
   componentDidMount() {
-    loadProgressBar();
     this.loadFile();
     window.addEventListener('keydown', this.startSelection);
     window.addEventListener('keyup', this.endSelection);
@@ -1016,24 +1028,17 @@ export default class ParseClassPieceThumbnails extends Component {
       let selectionsFaceBoxes = [];
       for (let sf=0; sf<this.state.faces.length; sf++) {
         let face = this.state.faces[sf];
-        let vertices = face.boundingPoly.vertices;
-        // create css shape
-        let left = vertices[0].x;
-        let top = vertices[0].y;
-        let width = parseInt(vertices[1].x,10) - parseInt(vertices[0].x,10);
-        width = parseInt(width,10);
-        let height = parseInt(vertices[2].y,10) - parseInt(vertices[1].y,10);
-        height = parseInt(height,10);
+        let rectangle = face.faceRectangle;
         let rotate = 0;
         if (typeof face.rotate!=="undefined") {
           rotate = face.rotate;
         }
 
         let defaultValues = {
-          x: left,
-          y: top,
-          width: width,
-          height: height,
+          x: rectangle.left,
+          y: rectangle.top,
+          width: rectangle.width,
+          height: rectangle.height,
           degree: rotate,
         }
         let hasThumbnailClass = "";
@@ -1057,20 +1062,18 @@ export default class ParseClassPieceThumbnails extends Component {
       let selectionsTextBoxes = [];
       for (let st=0; st<this.state.texts.length; st++) {
         let text = this.state.texts[st];
-        let vertices = text.boundingPoly.vertices;
+        let boundingBox = text.boundingBox;
 
+        let textLeft = boundingBox[0];
+        let textTop = boundingBox[1];
+        let textWidth = boundingBox[2]-boundingBox[0];
+        let textHeight = boundingBox[5] - boundingBox[1];
         // create css shape
-        let left = vertices[0].x;
-        let top = vertices[0].y;
-        let width = parseInt(vertices[1].x,10) - parseInt(vertices[0].x,10);
-        width = parseInt(width,10);
-        let height = parseInt(vertices[2].y,10) - parseInt(vertices[1].y,10);
-        height = parseInt(height,10);
         let boxStyle = {
-          'left': left,
-          'top': top,
-          'width': width,
-          'height': height,
+          left: textLeft,
+          top: textTop,
+          width: textWidth,
+          height: textHeight,
         }
         let newTextBox = <div key={st} className="textbox" style={boxStyle}></div>;
         selectionsTextBoxes.push(newTextBox);
@@ -1080,25 +1083,19 @@ export default class ParseClassPieceThumbnails extends Component {
       let linkingFaceBoxesOutput = [];
       for (let lf=0; lf<this.state.faces.length; lf++) {
         let linkingFaceBox = this.state.faces[lf];
-        let vertices = linkingFaceBox.boundingPoly.vertices;
+        let rectangle = linkingFaceBox.faceRectangle;
 
         // create css shape
-        let left = vertices[0].x;
-        let top = vertices[0].y;
-        let width = parseInt(vertices[1].x,10) - parseInt(vertices[0].x,10);
-        width = parseInt(width,10);
-        let height = parseInt(vertices[2].y,10) - parseInt(vertices[1].y,10);
-        height = parseInt(height,10);
 
         let rotate = 0;
         if (typeof linkingFaceBox.rotate!=="undefined") {
           rotate = linkingFaceBox.rotate;
         }
         let defaultValues = {
-          left: left,
-          top: top,
-          width: width,
-          height: height,
+          left: rectangle.left,
+          top: rectangle.top,
+          width: rectangle.width,
+          height: rectangle.height,
         }
         if (rotate!==0) {
           defaultValues.transform = "rotate("+rotate+"deg)";
@@ -1130,20 +1127,18 @@ export default class ParseClassPieceThumbnails extends Component {
       let linkingTextBoxesOutput = [];
       for (let lt=0; lt<this.state.texts.length; lt++) {
         let linkingTextBox = this.state.texts[lt];
-        let vertices = linkingTextBox.boundingPoly.vertices;
+        let boundingBox = linkingTextBox.boundingBox;
 
+        let textLeft = boundingBox[0];
+        let textTop = boundingBox[1];
+        let textWidth = boundingBox[2]-boundingBox[0];
+        let textHeight = boundingBox[5] - boundingBox[1];
         // create css shape
-        let left = vertices[0].x;
-        let top = vertices[0].y;
-        let width = parseInt(vertices[1].x,10) - parseInt(vertices[0].x,10);
-        width = parseInt(width,10);
-        let height = parseInt(vertices[2].y,10) - parseInt(vertices[1].y,10);
-        height = parseInt(height,10);
         let boxStyle = {
-          'left': left,
-          'top': top,
-          'width': width,
-          'height': height,
+          left: textLeft,
+          top: textTop,
+          width: textWidth,
+          height: textHeight,
         }
 
         let activeLinkingTextbox = "";
@@ -1180,6 +1175,23 @@ export default class ParseClassPieceThumbnails extends Component {
       </div>
     }
 
+    let honorificPrefixActive="",firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="";
+    if (this.state.draggedElem==="inputhonorificprefix") {
+      honorificPrefixActive = "active";
+    }
+    if (this.state.draggedElem==="inputfirstname") {
+      firstNameActive = "active";
+    }
+    if (this.state.draggedElem==="inputmiddlename") {
+      middleNameActive = "active";
+    }
+    if (this.state.draggedElem==="inputlastname") {
+      lastNameActive = "active";
+    }
+    if (this.state.draggedElem==="inputdiocese") {
+      dioceseActive = "active";
+    }
+
     let selectedThumbnail = "";
     let thumbnailText = [];
     if (this.state.selectionFaces!==null) {
@@ -1193,8 +1205,8 @@ export default class ParseClassPieceThumbnails extends Component {
 
     }
     for (let tt=0;tt<this.state.selectionText.length; tt++) {
-      let textItem = this.state.selectionText[tt];
-      let textChunk = this.state.texts[textItem].description;
+      let textItem = this.state.selectionText[tt]
+      let textChunk = this.state.texts[textItem].text;
       let textBox = <div
         draggable="true"
         onDragStart={this.startDragText.bind(this)}
@@ -1267,6 +1279,7 @@ export default class ParseClassPieceThumbnails extends Component {
                   <div className="form-group">
                     <label>Honorific Prefix</label>
                     <input
+                      className={"form-control "+honorificPrefixActive}
                       onChange={this.handleChange}
                       value={this.state.inputhonorificprefix}
                       data-target="inputhonorificprefix"
@@ -1274,11 +1287,12 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragEnter={this.dragEnterText.bind(this)}
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" className="form-control" name="inputhonorificprefix" />
+                      type="text" name="inputhonorificprefix" />
                   </div>
                   <div className="form-group">
                     <label>First Name</label>
                     <input
+                      className={"form-control "+firstNameActive}
                       onChange={this.handleChange}
                       value={this.state.inputfirstname}
                       data-target="inputfirstname"
@@ -1286,12 +1300,13 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragEnter={this.dragEnterText.bind(this)}
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" className="form-control" name="inputfirstname" />
+                      type="text" name="inputfirstname" />
                   </div>
 
                   <div className="form-group">
                     <label>Middle Name</label>
                     <input
+                      className={"form-control "+middleNameActive}
                       onChange={this.handleChange}
                       value={this.state.inputmiddlename}
                       data-target="inputmiddlename"
@@ -1299,11 +1314,12 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragEnter={this.dragEnterText.bind(this)}
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" className="form-control" name="inputmiddlename" />
+                      type="text" name="inputmiddlename" />
                   </div>
                   <div className="form-group">
                     <label>Last Name</label>
                     <input
+                      className={"form-control "+lastNameActive}
                       onChange={this.handleChange}
                       value={this.state.inputlastname}
                       data-target="inputlastname"
@@ -1311,11 +1327,12 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragEnter={this.dragEnterText.bind(this)}
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" className="form-control" name="inputlastname" />
+                      type="text" name="inputlastname" />
                   </div>
                   <div className="form-group">
                     <label>Diocese</label>
                     <input
+                      className={"form-control "+dioceseActive}
                       onChange={this.handleChange}
                       value={this.state.inputdiocese}
                       data-target="inputdiocese"
@@ -1323,7 +1340,7 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragEnter={this.dragEnterText.bind(this)}
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" className="form-control" name="inputdiocese" />
+                      type="text" name="inputdiocese" />
                   </div>
                   <div className="form-group">
                     <label>Type</label>

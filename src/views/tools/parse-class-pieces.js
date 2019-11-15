@@ -5,7 +5,6 @@ import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -68,59 +67,53 @@ export default class ParseClassPieces extends Component {
     this.setState({selectedClassPiece:file});
   }
 
-  updateThumbnails(src) {
+  async updateThumbnails(src) {
     if (this.state.importStatus) {
       return false;
     }
-    if (src===0) {
-      this.setState({
-        updateThumbnailsText: <span><i>Importing...</i> <Spinner color="secondary" size="sm" /></span>,
-        importStatus: true
-      });
-    }
-    if (src===1) {
-      this.setState({
-        updateThumbnailsText1: <span><i>Importing...</i> <Spinner color="secondary" size="md" /></span>,
-        importStatus: true
-      });
-    }
+    this.setState({
+      updateThumbnailsText: <span><i>Importing...</i> <Spinner color="secondary" size="sm" /></span>,
+      importStatus: true
+    });
 
-    let context = this;
-    axios({
+    let updateThumbs = await axios({
         method: 'get',
         url: APIPath+'create-thumbnails',
         crossDomain: true,
       })
-  	  .then(function (response) {
-        context.loadFiles();
-        if (src===0) {
-          context.setState({
-            updateThumbnailsText: <span>Import complete <i className="fa fa-check"></i></span>,
-          });
-          setTimeout(function() {
-            context.setState({
-              updateThumbnailsText: <span>Import files</span>,
-            });
-          },2000);
-        }
-        if (src===1) {
-          context.setState({
-            updateThumbnailsText1: <span>Import complete <i className="fa fa-check"></i></span>,
-          });
-          setTimeout(function() {
-            context.setState({
-              updateThumbnailsText1: <span>Import files</span>,
-            });
-          },2000);
-        }
-
-  	  })
-  	  .catch(function (error) {
-  	  });
+	  .then(function (response) {
+      return response;
+	  })
+	  .catch(function (error) {
+	  });
+    if(updateThumbs.data.status) {
+      this.loadFiles();
+      this.setState({
+        updateThumbnailsText: <span>Import complete <i className="fa fa-check"></i></span>,
+        importStatus: false
+      });
+      let context = this;
+      setTimeout(function() {
+        context.setState({
+          updateThumbnailsText: <span>Import files</span>,
+        });
+      },2000);
+    }
+    else {
+      this.setState({
+        updateThumbnailsText: <span>Import error <i className="fa fa-times"></i></span>,
+        importStatus: false
+      });
+      let context = this;
+      setTimeout(function() {
+        context.setState({
+          updateThumbnailsText: <span>Import files</span>,
+        });
+      },2000);
+    }
   }
 
   componentDidMount() {
-    loadProgressBar();
     this.loadFiles();
   }
 
@@ -152,7 +145,7 @@ export default class ParseClassPieces extends Component {
           <div className="row">
             <div className="col-xs-12 col-sm-8"></div>
             <div className="col-xs-12 col-sm-4">
-              <button type="button" className="btn btn-light"  onClick={this.updateThumbnails.bind(this,0)}>{this.state.updateThumbnailsText}</button>
+              <button type="button" className="btn btn-light"  onClick={()=>this.updateThumbnails()}>{this.state.updateThumbnailsText}</button>
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import PageActions from '../components/page-actions';
-import {getPersonThumbnailURL} from '../helpers/helpers'
+import {getThumbnailURL} from '../helpers/helpers';
 import BatchActions from '../components/add-batch-relations'
 
 import {connect} from "react-redux";
@@ -356,7 +356,7 @@ class People extends Component {
       }
 
       let thumbnailImage = [];
-      let thumbnailURL = getPersonThumbnailURL(person);
+      let thumbnailURL = getThumbnailURL(person);
       if (thumbnailURL!==null) {
         thumbnailImage = <img src={thumbnailURL} className="people-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
@@ -534,7 +534,7 @@ class People extends Component {
                 <Table hover className="people-table">
                   <thead>
                     <tr>
-                      <th>
+                      <th style={{width: "30px"}}>
                         <div className="select-checkbox-container default">
                           <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
@@ -544,7 +544,7 @@ class People extends Component {
                       <th>Thumbnail</th>
                       <th>First Name</th>
                       <th>Last Name</th>
-                      <th style={{width: '40px'}}></th>
+                      <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
                   <tbody>

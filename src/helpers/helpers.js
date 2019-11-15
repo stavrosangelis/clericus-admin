@@ -1,17 +1,23 @@
 import axios from 'axios';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 const domain = process.env.REACT_APP_DOMAIN;
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export const getPersonThumbnailURL = (person) => {
-  if (person===null || typeof person.resources==="undefined" || person.resources.length===0) {
+export const getThumbnailURL = (item) => {
+  if (item===null || typeof item.resources==="undefined" || item.resources.length===0) {
     return null;
   }
-  let thumbnailResource = person.resources.filter((item)=>{return (item.refLabel==="hasRepresentationObject")});
+  let thumbnailResource = item.resources.filter((item)=>{return (item.term.label==="hasRepresentationObject")});
   let thumbnailPath = null;
   if (typeof thumbnailResource[0]!=="undefined") {
     if (typeof thumbnailResource[0].ref.paths!=="undefined") {
+
       let thumbnailPaths = thumbnailResource[0].ref.paths;
+      if (typeof thumbnailResource[0].ref.paths[0]==="string") {
+        thumbnailPaths = thumbnailResource[0].ref.paths.map(path=>JSON.parse(path));
+      }
       let thumbnailPathFilter = thumbnailPaths.filter((item)=>{return (item.pathType==="thumbnail")});
       thumbnailPath = domain+"/"+thumbnailPathFilter[0].path;
     }
@@ -31,8 +37,15 @@ export const getPersonLabel = (person) => {
 }
 
 export const getResourceThumbnailURL = (resource) => {
-  if (resource===null || typeof resource.paths==="undefined") {
+  if (resource===null || typeof resource.paths==="undefined" || resource.paths===null) {
     return null;
+  }
+  if(typeof resource.paths[0].path==="undefined") {
+    let parsedPaths = resource.paths.map(path=>{
+      let newPath = JSON.parse(path);
+      return newPath;
+    });
+    resource.paths = parsedPaths;
   }
   let thumbnail = resource.paths.filter((item)=>{return (item.pathType==="thumbnail")});
   let thumbnailPath = null;
@@ -85,7 +98,7 @@ export const getEventThumbnailURL = (item) => {
 export const addGenericReference = (reference) => {
   return new Promise((resolve, reject) => {
     axios({
-        method: 'post',
+        method: 'put',
         url: APIPath+'reference',
         crossDomain: true,
         data: reference
@@ -100,17 +113,12 @@ export const addGenericReference = (reference) => {
 
 export const refTypesList = (refTypes) => {
   let options = [];
-  let _ids = [];
   for (let i=0;i<refTypes.length;i++) {
     let option = refTypes[i];
     let label = option.term.label;
-    if (option.direction==="to") {
-      label = option.term.inverseLabel;
+    if (options.indexOf(label)<0) {
+      options.push({value: label, label: label});
     }
-    if (_ids.indexOf(option.term._id)<0) {
-      options.push({value: option.term._id, label: label});
-    }
-    _ids.push(option.term._id);
   };
   return options;
 }
@@ -119,8 +127,8 @@ export const parseReferenceLabels = (properties) => {
   let referenceLabels = [];
   for (let i=0;i<properties.length; i++) {
     let property = properties[i];
-    if (referenceLabels.indexOf(property.entityRef.labelId===-1)) {
-      referenceLabels.push(property.entityRef.labelId);
+    if (referenceLabels.indexOf(property.entityRef.label)===-1) {
+      referenceLabels.push(property.entityRef.label);
     }
   }
   return referenceLabels;
@@ -133,16 +141,16 @@ export const parseReferenceTypes = (properties) => {
   let referenceTypesResource = [];
   for (let i=0;i<properties.length; i++) {
     let property = properties[i];
-    if (property.entityRef.labelId==="Event") {
+    if (property.entityRef.label==="Event") {
       referenceTypesEvent.push(property);
     }
-    if (property.entityRef.labelId==="Organisation") {
+    if (property.entityRef.label==="Organisation") {
       referenceTypesOrganisation.push(property);
     }
-    if (property.entityRef.labelId==="Person") {
+    if (property.entityRef.label==="Person") {
       referenceTypesPerson.push(property);
     }
-    if (property.entityRef.labelId==="Resource") {
+    if (property.entityRef.label==="Resource") {
       referenceTypesResource.push(property);
     }
   }
@@ -153,4 +161,102 @@ export const parseReferenceTypes = (properties) => {
     resource: referenceTypesResource,
   }
   return referenceTypes;
+}
+
+export const loadRelatedEvents = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.events==="undefined") {
+    return [];
+  }
+  let references = item.events;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let label = reference.ref.label;
+      let newRow = <div key={i} className="ref-item">
+        <Link to={"/event/"+reference.ref._id} href={"/event/"+reference.ref._id}>
+          <i>{reference.term.label}</i> <b>{label}</b>
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Event")}><i className="fa fa-times" /></div>
+      </div>
+      output.push(newRow);
+    }
+  }
+  return output;
+}
+
+export const loadRelatedOrganisations = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.events==="undefined") {
+    return [];
+  }
+  let references = item.organisations;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let label = reference.ref.label;
+
+      let newRow = <div key={i} className="ref-item">
+        <Link to={"/organisation/"+reference.ref._id} href={"/organisation/"+reference.ref._id}>
+          <i>{reference.term.label}</i> <b>{label}</b>
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Organisation")}><i className="fa fa-times" /></div>
+      </div>
+      output.push(newRow);
+    }
+  }
+  return output;
+}
+
+export const loadRelatedPeople = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.events==="undefined") {
+    return [];
+  }
+  let references = item.people;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let label = reference.ref.firstName;
+      if (reference.ref.lastName!=="") {
+        label+= " "+reference.ref.lastName
+      }
+      let newRow = <div key={i} className="ref-item">
+        <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
+          <i>{reference.term.label}</i> <b>{label}</b>
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Person")}><i className="fa fa-times" /></div>
+      </div>
+      output.push(newRow);
+    }
+  }
+  return output;
+}
+
+export const loadRelatedResources = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.events==="undefined") {
+    return [];
+  }
+  let references = item.resources;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let thumbnailPath = getResourceThumbnailURL(reference.ref);
+      let thumbnailImage = [];
+      if (thumbnailPath!==null) {
+        thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
+      }
+      let newRow = <div key={i} className="img-thumbnail related-resource">
+          <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
+            <i>{reference.term.label}</i>
+            {thumbnailImage}
+            <label>{reference.ref.label}</label>
+          </Link>
+          <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Resource")}><i className="fa fa-times" /></div>
+        </div>
+      output.push(newRow);
+    }
+  }
+  return output;
 }

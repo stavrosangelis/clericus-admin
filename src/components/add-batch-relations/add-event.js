@@ -264,10 +264,10 @@ export default class AddEvent extends Component {
       let newReferences = this.props.items.map(item=> {
         let newReference = {
           items: [
+            {_id: item._id, type: this.props.type},
             {_id: this.state.selectedEvent, type: "Event"},
-            {_id: item._id, type: this.props.type}
           ],
-          taxonomyTermId: this.state.refType.value,
+          taxonomyTermLabel: this.state.refType.value,
         }
         return newReference;
       });
@@ -278,7 +278,7 @@ export default class AddEvent extends Component {
   postReferences(references) {
     return new Promise((resolve, reject) => {
       axios({
-          method: 'post',
+          method: 'put',
           url: APIPath+'references',
           crossDomain: true,
           data: references

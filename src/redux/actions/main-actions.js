@@ -156,41 +156,54 @@ export function setPaginationParams(type,params) {
 
 export function getSystemTypes() {
   return (dispatch,getState) => {
+    let params = {
+      systemType: "resourceSystemTypes"
+    }
     axios({
       method: 'get',
-      url: APIPath+'resource-system-types',
+      url: APIPath+'taxonomy',
       crossDomain: true,
+      params: params,
     })
-	  .then(function (response) {
+    .then(function (response) {
       let responseData = response.data;
       if (responseData.status) {
+        let systemTypes = responseData.data.taxonomyterms;
         let payload ={
-          systemTypes: responseData.data,
+          systemTypes: systemTypes,
         };
         dispatch({
           type: GENERIC_UPDATE,
           payload: payload
         });
       }
-	  })
-	  .catch(function (error) {
+      else {
+        return false;
+      }
+    })
+    .catch(function (error) {
       console.log(error)
-	  });
+    });
+
   }
 }
 
 export function getPeopleRoles() {
   return (dispatch,getState) => {
+    let params = {
+      systemType: "peopleRoles"
+    }
     axios({
       method: 'get',
-      url: APIPath+'people-roles',
+      url: APIPath+'taxonomy',
       crossDomain: true,
+      params: params
     })
 	  .then(function (response) {
       let responseData = response.data;
       if (responseData.status) {
         let payload ={
-          peopleRoles: responseData.data,
+          peopleRoles: responseData.data.taxonomyterms,
         };
         dispatch({
           type: GENERIC_UPDATE,
@@ -210,7 +223,6 @@ export function loadDefaultEntities() {
     let organisationEntity = await loadEntityProperties("Organisation");
     let personEntity = await loadEntityProperties("Person");
     let resourceEntity = await loadEntityProperties("Resource");
-
     let payload = {
       entitiesLoaded: true,
       eventEntity: eventEntity,

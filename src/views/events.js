@@ -10,7 +10,6 @@ import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import PageActions from '../components/page-actions';
 import {getEventThumbnailURL} from '../helpers/helpers'
 
@@ -274,7 +273,6 @@ export default class Events extends Component {
   }
 
   componentDidMount() {
-    loadProgressBar();
     this.load();
   }
 

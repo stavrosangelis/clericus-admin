@@ -1,7 +1,13 @@
 import React, { Component } from 'react';
 import { Card, CardTitle, CardBody, Button, ButtonGroup, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
-import { Link } from 'react-router-dom';
-import {getPersonThumbnailURL,getPersonLabel,getResourceThumbnailURL} from '../helpers/helpers';
+import {
+  getThumbnailURL,
+  getPersonLabel,
+  loadRelatedEvents,
+  loadRelatedOrganisations,
+  loadRelatedPeople,
+  loadRelatedResources
+} from '../helpers/helpers';
 import axios from 'axios';
 import PersonAppelations from './person-alternate-appelations.js';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -61,10 +67,6 @@ export default class ViewPerson extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
-    this.relatedEvents = this.relatedEvents.bind(this);
-    this.relatedOrganisations = this.relatedOrganisations.bind(this);
-    this.relatedPeople = this.relatedPeople.bind(this);
-    this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
     this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
@@ -147,111 +149,6 @@ export default class ViewPerson extends Component {
     return items;
   }
 
-  relatedEvents() {
-    if (this.props.person===null || this.props.person.length===0) {
-      return [];
-    }
-    let references = this.props.person.events;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.label;
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/event/"+reference.ref._id} href={"/event/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Event")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedOrganisations() {
-    if (this.props.person===null || this.props.person.length===0) {
-      return [];
-    }
-    let references = this.props.person.organisations;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.label;
-
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/organisation/"+reference.ref._id} href={"/organisation/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Organisation")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedPeople() {
-    if (this.props.person===null || this.props.person.length===0) {
-      return [];
-    }
-    let references = this.props.person.people;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let label = reference.ref.firstName;
-        if (reference.ref.lastName!=="") {
-          label+= " "+reference.ref.lastName
-        }
-        let newRow = <div key={i} className="ref-item">
-          <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
-            <i>{reference.refLabel}</i> <b>{label}</b>
-          </Link>
-          <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Person")}><i className="fa fa-times" /></div>
-        </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
-  relatedResources() {
-    if (this.props.person===null || this.props.person.length===0) {
-      return [];
-    }
-    let references = this.props.person.resources;
-    let output = [];
-    for (let i=0;i<references.length; i++) {
-      let reference = references[i];
-      if (reference.ref!==null) {
-        let thumbnailPath = getResourceThumbnailURL(reference.ref);
-        let thumbnailImage = [];
-        if (thumbnailPath!==null) {
-          thumbnailImage = <div>
-            <img src={thumbnailPath} alt={reference.ref.label} className="img-fluid"/>
-            <label>{reference.ref.label}</label>
-          </div>
-        }
-        let relRoleText = "";
-        if (typeof reference.refRole!=="undefined" && reference.refRole!==null) {
-          relRoleText = <i>as {reference.refRole.label}</i>
-        }
-        let newRow = <div key={i} className="img-thumbnail related-resource">
-            <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
-              <i>{reference.refLabel}</i>
-              {thumbnailImage}
-              {relRoleText}
-            </Link>
-            <div className="delete-ref" onClick={()=>this.deleteRef(reference.ref._id, reference.refTerm, "Resource")}><i className="fa fa-times" /></div>
-          </div>
-        output.push(newRow);
-      }
-    }
-    return output;
-  }
-
   toggleCollapse(name) {
     let value = true;
     if (this.state[name]==="undefined" || this.state[name]) {
@@ -269,13 +166,13 @@ export default class ViewPerson extends Component {
         {_id: this.props.person._id, type: "Person"},
         {_id: ref, type: model}
       ],
-      taxonomyTermId: refTerm,
+      taxonomyTermLabel: refTerm,
     }
     axios({
       method: 'delete',
       url: APIPath+'reference',
       crossDomain: true,
-      params: params
+      data: params
     })
 	  .then(function (response) {
       context.props.reload();
@@ -367,10 +264,10 @@ export default class ViewPerson extends Component {
     }
 
     let metadataItems = this.parseMetadata();
-    let relatedEvents = this.relatedEvents();
-    let relatedOrganisations = this.relatedOrganisations();
-    let relatedPeople = this.relatedPeople();
-    let relatedResources = this.relatedResources();
+    let relatedEvents = loadRelatedEvents(this.props.person, this.deleteRef);
+    let relatedOrganisations = loadRelatedOrganisations(this.props.person, this.deleteRef);
+    let relatedPeople = loadRelatedPeople(this.props.person, this.deleteRef);
+    let relatedResources = loadRelatedResources(this.props.person, this.deleteRef);
 
     let metadataCard = " hidden";
     if (metadataItems.length>0) {
@@ -394,7 +291,7 @@ export default class ViewPerson extends Component {
       relatedResourcesCard = "";
     }
     let thumbnailImage = [];
-    let thumbnailURL = getPersonThumbnailURL(this.props.person);
+    let thumbnailURL = getThumbnailURL(this.props.person);
     if (thumbnailURL!==null) {
       thumbnailImage = <img src={thumbnailURL} className="img-fluid img-thumbnail" alt={getPersonLabel(this.props.person)} />
     }

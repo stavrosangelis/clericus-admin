@@ -47,8 +47,7 @@ export default class PageActions extends Component {
     let defaultRow = advancedSearchRows.find(el=>el._id==='default');
     let defaultRowIndex = advancedSearchRows.indexOf(defaultRow);
     let newRow = {_id: newId, select: defaultRow.select, input: defaultRow.input, default: false};
-
-    defaultRow.select = '';
+    defaultRow.select = this.props.searchElements[0].element;
     defaultRow.input = '';
     advancedSearchRows[defaultRowIndex] = defaultRow;
     advancedSearchRows.push(newRow);

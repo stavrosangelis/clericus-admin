@@ -90,7 +90,6 @@ class Organisation extends Component {
           reload: false,
           organisation: organisation
         });
-
   	  })
   	  .catch(function (error) {
         console.log(error)
@@ -161,7 +160,7 @@ class Organisation extends Component {
     if (isValid) {
       let context = this;
       axios({
-        method: 'post',
+        method: 'put',
         url: APIPath+'organisation',
         crossDomain: true,
         data: postData

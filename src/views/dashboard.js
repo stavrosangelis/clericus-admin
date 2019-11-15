@@ -1,6 +1,5 @@
 import React from "react";
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -44,7 +43,6 @@ class Dashboard extends React.Component {
 
   componentDidMount() {
     this.loadDashboard();
-    loadProgressBar();
   }
 
   render() {

@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import {Spinner,Collapse, Button, Modal, ModalHeader, ModalBody, ModalFooter} from 'reactstrap';
 import axios from 'axios';
-import {loadProgressBar} from 'axios-progress-bar';
 import ImportToDBToolbox from './right-sidebar-import-to-db';
 import {Breadcrumbs} from '../../components/breadcrumbs';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -112,10 +111,11 @@ export default class ImportClassPieceToDB extends Component {
       let stateUpdate = {
         loading: false,
         data: newData,
-        dbClasspiece: responseData.dbClasspiece,
+        dbClasspiece: responseData.db_classpiece,
         collapseRelations: collapseRelations
       }
-      if (responseData.dbClasspiece!==null) {
+
+      if (responseData.db_classpiece!==null && responseData.db_classpiece!==0 && responseData.db_classpiece!=="0") {
         stateUpdate.importSelectedBtn = <span>Re-import selected</span>;
       }
       context.setState(stateUpdate);
@@ -125,7 +125,7 @@ export default class ImportClassPieceToDB extends Component {
     });
   }
 
-  identifyDuplicates = () => {
+  identifyDuplicates = async () => {
     let context = this;
     if (this.state.identifyDuplicatesStatus) {
       return false;
@@ -134,42 +134,39 @@ export default class ImportClassPieceToDB extends Component {
       identifyDuplicatesBtn: <span><i>Identifying...</i> <Spinner color="secondary" size="sm" /></span>,
       identifyDuplicatesStatus: true
     });
-    axios({
-      method: 'post',
+    let newFaces = await axios({
+      method: 'put',
       url: APIPath+'prepare-classpiece-identify-duplicates',
       crossDomain: true,
-      data: {faces: this.state.data.faces},
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
+      data: {faces: JSON.stringify(this.state.data.faces)},
     })
 	  .then(function (response) {
-      let newFaces = response.data.data;
-      let stateData = context.state.data;
-      for (let i=0; i<newFaces.length; i++) {
-        let newFace = newFaces[i];
-        if (typeof newFace.matches!=="undefined" && newFace.matches.length>0) {
-          let matches = newFace.matches;
-          matches.sort(function (a,b) {
-            return b.score - a.score;
-          });
-        }
-      }
-      stateData.faces = newFaces;
-      context.setState({
-        data: stateData,
-        identifyDuplicatesStatus: false,
-        identifyDuplicatesBtn: <span>Identification complete <i className="fa fa-check"></i></span>
-      });
-
-      setTimeout(function() {
-        context.setState({
-          identifyDuplicatesBtn: <span>Identify possible duplicates</span>
-        });
-      },2000)
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    let stateData = this.state.data;
+    for (let i=0; i<newFaces.length; i++) {
+      let newFace = newFaces[i];
+      if (typeof newFace.matches!=="undefined" && newFace.matches.length>0) {
+        let matches = newFace.matches;
+        matches.sort(function (a,b) {
+          return b.score - a.score;
+        });
+      }
+    }
+    stateData.faces = newFaces;
+    this.setState({
+      data: stateData,
+      identifyDuplicatesStatus: false,
+      identifyDuplicatesBtn: <span>Identification complete <i className="fa fa-check"></i></span>
+    });
+
+    setTimeout(function() {
+      context.setState({
+        identifyDuplicatesBtn: <span>Identify possible duplicates</span>
+      });
+    },2000)
   }
 
   selectAll = () => {
@@ -489,7 +486,7 @@ export default class ImportClassPieceToDB extends Component {
 
   }
 
-  importSelected = (e) => {
+  importSelected = async (e) => {
     if (this.state.importSelectedStatus) {
       return false;
     }
@@ -516,17 +513,19 @@ export default class ImportClassPieceToDB extends Component {
     postData.faces = checkedFaces;
 
     let context = this;
-    axios({
-        method: 'post',
+    let ingestData = await axios({
+        method: 'put',
         url: APIPath+'ingest-classpiece',
         crossDomain: true,
-        data: postData,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        data: {data:JSON.stringify(postData)},
       })
     .then(function (response) {
-      context.setState({
+      return response.data;
+    })
+    .catch(function (error) {
+    });
+    if (ingestData.status) {
+      this.setState({
         importSelectedStatus: false,
         importSelectedBtn: <span>Import complete <i className="fa fa-check"></i></span>
       });
@@ -535,11 +534,8 @@ export default class ImportClassPieceToDB extends Component {
         context.setState({
           importSelectedBtn: <span>Import selected</span>
         });
-      },2000)
-
-    })
-    .catch(function (error) {
-    });
+      },2000);
+    }
 
   }
 
@@ -550,7 +546,6 @@ export default class ImportClassPieceToDB extends Component {
   }
 
   componentDidMount() {
-    loadProgressBar();
     this.loadStatus();
   }
 
@@ -575,7 +570,7 @@ export default class ImportClassPieceToDB extends Component {
       for (let i=0; i<faces.length; i++) {
         let face = faces[i];
         let rotate = [];
-        if (typeof face.default.rotate!=="undefined" && face.default.rotate!==0) {
+        if (typeof face.default!=="undefined" && typeof face.default.rotate!=="undefined" && face.default.rotate!==0) {
           rotate = <span>rotate: {face.default.rotate}</span>
         }
         let label = '';
@@ -583,9 +578,9 @@ export default class ImportClassPieceToDB extends Component {
           label = face.firstName+' '+face.lastName;
           // classpiece relations
           let personRelation = <li key={"depicts-"+f}>
-            <span className="type-of">[classpiece]</span> {classpiece.label} <span className="relation">depicts</span> <span className="type-of">[person]</span> {label}</li>;
+            <span className="type-of">[:Resource]</span> {classpiece.label} <span className="relation">depicts</span> <span className="type-of">[:Person]</span> {label}</li>;
           let resourceRelation = <li key={"hasPart-"+f}>
-            <span className="type-of">[classpiece]</span> {classpiece.label} <span className="relation">hasPart</span> <span className="type-of">[resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /></li>;
+            <span className="type-of">[:Resource]</span> {classpiece.label} <span className="relation">hasPart</span> <span className="type-of">[:Resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /></li>;
           classPieceRelations.push(personRelation);
           classPieceRelations.push(resourceRelation);
         }
@@ -593,12 +588,12 @@ export default class ImportClassPieceToDB extends Component {
         // face relations
         let faceRelations = [];
         let personToClasspieceRelation = <li key={0}>
-          <span className="type-of">[person]</span> {label} <span className="relation">isDepictedOn</span> <span className="type-of">[classpiece]</span> {classpiece.label}</li>;
+          <span className="type-of">[:Person]</span> {label} <span className="relation">isDepictedOn</span> <span className="type-of">[:Resource]</span> {classpiece.label}</li>;
         let resourceToClasspieceRelation = <li key={1}>
-          <span className="type-of">[resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /> <span className="relation">isPartOf</span> <span className="type-of">[classpiece]</span> {classpiece.label}</li>;
+          <span className="type-of">[:Resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /> <span className="relation">isPartOf</span> <span className="type-of">[:Resource]</span> {classpiece.label}</li>;
 
         let resourceDioceseRelation = <li key={2}>
-          <span className="type-of">[person]</span> {label} <span className="relation">isRegisteredTo</span> <span className="type-of">[diocese]</span> {face.diocese}</li>;
+          <span className="type-of">[:Person]</span> {label} <span className="relation">isRegisteredTo</span> <span className="type-of">[:Organisation]</span> {face.diocese}</li>;
 
         if (face.firstName!=="" || face.lastName!=="") {
           faceRelations.push(personToClasspieceRelation);
@@ -707,7 +702,7 @@ export default class ImportClassPieceToDB extends Component {
       tableRows = tableRows.concat(facesRows);
 
       let importFunction = this.importSelected;
-      if (this.state.dbClasspiece!==null) {
+      if (this.state.dbClasspiece!==null && this.state.dbClasspiece!==0 && this.state.dbClasspiece!=="0") {
         importFunction = this.toggleReImportModal;
       }
 
@@ -948,7 +943,7 @@ export default class ImportClassPieceToDB extends Component {
       let reImportModal = <Modal isOpen={this.state.reImportModalOpen} toggle={this.toggleReImportModal} className={this.props.className+" update-modal"}>
          <ModalHeader toggle={this.toggleReImportModal}>Re-import Classpiece confirm</ModalHeader>
          <ModalBody>
-            <p>If you continue the selected items will be re-imported into the database, resulting in duplicates. Continue?</p>
+            <p>If you continue the selected items will be re-imported into the repository, resulting in duplicates. Continue?</p>
          </ModalBody>
          <ModalFooter>
           <Button color="danger" outline onClick={this.importSelected}>Re-import</Button>
@@ -985,9 +980,9 @@ export default class ImportClassPieceToDB extends Component {
         </div>;
     }
 
-    let heading = "Import data to database";
-    if (this.state.dbClasspiece!==null) {
-      heading = "Re-import data to database";
+    let heading = "Import data to repository";
+    if (this.state.dbClasspiece!==null && this.state.dbClasspiece!==0 && this.state.dbClasspiece!=="0") {
+      heading = "Re-import data to repository";
     }
     let fileName = this.props.match.params.fileName;
     let breadcrumbsItems = [

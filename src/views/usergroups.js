@@ -170,7 +170,7 @@ class Usergroups extends Component {
       let usergroup = usergroups[i];
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
-      let label = usergroup.name;
+      let label = usergroup.label;
 
       let isAdminIcon = [];
       let isDefaultIcon = [];

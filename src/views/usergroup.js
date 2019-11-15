@@ -33,7 +33,7 @@ class Usergroup extends Component {
 
       isAdmin: false,
       isDefault: false,
-      name: '',
+      label: '',
       description: '',
 
       deleteErrorVisible: false,
@@ -73,7 +73,7 @@ class Usergroup extends Component {
           usergroup: responseData,
           isAdmin: responseData.isAdmin,
           isDefault: responseData.isDefault,
-          name: responseData.name,
+          label: responseData.label,
           description: responseData.description,
         });
   	  })
@@ -82,7 +82,8 @@ class Usergroup extends Component {
     }
   }
 
-  update() {
+  async update(e) {
+    e.preventDefault();
     if (this.state.updating) {
       return false;
     }
@@ -93,7 +94,7 @@ class Usergroup extends Component {
     let postData = {
       isAdmin: this.state.isAdmin,
       isDefault: this.state.isDefault,
-      name: this.state.name,
+      label: this.state.label,
       description: this.state.description,
     }
     let _id = this.props.match.params._id;
@@ -102,42 +103,57 @@ class Usergroup extends Component {
     }
     let isValid = this.validateUsergroup(postData);
     if (isValid) {
-      let context = this;
-      axios({
-        method: 'post',
+      let updateData = await axios({
+        method: 'put',
         url: APIPath+'user-group',
         crossDomain: true,
         data: postData
       })
       .then(function (response) {
-        let responseData = response.data.data;
-        let newState = {
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-          reload: true
-        };
-        if (_id==="new") {
-          newState.redirectReload = true;
-          newState.newId = responseData.data._id;
-        }
-        context.setState(newState);
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update</span>
-          });
-        },2000);
+        return response.data;
       })
       .catch(function (error) {
       });
+      let newState = {};
+      if (updateData.status) {
+        newState = {
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+        };
+        if (_id==="new") {
+          newState.redirectReload = true;
+          newState.newId = updateData.data._id;
+          newState.reload = true;
+        }
+      }
+      else {
+        let errorText = updateData.error.map(error=> {
+          return <div key={error}>{error}</div>;
+        })
+        newState = {
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>,
+          errorVisible: true,
+          errorText: errorText,
+        };
+      }
+
+      this.setState(newState);
+      let context = this;
+      setTimeout(function() {
+        context.setState({
+          updateBtn: <span><i className="fa fa-save" /> Update</span>
+        });
+      },2000);
     }
   }
 
   validateUsergroup() {
-    if (this.state.name.length<2) {
+    if (this.state.label.length<2) {
       this.setState({
         updating: false,
         errorVisible: true,
-        errorText: <div>The User group name must contain at least two (2) characters</div>,
+        errorText: <div>The User group label must contain at least two (2) characters</div>,
         updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
       });
       return false;
@@ -156,40 +172,32 @@ class Usergroup extends Component {
     })
   }
 
-  delete() {
-    let context = this;
+  async delete() {
     let _id = this.props.match.params._id;
-    if (_id==="new") {
+    let params = {_id: _id};
+    let deleteUsergroup = await axios({
+      method: 'delete',
+      url: APIPath+'user-group',
+      crossDomain: true,
+      data: params
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if (!deleteUsergroup.status) {
       this.setState({
-        loading: false
-      })
+        deleteErrorVisible: true,
+        deleteErrorText: deleteUsergroup.error
+      });
     }
     else {
-      let params = {_id: _id};
-      axios({
-          method: 'delete',
-          url: APIPath+'user-group',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data;
-          if (!responseData.status) {
-            context.setState({
-              deleteErrorVisible: true,
-              deleteErrorText: responseData.error
-            });
-          }
-          else  {
-            context.setState({
-              deleteErrorVisible: false,
-              deleteErrorText: '',
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	  });
+      this.setState({
+        deleteErrorVisible: false,
+        deleteErrorText: '',
+        redirect: true
+      });
     }
   }
 
@@ -242,8 +250,8 @@ class Usergroup extends Component {
 
   render() {
     let label = '';
-    if (this.state.usergroup!==null && typeof this.state.usergroup.name!=="undefined") {
-      label = this.state.usergroup.name;
+    if (this.state.usergroup!==null && typeof this.state.usergroup.label!=="undefined") {
+      label = this.state.usergroup.label;
     }
     let heading = "User group \""+label+"\"";
     if (this.props.match.params._id==="new") {
@@ -307,8 +315,8 @@ class Usergroup extends Component {
                 {errorContainer}
                 <Form onSubmit={this.update}>
                   <FormGroup>
-                    <Label for="name">Name</Label>
-                    <Input type="text" name="name" id="name" placeholder="Name..." value={this.state.name} onChange={this.handleChange}/>
+                    <Label for="name">Label</Label>
+                    <Input type="text" name="label" id="label" placeholder="Name..." value={this.state.label} onChange={this.handleChange}/>
                   </FormGroup>
                   <FormGroup>
                     <Label for="description">Description</Label>

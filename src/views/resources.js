@@ -222,7 +222,7 @@ class Resources extends Component {
         {thumbnailImage}
         <CardBody>
           <CardText className="text-center">
-            <label><Link to={parseUrl} href={parseUrl}>{file.label}</Link></label>
+            <label className="resources-list-label"><Link to={parseUrl} href={parseUrl}>{file.label}</Link></label>
           </CardText>
         </CardBody>
       </Card>
