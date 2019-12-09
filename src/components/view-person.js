@@ -1,5 +1,9 @@
 import React, { Component } from 'react';
-import { Card, CardTitle, CardBody, Button, ButtonGroup, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
+import {
+  Card, CardTitle, CardBody,
+  Button, ButtonGroup,
+  Form, FormGroup, Label, Input, InputGroup, InputGroupAddon,
+  Collapse} from 'reactstrap';
 import {
   getThumbnailURL,
   getPersonLabel,
@@ -18,7 +22,7 @@ export default class ViewPerson extends Component {
 
     let person = this.props.person;
     let status = 'private';
-    let honorificPrefix = '';
+    let honorificPrefix = [""];
     let firstName = '';
     let middleName = '';
     let lastName = '';
@@ -65,12 +69,15 @@ export default class ViewPerson extends Component {
     this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleMultipleChange = this.handleMultipleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
     this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
     this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
+    this.removeHP = this.removeHP.bind(this);
+    this.addHP = this.addHP.bind(this);
   }
 
   updateStatus(value) {
@@ -98,6 +105,17 @@ export default class ViewPerson extends Component {
 
     this.setState({
       [name]: value
+    });
+  }
+
+  handleMultipleChange(e, i){
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let name = target.name;
+    let elem = this.state[name];
+    elem[i] = value;
+    this.setState({
+      [name]: elem
     });
   }
 
@@ -228,6 +246,21 @@ export default class ViewPerson extends Component {
     });
   }
 
+  removeHP(i) {
+    let hps = this.state.honorificPrefix;
+    hps.splice(i,1);
+    this.setState({
+      honorificPrefix: hps
+    });
+  }
+  addHP() {
+    let hps = this.state.honorificPrefix;
+    hps.push("");
+    this.setState({
+      honorificPrefix: hps
+    });
+  }
+
   render() {
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
@@ -310,6 +343,22 @@ export default class ViewPerson extends Component {
     if (this.props.person!==null) {
       personAppelationsData = this.props.person.alternateAppelations;
     }
+    let honorificPrefixInputs = [];
+    if (typeof this.state.honorificPrefix!=="string") {
+      honorificPrefixInputs = this.state.honorificPrefix.map((h,i)=>{
+        let item = <InputGroup key={i}>
+          <Input type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>
+            <InputGroupAddon addonType="append">
+              <Button type="button" color="info" outline onClick={()=>this.removeHP(i)}><b><i className="fa fa-minus" /></b></Button>
+            </InputGroupAddon>
+        </InputGroup>
+        if (i===0) {
+          item = <Input style={{marginBottom: "5px"}} key={i} type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+        }
+        return item;
+      });
+    }
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -331,7 +380,10 @@ export default class ViewPerson extends Component {
                     </div>
                     <FormGroup>
                       <Label for="honorificPrefix">Honorific Prefix</Label>
-                      <Input type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix} onChange={this.handleChange}/>
+                      {honorificPrefixInputs}
+                      <div className="text-right">
+                        <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP()}>Add new <i className="fa fa-plus" /></Button>
+                      </div>
                     </FormGroup>
                     <FormGroup>
                       <Label for="firstName">First name</Label>

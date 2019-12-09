@@ -25,27 +25,24 @@ export default class ParseClassPieces extends Component {
     this.updateThumbnails = this.updateThumbnails.bind(this);
   }
 
-  loadFiles() {
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'list-class-pieces',
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let filesOutput = [];
-        for (let i=0; i<responseData.length; i++) {
-          let file = responseData[i];
-          filesOutput.push(context.fileOutput(i, file));
-        }
-        context.setState({
-          files: filesOutput,
-        });
+  async loadFiles() {
+    let data = await axios({
+      method: 'get',
+      url: APIPath+'list-class-pieces',
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let filesOutput = data.map((file,i)=>{
+      return this.fileOutput(i, file);
+    });
+    this.setState({
+      files: filesOutput,
+    });
   }
 
   fileOutput(i, file) {

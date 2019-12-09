@@ -18,6 +18,7 @@ export class ParseClassPiece extends Component {
       analyzeBtnStatus: true,
       analyzeStatus: false,
       analyzeStep: 0,
+      analyzingText: [],
       createThumbnailsBtnText: <span>Identify people</span>,
       createThumbnailsBtnStatus: false,
       identifyStep: 0,
@@ -42,41 +43,57 @@ export class ParseClassPiece extends Component {
     this.confirmModalToggle = this.confirmModalToggle.bind(this);
   }
 
-  loadFile = () => {
+  loadFile = async() => {
     let fileName = this.props.match.params.fileName;
+    let loadData = await axios({
+      method: 'get',
+      url: APIPath+'list-class-piece?file='+fileName,
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      let responseData = response.data.data;
+      return responseData;
+	  })
+	  .catch(function (error) {
+	  });
+
+    let file = loadData[0];
+    let analyzeBtnText = <span>Analyze image</span>;
+    let createThumbnailsBtnStatus = false;
+    let importDataBtnStatus = false;
+    let analyzeStep = 0;
     let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'list-class-piece?file='+fileName,
-        crossDomain: true,
+    if (file.faces!==null && file.text===null) {
+      this.setState({
+        analyzingText: <div><i>Processing image...</i> <Spinner size="sm" color="secondary" /></div>
       })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let file = responseData[0];
-        let analyzeBtnText = <span>Analyze image</span>;
-        let createThumbnailsBtnStatus = false;
-        let importDataBtnStatus = false;
-        let analyzeStep = 0;
-        if (file.faces!==null) {
-          analyzeBtnText = <span>Re-analyze image</span>;
-          createThumbnailsBtnStatus = true;
-          analyzeStep = 1;
-        }
-        if (file.facesThumbnails && file.text!==null) {
-          importDataBtnStatus = true;
-        }
-        context.setState({
-          file: file,
-          loading: false,
-          analyzeBtnText: analyzeBtnText,
-          analyzeStep: analyzeStep,
-          createThumbnailsBtnStatus: createThumbnailsBtnStatus,
-          importDataBtnStatus: importDataBtnStatus
-        });
-        context.loadFaces();
-  	  })
-  	  .catch(function (error) {
-  	  });
+      setTimeout(()=> {
+        context.loadFile();
+      },5000);
+      return false;
+    }
+    else {
+      this.setState({
+        analyzingText: []
+      })
+    }
+    if (file.faces!==null) {
+      analyzeBtnText = <span>Re-analyze image</span>;
+      createThumbnailsBtnStatus = true;
+      analyzeStep = 1;
+    }
+    if (file.facesThumbnails && file.text!==null) {
+      importDataBtnStatus = true;
+    }
+    this.setState({
+      file: file,
+      loading: false,
+      analyzeBtnText: analyzeBtnText,
+      analyzeStep: analyzeStep,
+      createThumbnailsBtnStatus: createThumbnailsBtnStatus,
+      importDataBtnStatus: importDataBtnStatus
+    });
+    this.loadFaces();
   }
 
   loadFaces = () => {
@@ -236,6 +253,7 @@ export class ParseClassPiece extends Component {
         <div className="col-xs-12 col-sm-6 col-md-8">
           <div className="classpiece-actions">
           {analyzeBtn}
+          {this.state.analyzingText}
           {createThumbnailsBtn}
           {importDataBtn}
           </div>

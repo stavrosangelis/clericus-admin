@@ -62,8 +62,7 @@ class Person extends Component {
     this.reload = this.reload.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
@@ -73,23 +72,22 @@ class Person extends Component {
     }
     else {
     let params = {_id: _id};
-      axios({
+    let personData = await axios({
         method: 'get',
         url: APIPath+'person',
         crossDomain: true,
         params: params
       })
   	  .then(function (response) {
-        let responseData = response.data.data;
-        context.setState({
-          loading: false,
-          reload: false,
-          person: responseData
-        });
-
+        return response.data.data;
   	  })
   	  .catch(function (error) {
   	  });
+      this.setState({
+        loading: false,
+        reload: false,
+        person: personData
+      });
     }
   }
 

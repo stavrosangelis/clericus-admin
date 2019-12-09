@@ -34,6 +34,7 @@ class Organisation extends Component {
       reload: false,
       loading: true,
       organisation:null,
+      organisationTypes: [],
       redirect: false,
       redirectReload: false,
       deleteModal: false,
@@ -55,6 +56,7 @@ class Organisation extends Component {
     }
     this.load = this.load.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
+    this.loadOrganisationTypes = this.loadOrganisationTypes.bind(this);
     this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
     this.validateOrganisation = this.validateOrganisation.bind(this);
@@ -63,38 +65,37 @@ class Organisation extends Component {
     this.reload = this.reload.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
         loading: false,
         addReferencesVisible: false
-      })
+      });
+      return false;
     }
-    else {
-      let params = {
-        _id:_id
-      }
-      axios({
-        method: 'get',
-        url: APIPath+'organisation',
-        crossDomain: true,
-        params: params
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-        let organisation = responseData.data;
-        context.setState({
-          loading: false,
-          reload: false,
-          organisation: organisation
-        });
-  	  })
-  	  .catch(function (error) {
-        console.log(error)
-  	  });
+
+    let params = {
+      _id:_id
     }
+    let organisation = await axios({
+      method: 'get',
+      url: APIPath+'organisation',
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+      console.log(error)
+	  });
+    this.setState({
+      loading: false,
+      reload: false,
+      organisation: organisation
+    });
+
   }
 
   loadReferenceLabelsNTypes() {
@@ -105,6 +106,23 @@ class Organisation extends Component {
       referencesLabels: referencesLabels,
       referencesTypes: referencesTypes,
       referencesLoaded: true,
+    })
+  }
+
+  loadOrganisationTypes = async() => {
+    let organisationTypes = await axios({
+      method: 'get',
+      url: APIPath+"taxonomy",
+      crossDomain: true,
+      params: {systemType: "organisationTypes"}
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    this.setState({
+      organisationTypes: organisationTypes.taxonomyterms,
     })
   }
 
@@ -149,9 +167,7 @@ class Organisation extends Component {
       updating: true,
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
     })
-    let postData = {
-      label: newData.label,
-    }
+    let postData = Object.assign({}, newData);
     let _id = this.props.match.params._id;
     if (_id!=="new") {
       postData._id = _id;
@@ -213,32 +229,26 @@ class Organisation extends Component {
     })
   }
 
-  delete() {
-    let context = this;
+  async delete() {
     let _id = this.props.match.params._id;
-    if (_id==="new") {
+    let params = {_id: _id};
+    let responseData = await axios({
+      method: 'delete',
+      url: APIPath+'organisation',
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data.data;
+
+	  })
+	  .catch(function (error) {
+      console.log(error);
+    });
+    if (responseData.summary.counters._stats.nodesDeleted===1) {
       this.setState({
-        loading: false
-      })
-    }
-    else {
-      let params = {_id: _id};
-      axios({
-          method: 'delete',
-          url: APIPath+'organisation',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          if (responseData.data.ok===1) {
-            context.setState({
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	 });
+        redirect: true
+      });
     }
   }
 
@@ -249,6 +259,7 @@ class Organisation extends Component {
   }
 
   componentDidMount() {
+    this.loadOrganisationTypes();
     this.load();
   }
 
@@ -313,6 +324,7 @@ class Organisation extends Component {
       content = <div className="items-container">
           <ViewOrganisation
             organisation={this.state.organisation}
+            organisationTypes={this.state.organisationTypes}
             reload={this.reload}
             label={label}
             delete={this.toggleDeleteModal}

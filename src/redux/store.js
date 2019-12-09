@@ -3,6 +3,13 @@ import rootReducer from "./reducers/index";
 import thunk from 'redux-thunk';
 
 export const defaultState = {
+  // settings
+  settings: {},
+  seedRedirect: false,
+
+  // languageCodes
+  languageCodes: [],
+
   // login
   loginError: false,
   loginErrorText: [],

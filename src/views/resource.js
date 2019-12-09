@@ -67,22 +67,22 @@ class Resource extends Component {
     else {
       let params = {_id:_id}
       axios({
-          method: 'get',
-          url: APIPath+'resource',
-          crossDomain: true,
-          params: params
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          context.setState({
-            loading: false,
-            resource: responseData,
-            systemType: responseData.systemType,
-            reload: false,
-          });
-    	  })
-    	  .catch(function (error) {
-    	  });
+        method: 'get',
+        url: APIPath+'resource',
+        crossDomain: true,
+        params: params
+      })
+  	  .then(function (response) {
+        let responseData = response.data.data;
+        context.setState({
+          loading: false,
+          resource: responseData,
+          systemType: responseData.systemType,
+          reload: false,
+        });
+  	  })
+  	  .catch(function (error) {
+  	  });
     }
   }
 
@@ -142,6 +142,11 @@ class Resource extends Component {
     resource.label = newData.label;
     resource.systemType = newData.systemType;
     resource.description = newData.description;
+    resource.status = newData.status;
+    delete resource.events;
+    delete resource.people;
+    delete resource.organisations;
+    delete resource.resources;
 
     let postData = {
       resource: resource

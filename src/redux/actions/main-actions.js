@@ -6,6 +6,38 @@ import axios from 'axios';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
+export function loadSettings() {
+  return (dispatch,getState) => {
+    axios({
+      method: 'get',
+      url: APIPath+'settings',
+      crossDomain: true,
+    })
+    .then(function (response) {
+      let responseData = response.data;
+      let payload = {};
+      if (responseData.status) {
+        let settings = responseData.data;
+        payload = {
+          settings: settings
+        };
+        if (typeof settings.seedingAllowed!=="undefined" && settings.seedingAllowed) {
+          payload.seedRedirect = true;
+        }
+      }
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload: payload
+      });
+
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+
+  }
+}
+
 export function checkSession() {
   return (dispatch,getState) => {
     let token = localStorage.getItem('token');
@@ -21,11 +53,13 @@ export function checkSession() {
       if (!responseData.status) {
         localStorage.setItem('token', null);
         payload = {
-          loginError: false,
-          loginErrorText: '',
           sessionActive: false,
           sessionUser: null
         };
+        if (responseData.error!=="") {
+          payload.loginError = true;
+          payload.loginErrorText = responseData.error;
+        }
       }
       else {
         payload = {
@@ -96,6 +130,15 @@ export function login(email, password) {
   }
 }
 
+export function resetSeedRedirect() {
+  return (dispatch,getState) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {seedRedirect: false}
+    });
+  }
+}
+
 export function resetLoginRedirect() {
   return (dispatch,getState) => {
     dispatch({
@@ -121,6 +164,33 @@ export function logout() {
       type: GENERIC_UPDATE,
       payload: payload
     });
+  }
+}
+
+export function getLanguageCodes() {
+  return (dispatch,getState) => {
+    axios({
+      method: 'get',
+      url: APIPath+'language-codes',
+      crossDomain: true,
+    })
+    .then(function (response) {
+      let responseData = response.data;
+      let payload = {};
+      if (responseData.status) {
+        payload = {
+          languageCodes: responseData.data
+        };
+      }
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload: payload
+      });
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+
   }
 }
 
@@ -237,23 +307,22 @@ export function loadDefaultEntities() {
   }
 }
 
-function loadEntityProperties(label) {
-  return new Promise((resolve, reject) => {
-    let params = {labelId: label}
-    axios({
-        method: 'get',
-        url: APIPath+'entity',
-        crossDomain: true,
-        params: params
-      })
-    .then(function (response) {
-      let entity = response.data.data;
-      resolve(entity);
+const loadEntityProperties = async(label)=>{
+  let params = {labelId: label}
+  let entity = await axios({
+      method: 'get',
+      url: APIPath+'entity',
+      crossDomain: true,
+      params: params
     })
-    .catch((error)=> {
-      console.log(error);
-    });
+  .then(function (response) {
+    return response.data.data;
+
+  })
+  .catch((error)=> {
+    console.log(error);
   });
+  return entity;
 }
 
 export function toggleLightBox(value) {

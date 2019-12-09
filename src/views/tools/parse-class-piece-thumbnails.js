@@ -1,12 +1,17 @@
 import React, { Component } from 'react';
-import {Spinner} from 'reactstrap';
-import Rnd from 'react-rnd-rotate';
-import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import Draggable from '../../components/draggable';
+import '../../assets/sa-dnd/sa-dnd.css';
+import {
+  Spinner, Button,
+  Modal, ModalHeader, ModalBody, ModalFooter,
+  Input, InputGroup, InputGroupAddon,
+} from 'reactstrap';
 import {Breadcrumbs} from '../../components/breadcrumbs';
 
 import axios from 'axios';
 import ParseClassPieceToolbox from './right-sidebar-toolbox';
 import ContextualMenu from '../../components/parse-class-piece-contextual-menu';
+import {stringDimensionToInteger, capitalizeOnlyFirst} from '../../helpers/helpers';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ParseClassPieceThumbnails extends Component {
@@ -16,6 +21,8 @@ export default class ParseClassPieceThumbnails extends Component {
     this.state = {
       initialLoad: true,
       loading: true,
+      organisationTypes: [],
+      peopleRoles: [],
       fileInfo: [],
       file: [],
       faces: [],
@@ -42,11 +49,13 @@ export default class ParseClassPieceThumbnails extends Component {
       draggableText: '',
       dragover: false,
       draggedElem: null,
-      inputhonorificprefix: '',
+      draggedIndex: null,
+      inputhonorificprefix: [""],
       inputfirstname: '',
       inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputdioceseType: 'Diocese',
       inputtype: 'student',
 
       updatePersonStatus: false,
@@ -69,6 +78,7 @@ export default class ParseClassPieceThumbnails extends Component {
     this.loadFile = this.loadFile.bind(this);
     this.loadFaces = this.loadFaces.bind(this);
     this.loadSettings = this.loadSettings.bind(this);
+    this.loadTaxonomyTypes = this.loadTaxonomyTypes.bind(this);
     this.loadText = this.loadText.bind(this);
     this.updateFaces = this.updateFaces.bind(this);
     this.resizeFace = this.resizeFace.bind(this);
@@ -101,6 +111,7 @@ export default class ParseClassPieceThumbnails extends Component {
     this.dragEnterText = this.dragEnterText.bind(this);
     this.dragLeaveText = this.dragLeaveText.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleMultipleChange = this.handleMultipleChange.bind(this);
 
     this.updatePersonModal = this.updatePersonModal.bind(this);
     this.storeLinking = this.storeLinking.bind(this);
@@ -111,6 +122,11 @@ export default class ParseClassPieceThumbnails extends Component {
 
 
     this.toggleErrorModal = this.toggleErrorModal.bind(this);
+    this.matchTexts = this.matchTexts.bind(this);
+    this.itemPreview = React.createRef();
+
+    this.removeHP = this.removeHP.bind(this);
+    this.addHP = this.addHP.bind(this);
   }
 
   loadFile = async() => {
@@ -125,7 +141,6 @@ export default class ParseClassPieceThumbnails extends Component {
 	  })
 	  .catch(function (error) {
 	  });
-
     let fileOutput = <img src={file.compressed} alt={file.name}
       draggable="false" />;
     this.setState({
@@ -137,39 +152,40 @@ export default class ParseClassPieceThumbnails extends Component {
     this.loadSettings();
   }
 
-  loadFaces = () => {
+  loadFaces = async() => {
     let facesFile = this.state.fileInfo.faces;
-    let context = this;
-    axios({
-        method: 'get',
-        url: facesFile,
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-
-        let hasThumbnailCount = 0;
-        for (let i=0; i<responseData.length; i++) {
-          let face = responseData[i];
-          if (typeof face.thumbnail!=="undefined") {
-            hasThumbnailCount++;
-          }
-        }
-        let selectionsActive = true;
-        let linkingActive = false;
-        if (hasThumbnailCount===responseData.length) {
-          selectionsActive = false;
-          linkingActive = true;
-        }
-        context.setState({
-          faces: responseData,
-          selectionsActive: selectionsActive,
-          linkingActive: linkingActive,
-        });
-
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let facesData = await axios({
+      method: 'get',
+      url: facesFile,
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      let responseData = response.data;
+      return responseData;
+	  })
+	  .catch(function (error) {
+	  });
+    if(typeof facesData==="string") {
+      facesData = JSON.parse(facesData)
+    }
+    let hasThumbnailCount = 0;
+    for (let i=0; i<facesData.length; i++) {
+      let face = facesData[i];
+      if (typeof face.thumbnail!=="undefined") {
+        hasThumbnailCount++;
+      }
+    }
+    let selectionsActive = true;
+    let linkingActive = false;
+    if (hasThumbnailCount===facesData.length) {
+      selectionsActive = false;
+      linkingActive = true;
+    }
+    this.setState({
+      faces: facesData,
+      selectionsActive: selectionsActive,
+      linkingActive: linkingActive,
+    });
   }
 
   loadText = async () => {
@@ -208,7 +224,36 @@ export default class ParseClassPieceThumbnails extends Component {
     }
     let newZoom = settings.zoom || 100;
     this.setState({
-      zoom: parseInt(newZoom,10)
+      zoom: parseInt(newZoom,10),
+    })
+  }
+
+  loadTaxonomyTypes = async() => {
+    let organisationTypes = await axios({
+      method: 'get',
+      url: APIPath+"taxonomy",
+      crossDomain: true,
+      params: {systemType: "organisationTypes"}
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    let peopleRoles = await axios({
+      method: 'get',
+      url: APIPath+"taxonomy",
+      crossDomain: true,
+      params: {systemType: "peopleRoles"}
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    this.setState({
+      organisationTypes: organisationTypes.taxonomyterms,
+      peopleRoles: peopleRoles.taxonomyterms
     })
   }
 
@@ -223,7 +268,7 @@ export default class ParseClassPieceThumbnails extends Component {
     let fileName = this.props.match.params.fileName;
     let postData = {
       file: fileName,
-      faces: this.state.faces
+      faces: JSON.stringify(this.state.faces)
     };
     let update = await axios({
       method: 'post',
@@ -261,20 +306,19 @@ export default class ParseClassPieceThumbnails extends Component {
     },2000);
   }
 
-  dragFace = (e,d,i) => {
+  dragFace = (d, i) => {
     let faces = this.state.faces;
     let currentFace = faces[i];
-    let width = d.newWidth;
-    let height = d.newHeight;
-    let leftX = parseInt(d.x,10);
-    let topY = parseInt(d.y,10);
+    let width = d.width;
+    let height = d.height;
+    let leftX = d.left;
+    let topY = d.top;
     let calcFaceRectangle = {
       width: width,
       height: height,
       left: leftX,
       top: topY,
     }
-
     let newFace = Object.assign({}, currentFace);
     newFace.faceRectangle = calcFaceRectangle;
     faces[i] = newFace;
@@ -283,13 +327,13 @@ export default class ParseClassPieceThumbnails extends Component {
     })
   }
 
-  resizeFace = (e, direction, ref, delta, position, i) => {
+  resizeFace = (d, i) => {
     let faces = this.state.faces;
     let currentFace = faces[i];
-    let width = ref.style.width;
-    let height = ref.style.height;
-    let leftX = parseInt(position.x,10);
-    let topY = parseInt(position.y,10);
+    let width = d.width;
+    let height = d.height;
+    let leftX = d.left;
+    let topY = d.top;
     let calcFaceRectangle = {
       width: width,
       height: height,
@@ -297,7 +341,7 @@ export default class ParseClassPieceThumbnails extends Component {
       top: topY,
     }
 
-    let rotate = delta.degree;
+    let rotate = d.degree;
     let newFace = Object.assign({}, currentFace);
     newFace.faceRectangle = calcFaceRectangle;
     newFace.rotate = rotate;
@@ -321,7 +365,7 @@ export default class ParseClassPieceThumbnails extends Component {
   updateZoom = (value) => {
     this.setState({
       zoom: value,
-      settingsUpdate: true
+      settingsUpdate: true,
     });
   }
 
@@ -398,7 +442,6 @@ export default class ParseClassPieceThumbnails extends Component {
   }
 
   // linking
-
   startSelection = (e) => {
     if (e.metaKey || e.ctrlKey) {
       this.setState({
@@ -425,11 +468,12 @@ export default class ParseClassPieceThumbnails extends Component {
       selectionFaces: null,
       selectionText: [],
       draggableText: '',
-      inputhonorificprefix: '',
+      inputhonorificprefix: [""],
       inputfirstname: '',
       inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputdioceseType: 'Diocese',
       inputtype: 'student',
       saveSelectedModal: false
     });
@@ -522,7 +566,7 @@ export default class ParseClassPieceThumbnails extends Component {
     }
   }
 
-  linkingSelectionEnd = () => {
+  linkingSelectionEnd = async () => {
     if (this.state.linkingSelectionActive) {
       return false;
     }
@@ -567,13 +611,17 @@ export default class ParseClassPieceThumbnails extends Component {
 
         let stateFaces = this.state.faces;
         let selectedFaceData = stateFaces[selectedFace];
-        let inputhonorificprefix = '';
+        let inputhonorificprefix = [""];
         let inputfirstname = '';
         let inputmiddlename = '';
         let inputlastname = '';
         let inputdiocese = '';
-        let inputtype = '';
+        let inputdioceseType = 'Diocese';
+        let inputtype = 'student';
         if (typeof selectedFaceData.honorificPrefix!=="undefined") {
+          if (typeof selectedFaceData.honorificPrefix==="string") {
+            selectedFaceData.honorificPrefix = [selectedFaceData.honorificPrefix];
+          }
           inputhonorificprefix = selectedFaceData.honorificPrefix;
         }
         if (typeof selectedFaceData.firstName!=="undefined") {
@@ -588,10 +636,39 @@ export default class ParseClassPieceThumbnails extends Component {
         if (typeof selectedFaceData.diocese!=="undefined") {
           inputdiocese = selectedFaceData.diocese;
         }
-        if (typeof selectedFaceData.type!=="undefined") {
+        if (typeof selectedFaceData.dioceseType!=="undefined" && selectedFaceData.dioceseType!=="") {
+          inputdioceseType = selectedFaceData.dioceseType;
+        }
+        if (typeof selectedFaceData.type!=="undefined" && selectedFaceData.type!=="") {
           inputtype = selectedFaceData.type;
         }
-
+        if (inputhonorificprefix==="" && inputfirstname==="" && inputmiddlename==="" && inputlastname==="" && inputdiocese==="") {
+          let texts = selectedText.map(i=> this.state.texts[i]);
+          let words = texts.map(item=>item.text);
+          let matchedTexts = await this.matchTexts(words);
+          for (let i=0; i<matchedTexts.length; i++) {
+            let match = matchedTexts[i];
+            if (match.type!==null && match.count>0) {
+              if (match.type==="firstName") {
+                inputfirstname += (match.word)+" ";
+              }
+              if (match.type==="middleName") {
+                inputmiddlename += (match.word)+" ";
+              }
+              if (match.type==="lastName") {
+                inputlastname += (match.word)+" ";
+              }
+              if (match.type==="diocese") {
+                inputdiocese += (match.word)+" ";
+              }
+            }
+          }
+          inputhonorificprefix = inputhonorificprefix.trim();
+          inputfirstname = inputfirstname.trim();
+          inputmiddlename = inputmiddlename.trim();
+          inputlastname = inputlastname.trim();
+          inputdiocese = inputdiocese.trim();
+        }
         this.setState({
           selectionFaces: selectedFace,
           selectionText: selectedText,
@@ -603,8 +680,25 @@ export default class ParseClassPieceThumbnails extends Component {
           inputmiddlename: inputmiddlename,
           inputlastname: inputlastname,
           inputdiocese: inputdiocese,
+          inputdioceseType: inputdioceseType,
           inputtype: inputtype,
-        })
+        }, ()=> {
+          // preview selection
+          let context = this;
+          setTimeout(()=> {
+            let rectangle = selectedFaceData.faceRectangle;
+            let left = stringDimensionToInteger(rectangle.left);
+            let width = stringDimensionToInteger(rectangle.width);
+            let top = rectangle.top;
+            let previewWindow = context.itemPreview.current;
+            let box = previewWindow.getBoundingClientRect();
+            let boxWidth = box.width;
+            let margin = (boxWidth - width)/2;
+            left = left - margin;
+            previewWindow.scrollTo(left, top);
+          },500);
+
+        });
       }
       else {
         this.setState({
@@ -616,6 +710,21 @@ export default class ParseClassPieceThumbnails extends Component {
     }
   };
 
+  matchTexts = async(texts) => {
+    let dbTexts = await axios({
+      method: 'post',
+      url: APIPath+'query-texts',
+      crossDomain: true,
+      data: {texts: texts}
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    return dbTexts;
+  }
+
   getFaceInSelection = () => {
     let selection = this.state.linkinSelectionRect;
     let selectedFaces = [];
@@ -624,10 +733,8 @@ export default class ParseClassPieceThumbnails extends Component {
       let faceRectangle = linkingFaceBox.faceRectangle;
 
       // create css shape
-      let width = faceRectangle.width.replace("px", "");
-      width = parseInt(width,10);
-      let height = faceRectangle.height.replace("px", "");
-      height = parseInt(height,10);
+      let width = stringDimensionToInteger(faceRectangle.width);
+      let height = stringDimensionToInteger(faceRectangle.height);
       let left = faceRectangle.left;
       let top = faceRectangle.top;
       let right = left+width;
@@ -723,20 +830,41 @@ export default class ParseClassPieceThumbnails extends Component {
     })
   }
 
-  dragStopText = (e) => {
+  dragStopText = (e,i=null) => {
     e.preventDefault();
     e.stopPropagation();
     let target = e.target.getAttribute("data-target");
-    let targetText = this.state[target];
-    let space = '';
-    if (targetText!=='') {
-      space = ' ';
+    if (i===null) {
+      let targetText = this.state[target];
+      let space = '';
+      if (targetText!=='') {
+        space = ' ';
+      }
+      let newTargetText = targetText+space+this.state.draggableText;
+      newTargetText = capitalizeOnlyFirst(newTargetText);
+      this.setState({
+        [target]: newTargetText,
+        draggedElem:null,
+        draggedIndex:null,
+      })
     }
-    let newTargetText = targetText+space+this.state.draggableText;
-    this.setState({
-      [target]: newTargetText,
-      draggedElem:null
-    })
+    else {
+      let targetText = this.state[target][i];
+      let space = '';
+      if (targetText!=='') {
+        space = ' ';
+      }
+      let newTargetText = targetText+space+this.state.draggableText;
+      newTargetText = capitalizeOnlyFirst(newTargetText);
+
+      let elem = this.state[target];
+      elem[i] = newTargetText;
+      this.setState({
+        [target]: elem,
+        draggedElem:null,
+        draggedIndex:null,
+      })
+    }
     return false;
   }
 
@@ -750,16 +878,19 @@ export default class ParseClassPieceThumbnails extends Component {
     e.preventDefault();
     e.stopPropagation();
     let target = e.target.getAttribute("data-target");
+    let index = e.target.getAttribute("data-index");
     this.setState({
       dragover: true,
-      draggedElem:target
+      draggedElem:target,
+      draggedIndex:index,
     });
   }
 
   dragLeaveText = (e) => {
     this.setState({
       dragover: false,
-      draggedElem:null
+      draggedElem:null,
+      draggedIndex:null
     });
     e.preventDefault();
     return false;
@@ -775,6 +906,17 @@ export default class ParseClassPieceThumbnails extends Component {
     });
   }
 
+  handleMultipleChange = (e, i) => {
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let name = target.name;
+    let elem = this.state[name];
+    elem[i] = value;
+    this.setState({
+      [name]: elem
+    });
+  }
+
   updatePersonModal = (e) => {
     e.preventDefault();
     if (this.state.updatePersonStatus) {
@@ -784,34 +926,42 @@ export default class ParseClassPieceThumbnails extends Component {
       updatePersonStatus: true,
       updatePersonBtn: <span><i className="fa fa-save"></i> Updating person... <Spinner size="sm" color="light" /></span>
     });
-    let faces = this.state.faces;
-    let selectedFace = this.state.selectionFaces;
+    let faces = Object.assign([{}],this.state.faces);
+    let selectedFaceIndex = this.state.selectionFaces;
 
-    let selectedPerson = faces[selectedFace];
+    let selectedPerson = faces[selectedFaceIndex];
     selectedPerson.honorificPrefix = this.state.inputhonorificprefix;
     selectedPerson.firstName = this.state.inputfirstname;
     selectedPerson.middleName = this.state.inputmiddlename;
     selectedPerson.lastName = this.state.inputlastname;
     selectedPerson.diocese = this.state.inputdiocese;
+    selectedPerson.dioceseType = this.state.inputdioceseType;
     selectedPerson.type = this.state.inputtype;
 
-    faces[selectedFace] = selectedPerson;
+    if (typeof selectedPerson.dioceseType==="undefined" || selectedPerson.dioceseType==="") {
+      selectedPerson.dioceseType = "diocese";
+    }
+    if (selectedPerson.type==="") {
+      selectedPerson.type = "student";
+    }
+    faces[selectedFaceIndex] = selectedPerson;
     this.setState({
       faces: faces,
       saveSelectedModal: false,
       updatePersonStatus: false,
       updatePersonBtn: <span><i className="fa fa-save"></i> Update person</span>,
       draggableText: '',
-      inputhonorificprefix: '',
+      inputhonorificprefix: [],
       inputfirstname: '',
       inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputdioceseType: '',
       inputtype: 'student',
     });
   }
 
-  storeLinking = () => {
+  storeLinking = async () => {
     if (this.state.storeLinkingStatus) {
       return false;
     }
@@ -819,14 +969,12 @@ export default class ParseClassPieceThumbnails extends Component {
       storeLinkingStatus: true,
       storeLinkingBtn: <span><i className="fa fa-save"></i> Storing updates... <Spinner size="sm" color="secondary" /></span>
     });
-
-    let context = this;
     let fileName = this.props.match.params.fileName;
     let postData = {
       file: fileName,
-      faces: this.state.faces
+      faces: JSON.stringify(this.state.faces)
     };
-    axios({
+    let post = await axios({
         method: 'post',
         url: APIPath+'update-class-piece-faces?file='+fileName,
         crossDomain: true,
@@ -836,18 +984,23 @@ export default class ParseClassPieceThumbnails extends Component {
         }
       })
   	  .then(function (response) {
-        context.setState({
-          storeLinkingStatus: false,
-          storeLinkingBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
-        })
-        setTimeout(function() {
-          context.setState({
-            storeLinkingBtn: <span><i className="fa fa-save"></i> Store updates</span>
-          })
-        },2000)
+        return response.data;
   	  })
   	  .catch(function (error) {
   	  });
+    if (post.status) {
+      this.setState({
+        storeLinkingStatus: false,
+        storeLinkingBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+      });
+
+      let context = this;
+      setTimeout(function() {
+        context.setState({
+          storeLinkingBtn: <span><i className="fa fa-save"></i> Store updates</span>
+        })
+      },2000)
+    }
   }
 
   addNewSelection = () => {
@@ -857,28 +1010,19 @@ export default class ParseClassPieceThumbnails extends Component {
     else {
       let containerPosition = this.state.selectedNode.getBoundingClientRect();
       let faces = this.state.faces;
-      let defaultDimensions = faces[0].boundingPoly.vertices;
-      let defaultWidth = defaultDimensions[1].x - defaultDimensions[0].x;
-      let defaultHeight = defaultDimensions[2].y - defaultDimensions[0].y;
-
-      let newWidth = Math.abs(defaultWidth);
-      let newHeight = Math.abs(defaultHeight);
-
       let mousePosition = this.state.contextualMenuPosition;
       let zoom = parseInt(this.state.zoom,10);
       let mouseLeft = ((parseInt(mousePosition.left,10)-containerPosition.left)*100)/zoom;
       let mouseTop = ((parseInt(mousePosition.top,10)-containerPosition.top)*100)/zoom;
       let leftX = mouseLeft;
-      let rightX = mouseLeft+newWidth;
       let topY = mouseTop;
-      let bottomY = mouseTop+newHeight;
-
-      let tl = {x: leftX, y: topY};
-      let tr = {x: rightX, y: topY};
-      let br = {x: rightX, y: bottomY};
-      let bl = {x: leftX, y: bottomY};
       let newFace = {};
-      newFace.boundingPoly = {vertices: [tl, tr, br, bl]};
+      newFace.faceRectangle = {
+        width: 100,
+        height: 100,
+        left: leftX,
+        top: topY
+      }
 
       faces.push(newFace);
       this.setState({
@@ -973,7 +1117,24 @@ export default class ParseClassPieceThumbnails extends Component {
     })
   }
 
+  removeHP = (i) => {
+    let hps = this.state.inputhonorificprefix;
+    hps.splice(i,1);
+    this.setState({
+      inputhonorificprefix: hps
+    });
+  }
+
+  addHP = () => {
+    let hps = this.state.inputhonorificprefix;
+    hps.push("");
+    this.setState({
+      inputhonorificprefix: hps
+    });
+  }
+
   componentDidMount() {
+    this.loadTaxonomyTypes();
     this.loadFile();
     window.addEventListener('keydown', this.startSelection);
     window.addEventListener('keyup', this.endSelection);
@@ -1033,30 +1194,38 @@ export default class ParseClassPieceThumbnails extends Component {
         if (typeof face.rotate!=="undefined") {
           rotate = face.rotate;
         }
-
-        let defaultValues = {
-          x: rectangle.left,
-          y: rectangle.top,
-          width: rectangle.width,
-          height: rectangle.height,
-          degree: rotate,
-        }
         let hasThumbnailClass = "";
         if (typeof face.thumbnail!=="undefined") {
           hasThumbnailClass = " has-thumbnail";
         }
-        let extendedProps = {'data-key': sf}
-        let newBox = <Rnd
-          extendsProps = {extendedProps}
+        let widthInt = rectangle.width;
+        if (typeof widthInt==="string") {
+          widthInt = widthInt.replace("px", "");
+          widthInt = parseInt(widthInt,10);
+        }
+        let heightInt = rectangle.height;
+        if (typeof heightInt==="string") {
+          heightInt = heightInt.replace("px", "");
+          heightInt = parseInt(heightInt,10);
+        }
+        let newBox = <Draggable
+          draggable={true}
+          resizable={true}
+          rotate={true}
+          parentConstrain={false}
+          parentId="classpiece-container"
           key={sf}
+          index={sf}
           className={"facebox"+hasThumbnailClass}
-          default={defaultValues}
-          enable={{rotate: rotate}}
-          onDragStop={(e,d) =>this.dragFace(e,d,sf)}
-          onResizeStop={(e, direction, ref, delta, position)=> this.resizeFace(e, direction, ref, delta, position, sf)}
-          ></Rnd>;
+          left={rectangle.left+"px"}
+          top={rectangle.top+"px"}
+          width={widthInt}
+          height={heightInt}
+          degree={rotate}
+          onDragStop={this.dragFace}
+          onResizeStop={this.resizeFace}
+          ></Draggable>
         selectionsFaceBoxes.push(newBox);
-
       }
 
       let selectionsTextBoxes = [];
@@ -1175,10 +1344,7 @@ export default class ParseClassPieceThumbnails extends Component {
       </div>
     }
 
-    let honorificPrefixActive="",firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="";
-    if (this.state.draggedElem==="inputhonorificprefix") {
-      honorificPrefixActive = "active";
-    }
+    let firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="", dioceseTypeActive="",typeActive="";
     if (this.state.draggedElem==="inputfirstname") {
       firstNameActive = "active";
     }
@@ -1193,7 +1359,6 @@ export default class ParseClassPieceThumbnails extends Component {
     }
 
     let selectedThumbnail = "";
-    let thumbnailText = [];
     if (this.state.selectionFaces!==null) {
       let selectedFace = this.state.faces[this.state.selectionFaces];
       if (typeof selectedFace!=="undefined") {
@@ -1202,18 +1367,17 @@ export default class ParseClassPieceThumbnails extends Component {
           selectedThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnail.path} />
         }
       }
-
     }
-    for (let tt=0;tt<this.state.selectionText.length; tt++) {
-      let textItem = this.state.selectionText[tt]
+
+    let thumbnailText = this.state.selectionText.map((textItem, i)=> {
       let textChunk = this.state.texts[textItem].text;
       let textBox = <div
         draggable="true"
         onDragStart={this.startDragText.bind(this)}
-        key={tt}
+        key={i}
         className="thumbnail-textbox">{textChunk}</div>
-      thumbnailText.push(textBox);
-    }
+      return textBox;
+    });
 
     let fileName = this.props.match.params.fileName;
     let heading = "Identify people";
@@ -1233,7 +1397,43 @@ export default class ParseClassPieceThumbnails extends Component {
         </ModalFooter>
     </Modal>
 
-    return(
+    let honorificPrefixInputs = this.state.inputhonorificprefix.map((h,i)=>{
+      let honorificPrefixActive = "";
+      if (this.state.draggedElem==="inputhonorificprefix" && parseInt(this.state.draggedIndex,10)===i) {
+        honorificPrefixActive = "active";
+      }
+      let item = <InputGroup key={i}>
+        <Input className={honorificPrefixActive} type="text" name="inputhonorificprefix" id="honorificPrefix" placeholder="Person honorific prefix..."
+        data-target="inputhonorificprefix" data-index={i} value={this.state.inputhonorificprefix[i]}
+        onDrop={(e)=>this.dragStopText(e,i)}
+        onDragEnter={this.dragEnterText}
+        onDragOver={this.dragOverText}
+        onDragLeave={this.dragLeaveText}
+         onChange={(e)=>this.handleMultipleChange(e,i)}/>
+          <InputGroupAddon addonType="append">
+            <Button type="button" color="info" outline onClick={()=>this.removeHP(i)}><b><i className="fa fa-minus" /></b></Button>
+          </InputGroupAddon>
+      </InputGroup>
+      if (i===0) {
+        item = <Input className={honorificPrefixActive} data-index={i} style={{marginBottom: "5px"}} key={i} type="text" name="inputhonorificprefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.inputhonorificprefix[i]}
+        data-target={"inputhonorificprefix"} onDrop={(e)=>this.dragStopText(e,i)}
+        onDragEnter={this.dragEnterText}
+        onDragOver={this.dragOverText}
+        onDragLeave={this.dragLeaveText} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+      }
+      return item;
+    });
+
+    let organisationTypesOptions = [];
+    let peopleRolesOptions = [];
+    if (this.state.organisationTypes.length>0) {
+      organisationTypesOptions = this.state.organisationTypes.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
+    }
+    if (this.state.peopleRoles.length>0) {
+     peopleRolesOptions = this.state.peopleRoles.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
+   }
+
+    return (
       <div id="classpiece-content-wrapper">
         <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
@@ -1265,7 +1465,8 @@ export default class ParseClassPieceThumbnails extends Component {
             storeLinking={this.storeLinking}
             />
         </div>
-        <Modal isOpen={this.state.saveSelectedModal} toggle={this.closeSelectedModal} className={this.props.className}>
+
+        <Modal isOpen={this.state.saveSelectedModal} toggle={this.closeSelectedModal} className={this.props.className} size="lg">
           <form onSubmit={this.updatePersonModal}>
             <ModalHeader toggle={this.closeSelectedModal}>Update person</ModalHeader>
             <ModalBody>
@@ -1274,20 +1475,20 @@ export default class ParseClassPieceThumbnails extends Component {
                   <div className="selected-item-thumbnail">
                     {selectedThumbnail}
                   </div>
+                  <div style={{marginTop: "20px"}}>
+                    <b>Preview</b>
+                  </div>
+                  <div className="preview-window" ref={this.itemPreview}>
+                    {this.state.file}
+                  </div>
                 </div>
                 <div className="col-xs-12 col-sm-6 col-md-8">
                   <div className="form-group">
                     <label>Honorific Prefix</label>
-                    <input
-                      className={"form-control "+honorificPrefixActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputhonorificprefix}
-                      data-target="inputhonorificprefix"
-                      onDrop={this.dragStopText.bind(this)}
-                      onDragEnter={this.dragEnterText.bind(this)}
-                      onDragOver={this.dragOverText.bind(this)}
-                      onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" name="inputhonorificprefix" />
+                    {honorificPrefixInputs}
+                    <div className="text-right">
+                      <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP()}>Add new <i className="fa fa-plus" /></Button>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>First Name</label>
@@ -1330,7 +1531,7 @@ export default class ParseClassPieceThumbnails extends Component {
                       type="text" name="inputlastname" />
                   </div>
                   <div className="form-group">
-                    <label>Diocese</label>
+                    <label>Diocese | Order</label>
                     <input
                       className={"form-control "+dioceseActive}
                       onChange={this.handleChange}
@@ -1341,16 +1542,18 @@ export default class ParseClassPieceThumbnails extends Component {
                       onDragOver={this.dragOverText.bind(this)}
                       onDragLeave={this.dragLeaveText.bind(this)}
                       type="text" name="inputdiocese" />
+                    <select
+                      style={{marginTop: "5px"}}
+                      className={"form-control "+dioceseTypeActive}
+                      onChange={this.handleChange}
+                      value={this.state.inputdioceseType}
+                      name="inputdioceseType">{organisationTypesOptions}</select>
                   </div>
                   <div className="form-group">
                     <label>Type</label>
-                    <select name="inputtype" className="form-control"
+                    <select name="inputtype" className={"form-control "+typeActive}
                       onChange={this.handleChange}
-                      value={this.state.inputtype}>
-                      <option value="student">Student</option>
-                      <option value="teacher">Teacher</option>
-                      <option value="guestofhonor">Guest of honor</option>
-                    </select>
+                      value={this.state.inputtype}>{peopleRolesOptions}</select>
                   </div>
                   {thumbnailText}
                 </div>

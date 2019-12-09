@@ -1,8 +1,14 @@
 import React, { Component } from 'react';
-import {Spinner,Collapse, Button, Modal, ModalHeader, ModalBody, ModalFooter} from 'reactstrap';
+import {
+  Spinner,Collapse, Button,
+  Modal, ModalHeader, ModalBody, ModalFooter,
+  Input, InputGroup, InputGroupAddon,
+} from 'reactstrap';
 import axios from 'axios';
 import ImportToDBToolbox from './right-sidebar-import-to-db';
 import {Breadcrumbs} from '../../components/breadcrumbs';
+import {getThumbnailURL,capitalizeOnlyFirst} from '../../helpers/helpers';
+import { Redirect} from 'react-router-dom';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ImportClassPieceToDB extends Component {
@@ -13,6 +19,7 @@ export default class ImportClassPieceToDB extends Component {
       loading: true,
       compact: false,
       data: [],
+      loadedFaces: [],
       dbClasspiece: null,
       collapseRelations: [],
       identifyDuplicatesStatus: false,
@@ -25,19 +32,33 @@ export default class ImportClassPieceToDB extends Component {
       selectedDuplicate:[],
       duplicateModal: false,
       duplicateImageOver: false,
+
       inputthumbnail: '',
+      inputhonorificprefix: [],
       inputfirstname: '',
+      inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
+      inputdioceseType: '',
+      inputtype: 'student',
       input_id: '',
+
       mergePersonBtn: <span>Merge Person</span>,
       updateModal: false,
+      updateHonorificPrefix: [],
       updateFirstName: '',
+      updateMiddleName: '',
       updateLastName: '',
       updateDiocese: '',
+      updateDioceseType: '',
+      updateType: '',
+
       importSelectedBtn: <span>Import selected</span>,
       importSelectedStatus: false,
+      imported: false,
       reImportModalOpen: false,
+      draggedElem: null,
+      draggedIndex: null,
     }
     this.loadStatus = this.loadStatus.bind(this);
     this.toggleRelations = this.toggleRelations.bind(this);
@@ -47,6 +68,7 @@ export default class ImportClassPieceToDB extends Component {
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleDuplicateModal = this.toggleDuplicateModal.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleMultipleChange = this.handleMultipleChange.bind(this);
     this.startDragText = this.startDragText.bind(this);
     this.startDragImage = this.startDragImage.bind(this);
     this.dragStopText = this.dragStopText.bind(this);
@@ -63,6 +85,8 @@ export default class ImportClassPieceToDB extends Component {
     this.openUpdatePerson = this.openUpdatePerson.bind(this);
     this.importSelected = this.importSelected.bind(this);
     this.toggleReImportModal = this.toggleReImportModal.bind(this);
+    this.removeHP = this.removeHP.bind(this);
+    this.addHP = this.addHP.bind(this);
   }
 
   toggleRelations = (i) => {
@@ -81,52 +105,52 @@ export default class ImportClassPieceToDB extends Component {
     });
   }
 
-  loadStatus = () => {
+  loadStatus = async() => {
     let file = this.props.match.params.fileName;
     let context = this;
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'prepare-classpiece-ingestion?file='+file,
         crossDomain: true,
       })
     .then(function (response) {
-      let responseData = response.data.data;
+      return response.data.data;
 
-      let collapseRelations = [];
-      collapseRelations.push(false);
-
-      let newData = [];
-      let newClassPiece = responseData.classpiece;
-      newClassPiece.checked = true;
-      newData.classpiece=newClassPiece;
-      let newFaces = [];
-      for (let i=0;i<responseData.faces.length;i++) {
-        let face = responseData.faces[i];
-        face.checked = true;
-        newFaces.push(face);
-        collapseRelations.push(false);
-      }
-      newData.faces = newFaces;
-
-      let stateUpdate = {
-        loading: false,
-        data: newData,
-        dbClasspiece: responseData.db_classpiece,
-        collapseRelations: collapseRelations
-      }
-
-      if (responseData.db_classpiece!==null && responseData.db_classpiece!==0 && responseData.db_classpiece!=="0") {
-        stateUpdate.importSelectedBtn = <span>Re-import selected</span>;
-      }
-      context.setState(stateUpdate);
 
     })
     .catch(function (error) {
     });
+
+    let collapseRelations = [];
+    collapseRelations.push(false);
+
+    let newData = [];
+    let newClassPiece = responseData.classpiece;
+    newClassPiece.checked = true;
+    newData.classpiece=newClassPiece;
+    let newFaces = [];
+    for (let i=0;i<responseData.faces.length;i++) {
+      let face = responseData.faces[i];
+      face.checked = true;
+      newFaces.push(face);
+      collapseRelations.push(false);
+    }
+    newData.faces = newFaces;
+    let stateUpdate = {
+      loading: false,
+      data: newData,
+      loadedFaces: newFaces,
+      dbClasspiece: responseData.db_classpiece,
+      collapseRelations: collapseRelations
+    }
+
+    if (responseData.db_classpiece!==null && responseData.db_classpiece!==0 && responseData.db_classpiece!=="0") {
+      stateUpdate.importSelectedBtn = <span>Re-import selected</span>;
+    }
+    context.setState(stateUpdate);
   }
 
   identifyDuplicates = async () => {
-    let context = this;
     if (this.state.identifyDuplicatesStatus) {
       return false;
     }
@@ -138,23 +162,14 @@ export default class ImportClassPieceToDB extends Component {
       method: 'put',
       url: APIPath+'prepare-classpiece-identify-duplicates',
       crossDomain: true,
-      data: {faces: JSON.stringify(this.state.data.faces)},
+      data: {faces: JSON.stringify(this.state.loadedFaces)},
     })
 	  .then(function (response) {
-      return response.data.data;
+      return JSON.parse(response.data.data);
 	  })
 	  .catch(function (error) {
 	  });
-    let stateData = this.state.data;
-    for (let i=0; i<newFaces.length; i++) {
-      let newFace = newFaces[i];
-      if (typeof newFace.matches!=="undefined" && newFace.matches.length>0) {
-        let matches = newFace.matches;
-        matches.sort(function (a,b) {
-          return b.score - a.score;
-        });
-      }
-    }
+    let stateData = Object.assign({}, this.state.data);
     stateData.faces = newFaces;
     this.setState({
       data: stateData,
@@ -162,6 +177,7 @@ export default class ImportClassPieceToDB extends Component {
       identifyDuplicatesBtn: <span>Identification complete <i className="fa fa-check"></i></span>
     });
 
+    let context = this;
     setTimeout(function() {
       context.setState({
         identifyDuplicatesBtn: <span>Identify possible duplicates</span>
@@ -225,9 +241,19 @@ export default class ImportClassPieceToDB extends Component {
     let target = e.target;
     let value = target.type === 'checkbox' ? target.checked : target.value;
     let name = target.name;
-
     this.setState({
       [name]: value
+    });
+  }
+
+  handleMultipleChange = (e, i) => {
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let name = target.name;
+    let elem = this.state[name];
+    elem[i] = value;
+    this.setState({
+      [name]: elem
     });
   }
 
@@ -249,14 +275,41 @@ export default class ImportClassPieceToDB extends Component {
     })
   }
 
-  dragStopText = (e) => {
-    let target = e.target.getAttribute("data-target");
-    let targetText = this.state.draggableText;
-    this.setState({
-      [target]: targetText
-    })
+  dragStopText = (e,i=null) => {
     e.preventDefault();
     e.stopPropagation();
+    let target = e.target.getAttribute("data-target");
+    if (i===null) {
+      let targetText = this.state[target];
+      let space = '';
+      if (targetText!=='') {
+        space = ' ';
+      }
+      let newTargetText = targetText+space+this.state.draggableText;
+      newTargetText = capitalizeOnlyFirst(newTargetText);
+      this.setState({
+        [target]: newTargetText,
+        draggedElem:null,
+        draggedIndex:null,
+      })
+    }
+    else {
+      let targetText = this.state[target][i];
+      let space = '';
+      if (targetText!=='') {
+        space = ' ';
+      }
+      let newTargetText = targetText+space+this.state.draggableText;
+      newTargetText = capitalizeOnlyFirst(newTargetText);
+
+      let elem = this.state[target];
+      elem[i] = newTargetText;
+      this.setState({
+        [target]: elem,
+        draggedElem:null,
+        draggedIndex:null,
+      })
+    }
     return false;
   }
 
@@ -278,14 +331,22 @@ export default class ImportClassPieceToDB extends Component {
   }
 
   dragEnterText = (e) => {
-    let target = e.target.getAttribute("data-target");
-    if (target==="inputthumbnail" && !this.state.duplicateImageOver) {
-      this.setState({
-        duplicateImageOver: true
-      });
-    }
     e.preventDefault();
     e.stopPropagation();
+    let target = e.target.getAttribute("data-target");
+    let index = e.target.getAttribute("data-index");
+    if (target==="inputthumbnail" && !this.state.duplicateImageOver) {
+      this.setState({
+        duplicateImageOver: true,
+      });
+    }
+    else {
+      this.setState({
+        dragover: true,
+        draggedElem:target,
+        draggedIndex:index,
+      });
+    }
   }
 
   dragLeaveText = (e) => {
@@ -294,39 +355,29 @@ export default class ImportClassPieceToDB extends Component {
         duplicateImageOver: false
       });
     }
+    else {
+      this.setState({
+        dragover: false,
+        draggedElem:null,
+        draggedIndex:null,
+      });
+    }
     e.preventDefault();
     return false;
   }
 
   selectPossibleDuplicate = (i, fm) => {
-    let person = this.state.data.faces[i];
-    let possibleDuplicate = person.matches[fm];
-    this.setState({
-      inputthumbnail: '',
-      inputfirstname: '',
-      inputlastname: '',
-      inputdiocese: '',
-      input_id: '',
-      selectedPerson: person,
-      selectedPersonIndex: i,
-      selectedDuplicate: possibleDuplicate,
-      duplicateModal: true
-    });
-    let context = this;
-    setTimeout(function() {
-      context.copyRight();
-    },250)
-
-  }
-
-  copyRight = () => {
-    let srcPerson = this.state.selectedPerson;
-    let firstName = '';
-    let lastName = '';
-    let diocese = '';
-    let thumbnail = '';
+    let srcPerson = Object.assign({}, this.state.data.faces[i]);
+    let possibleDuplicate = srcPerson.matches[fm];
+    let honorificPrefix = '', firstName = '', middleName = '', lastName = '', diocese = '', dioceseType = '', type = '', thumbnail = '';
+    if (typeof srcPerson.honorificPrefix!=="undefined") {
+      honorificPrefix = Object.assign([{}], srcPerson.honorificPrefix);
+    }
     if (typeof srcPerson.firstName!=="undefined") {
       firstName = srcPerson.firstName;
+    }
+    if (typeof srcPerson.middleName!=="undefined") {
+      middleName = srcPerson.middleName;
     }
     if (typeof srcPerson.lastName!=="undefined") {
       lastName = srcPerson.lastName;
@@ -334,104 +385,199 @@ export default class ImportClassPieceToDB extends Component {
     if (typeof srcPerson.diocese!=="undefined") {
       diocese = srcPerson.diocese;
     }
+    if (typeof srcPerson.dioceseType!=="undefined") {
+      dioceseType = srcPerson.dioceseType;
+    }
+    if (typeof srcPerson.type!=="undefined") {
+      type = srcPerson.type;
+    }
     if (typeof srcPerson.thumbnail!=="undefined") {
       thumbnail = srcPerson.thumbnail;
     }
     this.setState({
       inputthumbnail: thumbnail,
+      inputhonorificprefix: honorificPrefix,
       inputfirstname: firstName,
+      inputmiddlename: middleName,
       inputlastname: lastName,
       inputdiocese: diocese,
+      inputdioceseType: dioceseType,
+      inputtype: type,
+      input_id: '',
+      selectedPerson: srcPerson,
+      selectedPersonIndex: i,
+      selectedDuplicate: possibleDuplicate,
+      duplicateModal: true
+    });
+  }
+
+  copyRight = () => {
+    let srcPerson = Object.assign({}, this.state.selectedPerson);
+    let honorificPrefix = '';
+    let firstName = '';
+    let middleName = '';
+    let lastName = '';
+    let diocese = '';
+    let dioceseType = '';
+    let type = '';
+    let thumbnail = '';
+    if (typeof srcPerson.honorificPrefix!=="undefined") {
+      honorificPrefix = srcPerson.honorificPrefix;
+    }
+    if (typeof srcPerson.firstName!=="undefined") {
+      firstName = srcPerson.firstName;
+    }
+    if (typeof srcPerson.middleName!=="undefined") {
+      middleName = srcPerson.middleName;
+    }
+    if (typeof srcPerson.lastName!=="undefined") {
+      lastName = srcPerson.lastName;
+    }
+    if (typeof srcPerson.diocese!=="undefined") {
+      diocese = srcPerson.diocese;
+    }
+    if (typeof srcPerson.dioceseType!=="undefined") {
+      dioceseType = srcPerson.dioceseType;
+    }
+    if (typeof srcPerson.type!=="undefined") {
+      type = srcPerson.type;
+    }
+    if (typeof srcPerson.thumbnail!=="undefined") {
+      thumbnail = srcPerson.thumbnail;
+    }
+    this.setState({
+      inputthumbnail: thumbnail,
+      inputhonorificprefix: honorificPrefix,
+      inputfirstname: firstName,
+      inputmiddlename: middleName,
+      inputlastname: lastName,
+      inputdiocese: diocese,
+      inputdioceseType: dioceseType,
+      inputtype: type,
       input_id: '',
     });
   }
 
   copyLeft = () => {
-    let srcPerson = this.state.selectedDuplicate;
+    let srcPerson = Object.assign({}, this.state.selectedDuplicate);
+    let honorificPrefix = '';
     let firstName = '';
+    let middleName = '';
     let lastName = '';
     let diocese = '';
-    let thumbnail = '';
+    let dioceseType = '';
+    let type = '';
+    let _id = '';
+    let thumbnail = {};
+    if (typeof srcPerson.honorificPrefix!=="undefined") {
+      honorificPrefix = srcPerson.honorificPrefix;
+    }
     if (typeof srcPerson.firstName!=="undefined") {
       firstName = srcPerson.firstName;
+    }
+    if (typeof srcPerson.middleName!=="undefined") {
+      middleName = srcPerson.middleName;
     }
     if (typeof srcPerson.lastName!=="undefined") {
       lastName = srcPerson.lastName;
     }
-    if (typeof srcPerson.diocese!=="undefined") {
-      diocese = srcPerson.diocese;
+    // get diocese
+    if (srcPerson.organisations.find(d=>d.term.label==="hasAffiliation")!=="undefined") {
+      let srcPersonDiocese = srcPerson.organisations.find(d=>d.term.label==="hasAffiliation");
+      diocese = srcPersonDiocese.ref.label;
+      dioceseType = srcPersonDiocese.ref.organisationType;
     }
-    if (typeof srcPerson.thumbnail!=="undefined") {
-      thumbnail = srcPerson.thumbnail;
+    // get type
+    if (srcPerson.resources.find(r=>r.term.label==="isDepictedOn")!=="undefined") {
+      type = srcPerson.resources.find(r=>r.term.label==="isDepictedOn").role;
+    }
+    if (typeof srcPerson.resources!=="undefined") {
+      thumbnail.src = getThumbnailURL(srcPerson);
+    }
+    if (typeof srcPerson._id!=="undefined") {
+      _id = srcPerson._id;
     }
     this.setState({
       inputthumbnail: thumbnail,
+      inputhonorificprefix: honorificPrefix,
       inputfirstname: firstName,
+      inputmiddlename: middleName,
       inputlastname: lastName,
       inputdiocese: diocese,
-      input_id: '',
+      inputdioceseType: dioceseType,
+      inputtype: type,
+      input_id: _id,
     });
   }
 
   mergePerson = (e) => {
     e.preventDefault();
-    let data = this.state.data;
+    let data = Object.assign({},this.state.data);
     let faces = data.faces;
-    let newPerson = this.state.selectedPerson;
+    let newPerson = Object.assign({},this.state.selectedPerson);
     let personIndex = this.state.selectedPersonIndex;
     let newId = this.state.selectedDuplicate._id;
     let inputthumbnail = this.state.inputthumbnail;
+    let inputhonorificprefix = this.state.inputhonorificprefix;
     let inputfirstname = this.state.inputfirstname;
+    let inputmiddlename = this.state.inputmiddlename;
     let inputlastname = this.state.inputlastname;
     let inputdiocese = this.state.inputdiocese;
+    let inputdioceseType = this.state.inputdioceseType;
+    let inputtype = this.state.inputtype;
 
     newPerson.thumbnail = inputthumbnail;
+    newPerson.honorificPrefix = inputhonorificprefix;
     newPerson.firstName = inputfirstname;
+    newPerson.middleName = inputmiddlename;
     newPerson.lastName = inputlastname;
     newPerson.diocese = inputdiocese;
+    newPerson.dioceseType = inputdioceseType;
+    newPerson.type = inputtype;
     newPerson._id = newId;
     faces[personIndex] = newPerson;
     data.faces = faces;
     this.setState({
-      data: data
+      data: data,
+      duplicateModal: false
     })
   }
 
-  undoMerge = () => {
+  undoMerge = async () => {
     let stateIndex = this.state.selectedPersonIndex;
     let file = this.props.match.params.fileName;
-    let context = this;
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'prepare-classpiece-ingestion?file='+file,
         crossDomain: true,
       })
     .then(function (response) {
-      let responseData = response.data.data;
-      let stateData = context.state.data;
-      let stateFaces = context.state.data.faces;
-
-      let stateFace = stateFaces[stateIndex];
-      let stateFaceMatches = stateFace.matches;
-      let stateFaceChecked = stateFace.checked;
-
-      let undoFace = responseData.faces[stateIndex];
-      undoFace.matches = stateFaceMatches;
-      undoFace.checked = stateFaceChecked;
-      stateFaces[stateIndex] = undoFace;
-      stateData.faces = stateFaces;
-      context.setState({
-        selectedPerson: undoFace,
-        data: stateData,
-      })
-
-      setTimeout(function() {
-        context.copyRight();
-      },250)
+      return response.data.data;
     })
     .catch(function (error) {
     });
 
+    let stateData = this.state.data;
+    let stateFaces = this.state.data.faces;
+
+    let stateFace = stateFaces[stateIndex];
+    let stateFaceMatches = stateFace.matches;
+    let stateFaceChecked = stateFace.checked;
+
+    let undoFace = responseData.faces[stateIndex];
+    undoFace.matches = stateFaceMatches;
+    undoFace.checked = stateFaceChecked;
+    stateFaces[stateIndex] = undoFace;
+    stateData.faces = stateFaces;
+    this.setState({
+      selectedPerson: undoFace,
+      data: stateData,
+    })
+
+    let context = this;
+    setTimeout(function() {
+      context.copyRight();
+    },250)
   }
 
   toggleUpdateModal = () => {
@@ -441,28 +587,48 @@ export default class ImportClassPieceToDB extends Component {
   }
 
   openUpdatePerson = (i) => {
-    let person = this.state.data.faces[i];
+    let person = Object.assign({},this.state.data.faces[i]);
     let thumbnail = '';
     if (typeof person.thumbnail!=="undefined") {
       thumbnail = person.thumbnail;
     }
+    let honorificPrefix = [];
     let firstName = '';
+    let middleName = '';
+    let lastName = '';
+    let diocese = '';
+    let dioceseType = '';
+    let type = '';
+    if (typeof person.honorificPrefix!=="undefined") {
+      honorificPrefix = person.honorificPrefix;
+    }
     if (typeof person.firstName!=="undefined") {
       firstName = person.firstName;
     }
-    let lastName = '';
+    if (typeof person.middleName!=="undefined") {
+      middleName = person.middleName;
+    }
     if (typeof person.lastName!=="undefined") {
       lastName = person.lastName;
     }
-    let diocese = '';
     if (typeof person.diocese!=="undefined") {
       diocese = person.diocese;
     }
+    if (typeof person.dioceseType!=="undefined") {
+      dioceseType = person.dioceseType;
+    }
+    if (typeof person.type!=="undefined") {
+      type = person.type;
+    }
     this.setState({
       inputthumbnail: thumbnail,
+      updateHonorificPrefix: honorificPrefix,
       updateFirstName: firstName,
+      updateMiddleName: middleName,
       updateLastName: lastName,
       updateDiocese: diocese,
+      updateDioceseType: dioceseType,
+      updateType: type,
       selectedPerson: person,
       selectedPersonIndex: i,
       updateModal: true
@@ -471,12 +637,16 @@ export default class ImportClassPieceToDB extends Component {
 
   updatePerson = (e) => {
     e.preventDefault();
-    let data = this.state.data;
+    let data = Object.assign({},this.state.data);
     let faces = this.state.data.faces;
     let person = this.state.data.faces[this.state.selectedPersonIndex];
+    person.honorificPrefix = this.state.updateHonorificPrefix;
     person.firstName = this.state.updateFirstName;
+    person.middleName = this.state.updateMiddleName;
     person.lastName = this.state.updateLastName;
     person.diocese = this.state.updateDiocese;
+    person.dioceseType = this.state.updateDioceseType;
+    person.type = this.state.updateType;
     faces[this.state.selectedPersonIndex] = person;
     data.faces = faces;
     this.setState({
@@ -495,7 +665,7 @@ export default class ImportClassPieceToDB extends Component {
       importSelectedStatus: true
     })
     let file = this.props.match.params.fileName;
-    let stateData = this.state.data;
+    let stateData = Object.assign([{}], this.state.data);
     let postData = {};
     postData.file = file;
     let classPiece = stateData.classpiece;
@@ -527,12 +697,13 @@ export default class ImportClassPieceToDB extends Component {
     if (ingestData.status) {
       this.setState({
         importSelectedStatus: false,
-        importSelectedBtn: <span>Import complete <i className="fa fa-check"></i></span>
+        importSelectedBtn: <span>Import complete <i className="fa fa-check"></i></span>,
       });
 
       setTimeout(function() {
         context.setState({
-          importSelectedBtn: <span>Import selected</span>
+          importSelectedBtn: <span>Import selected</span>,
+          imported: true,
         });
       },2000);
     }
@@ -545,11 +716,45 @@ export default class ImportClassPieceToDB extends Component {
     });
   }
 
+  removeHP = (i, name=null) => {
+    if (name===null) {
+      return false;
+    }
+    let hps = this.state[name];
+    hps.splice(i,1);
+    this.setState({
+      inputhonorificprefix: hps
+    });
+  }
+
+  addHP = (name) => {
+    if (name===null) {
+      return false;
+    }
+    let hps = this.state[name];
+    hps.push("");
+    this.setState({
+      inputhonorificprefix: hps
+    });
+  }
+
   componentDidMount() {
     this.loadStatus();
   }
 
+  componentDidUpdate(prevProps,prevState) {
+    if (!prevState.imported && this.state.imported) {
+      this.setState({
+        imported: false
+      })
+    }
+  }
+
   render() {
+    let redirect = [];
+    if (this.state.imported) {
+      redirect = <Redirect to='/parse-class-pieces/' />
+    }
     let content = <div className="row">
       <div className="col-12">
         <div style={{padding: '40pt',textAlign: 'center'}}>
@@ -575,7 +780,27 @@ export default class ImportClassPieceToDB extends Component {
         }
         let label = '';
         if (face.firstName!=="" || face.lastName!=="") {
-          label = face.firstName+' '+face.lastName;
+          if (typeof face.honorificPrefix!=="undefined" && face.honorificPrefix!=="") {
+            label += face.honorificPrefix;
+          }
+          if (typeof face.firstName!=="undefined" && face.firstName!=="") {
+            if (label!=="") {
+              label += " ";
+            }
+            label += face.firstName;
+          }
+          if (typeof face.middleName!=="undefined" && face.middleName!=="") {
+            if (label!=="") {
+              label += " ";
+            }
+            label += face.middleName;
+          }
+          if (typeof face.lastName!=="undefined" && face.lastName!=="") {
+            if (label!=="") {
+              label += " ";
+            }
+            label += face.lastName;
+          }
           // classpiece relations
           let personRelation = <li key={"depicts-"+f}>
             <span className="type-of">[:Resource]</span> {classpiece.label} <span className="relation">depicts</span> <span className="type-of">[:Person]</span> {label}</li>;
@@ -593,7 +818,7 @@ export default class ImportClassPieceToDB extends Component {
           <span className="type-of">[:Resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /> <span className="relation">isPartOf</span> <span className="type-of">[:Resource]</span> {classpiece.label}</li>;
 
         let resourceDioceseRelation = <li key={2}>
-          <span className="type-of">[:Person]</span> {label} <span className="relation">isRegisteredTo</span> <span className="type-of">[:Organisation]</span> {face.diocese}</li>;
+          <span className="type-of">[:Person]</span> {label} <span className="relation">hasAffiliation</span> <span className="type-of">[:Organisation]</span> {face.diocese}</li>;
 
         if (face.firstName!=="" || face.lastName!=="") {
           faceRelations.push(personToClasspieceRelation);
@@ -606,18 +831,15 @@ export default class ImportClassPieceToDB extends Component {
         }
 
         // duplicates
-        let duplicatesRows = [];
         let duplicatesTitle = [];
         let duplicatesClass = "";
         let duplicatesOutput = [];
         if (typeof face.matches!=="undefined" && face.matches.length>0) {
           duplicatesTitle = <div><label>Possible duplicates</label></div>;
           duplicatesClass = " duplicates";
-          for (let fm=0; fm<face.matches.length; fm++) {
-            let faceMatch = face.matches[fm];
-            let faceMatchRow = <li key={fm} id={faceMatch.id}><Button size="sm" type="button" onClick={this.selectPossibleDuplicate.bind(this, i, fm)}>{faceMatch.firstName} {faceMatch.lastName}</Button> [<i>{faceMatch.score}% match</i>]</li>
-            duplicatesRows.push(faceMatchRow);
-          }
+          let duplicatesRows = face.matches.map((faceMatch, fm)=>{
+            return <li key={fm}><Button size="sm" type="button" onClick={()=>this.selectPossibleDuplicate(i, fm)}>{faceMatch.firstName} {faceMatch.lastName}</Button> [<i>{faceMatch.score}% match</i>]</li>;
+          })
           duplicatesOutput = <ul className="duplicates-list">{duplicatesRows}</ul>
         }
         let checked = "";
@@ -732,14 +954,11 @@ export default class ImportClassPieceToDB extends Component {
       }
       let duplicateThumbnail = [];
       let duplicateFace = [];
-      let newThumbnail = [];
       if (this.state.selectedDuplicate!==null) {
         duplicateFace = this.state.selectedDuplicate;
-        if (typeof duplicateFace!=="undefined") {
-          newThumbnail = duplicateFace.thumbnail;
-          if (typeof newThumbnail!=="undefined" && typeof newThumbnail.path!=="undefined") {
-            duplicateThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={newThumbnail.src} />
-          }
+        let thumbnailURL = getThumbnailURL(duplicateFace);
+        if (thumbnailURL!==null) {
+          duplicateThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnailURL} />
         }
       }
 
@@ -758,7 +977,221 @@ export default class ImportClassPieceToDB extends Component {
         duplicateImageOverClass = " over";
       }
 
-      let duplicateModal = <Modal isOpen={this.state.duplicateModal} toggle={this.toggleDuplicateModal} className={this.props.className+" duplicate-modal"} size="lg">
+      let honorificPrefixInputs = this.state.inputhonorificprefix.map((h,i)=>{
+        let honorificPrefixActive = "";
+        if (this.state.draggedElem==="inputhonorificprefix" && parseInt(this.state.draggedIndex,10)===i) {
+          honorificPrefixActive = "active";
+        }
+
+        let item = <InputGroup key={i}>
+          <Input className={honorificPrefixActive}
+            type="text"
+            name="inputhonorificprefix"
+            placeholder="Person honorific prefix..."
+            data-target="inputhonorificprefix"
+            data-index={i}
+            value={this.state.inputhonorificprefix[i]}
+            onDrop={(e)=>this.dragStopText(e,i)}
+            onDragEnter={this.dragEnterText}
+            onDragOver={this.dragOverText}
+            onDragLeave={this.dragLeaveText}
+            onChange={(e)=>this.handleMultipleChange(e,i)}/>
+            <InputGroupAddon addonType="append">
+              <Button type="button" color="info" outline onClick={()=>this.removeHP(i, "inputhonorificprefix")}><b><i className="fa fa-minus" /></b></Button>
+            </InputGroupAddon>
+        </InputGroup>
+        if (i===0) {
+          item = <Input className={honorificPrefixActive}
+          data-index={i}
+          style={{marginBottom: "5px"}}
+          key={i} type="text"
+          name="inputhonorificprefix"
+          placeholder="Person honorific prefix..."
+          value={this.state.inputhonorificprefix[i]}
+          data-target={"inputhonorificprefix"}
+          onDrop={(e)=>this.dragStopText(e,i)}
+          onDragEnter={this.dragEnterText}
+          onDragOver={this.dragOverText}
+          onDragLeave={this.dragLeaveText}
+          onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+        }
+        return item;
+      });
+
+      let duplicateDiocese = {label: '', type: ''};
+      if (typeof duplicateFace!=="undefined" && typeof duplicateFace.organisations!=="undefined" && duplicateFace.organisations.length>0) {
+        duplicateDiocese = {label: duplicateFace.organisations[0].ref.label, type: duplicateFace.organisations[0].ref.organisationType}
+      }
+
+      let firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="", dioceseTypeActive="",typeActive="";
+      if (this.state.draggedElem==="inputfirstname") {
+        firstNameActive = "active";
+      }
+      if (this.state.draggedElem==="inputmiddlename") {
+        middleNameActive = "active";
+      }
+      if (this.state.draggedElem==="inputlastname") {
+        lastNameActive = "active";
+      }
+      if (this.state.draggedElem==="inputdiocese") {
+        dioceseActive = "active";
+      }
+      if (this.state.draggedElem==="inputdioceseType") {
+        dioceseTypeActive = "active";
+      }
+      if (this.state.draggedElem==="inputtype") {
+        typeActive = "active";
+      }
+
+      // 1. classpiece person values
+      let cphp = [];
+      let cpfn = [];
+      let cpmn = [];
+      let cpln = [];
+      let cpdo = [];
+      let cpty = [];
+      let selectedFaceHP = [];
+      if (typeof selectedFace.honorificPrefix!=="undefined" && selectedFace.honorificPrefix.length>0) {
+        selectedFaceHP = selectedFace.honorificPrefix.map((hp, i)=>{
+          return <div
+            key={i}
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{hp}</div>
+        });
+      }
+      if (selectedFaceHP.length>0) {
+        cphp = <div className="form-group">
+          <label>Honorific Prefix</label>
+          {selectedFaceHP}
+        </div>
+      }
+      if (selectedFace.firstName!=="") {
+        cpfn = <div className="form-group">
+          <label>First Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.firstName}</div>
+        </div>
+      }
+      if (selectedFace.middleName!=="") {
+        cpmn = <div className="form-group">
+          <label>Middle Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.middleName}</div>
+        </div>
+      }
+      if (selectedFace.lastName!=="") {
+        cpln = <div className="form-group">
+          <label>Last Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.lastName}</div>
+        </div>
+      }
+      if (selectedFace.diocese!=="") {
+        cpdo = <div className="form-group">
+          <label>Diocese | Order</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.diocese}</div>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.dioceseType}</div>
+        </div>
+      }
+      if (selectedFace.type!=="") {
+        cpty = <div className="form-group">
+          <label>Type</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{selectedFace.type}</div>
+        </div>
+      }
+
+      // 2. db person values
+      let dbhp = [];
+      let dbfn = [];
+      let dbmn = [];
+      let dbln = [];
+      let dbdo = [];
+      let dbty = [];
+
+      let duplicateFaceHP = [];
+      if (typeof duplicateFace.honorificPrefix!=="undefined" && duplicateFace.honorificPrefix.length>0) {
+        duplicateFaceHP = duplicateFace.honorificPrefix.map((hp, i)=>{
+          return <div
+            key={i}
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{hp}</div>
+        });
+      }
+      if (duplicateFaceHP.length>0) {
+        dbhp = <div className="form-group">
+          <label>Honorific Prefix</label>
+          {duplicateFaceHP}
+        </div>
+      }
+      if (duplicateFace.firstName!=="") {
+        dbfn = <div className="form-group">
+          <label>First Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{duplicateFace.firstName}</div>
+        </div>
+      }
+      if (duplicateFace.middleName!=="") {
+        dbmn = <div className="form-group">
+          <label>Middle Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{duplicateFace.middleName}</div>
+        </div>
+      }
+      if (duplicateFace.lastName!=="") {
+        dbln = <div className="form-group">
+          <label>Last Name</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{duplicateFace.lastName}</div>
+        </div>
+      }
+      if (duplicateDiocese.label!=="") {
+        dbdo = <div className="form-group">
+          <label>Diocese | Order</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{duplicateDiocese.label}</div>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{duplicateDiocese.type}</div>
+        </div>
+      }
+      if (typeof duplicateFace.resources!=="undefined" && duplicateFace.resources.find(r=>r.term.label==="isDepictedOn")!=="undefined") {
+        let dbtype = duplicateFace.resources.find(r=>r.term.label==="isDepictedOn").term.role;
+        dbty = <div className="form-group">
+          <label>Type</label>
+          <div
+            draggable="true"
+            onDragStart={(e)=>this.startDragText(e)}
+            className="thumbnail-textbox">{dbtype}</div>
+        </div>
+      }
+
+      let duplicateModal = <Modal isOpen={this.state.duplicateModal} toggle={this.toggleDuplicateModal} className="duplicate-modal" size="lg">
         <form onSubmit={this.mergePerson}>
           <ModalHeader toggle={this.toggleDuplicateModal}>Merge person</ModalHeader>
           <ModalBody>
@@ -773,28 +1206,12 @@ export default class ImportClassPieceToDB extends Component {
                     className="">
                     {selectedThumbnail}</div>
                 </div>
-                <div className="form-group">
-                  <label>First Name</label>
-                  <div
-                    draggable="true"
-                    onDragStart={this.startDragText.bind(this)}
-                    className="thumbnail-textbox">{selectedFace.firstName}</div>
-
-                </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <div
-                    draggable="true"
-                    onDragStart={this.startDragText.bind(this)}
-                    className="thumbnail-textbox">{selectedFace.lastName}</div>
-                </div>
-                <div className="form-group">
-                  <label>Diocese</label>
-                  <div
-                    draggable="true"
-                    onDragStart={this.startDragText.bind(this)}
-                    className="thumbnail-textbox">{selectedFace.diocese}</div>
-                </div>
+                {cphp}
+                {cpfn}
+                {cpmn}
+                {cpln}
+                {cpdo}
+                {cpty}
               </div>
 
               <div className="col-xs-12 col-sm-4">
@@ -812,40 +1229,88 @@ export default class ImportClassPieceToDB extends Component {
                     </div>
                 </div>
                 <div className="form-group">
+                  <label>Honorific Prefix</label>
+                  {honorificPrefixInputs}
+                  <div className="text-right">
+                    <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP("inputhonorificprefix")}>Add new <i className="fa fa-plus" /></Button>
+                  </div>
+                </div>
+                <div className="form-group">
                   <label>First Name</label>
                   <input
                     onChange={this.handleChange}
                     value={this.state.inputfirstname}
-                    onDrop={this.dragStopText.bind(this)}
-                    onDragEnter={this.dragEnterText.bind(this)}
-                    onDragOver={this.dragOverText.bind(this)}
-                    onDragLeave={this.dragLeaveText.bind(this)}
+                    onDrop={(e)=>this.dragStopText(e)}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
                     data-target="inputfirstname"
-                    type="text" className="form-control" name="inputfirstname" />
+                    type="text" className={"form-control "+firstNameActive} name="inputfirstname" />
+                </div>
+                <div className="form-group">
+                  <label>Middle Name</label>
+                  <input
+                    onChange={this.handleChange}
+                    value={this.state.inputmiddlename}
+                    onDrop={(e)=>this.dragStopText(e)}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
+                    data-target="inputmiddlename"
+                    type="text" className={"form-control "+middleNameActive} name="inputmiddlename" />
                 </div>
                 <div className="form-group">
                   <label>Last Name</label>
                   <input
                     onChange={this.handleChange}
                     value={this.state.inputlastname}
-                    onDrop={this.dragStopText.bind(this)}
-                    onDragEnter={this.dragEnterText.bind(this)}
-                    onDragOver={this.dragOverText.bind(this)}
-                    onDragLeave={this.dragLeaveText.bind(this)}
+                    onDrop={(e)=>this.dragStopText(e)}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
                     data-target="inputlastname"
-                    type="text" className="form-control" name="inputlastname" />
+                    type="text" className={"form-control "+lastNameActive} name="inputlastname" />
                 </div>
                 <div className="form-group">
-                  <label>Diocese</label>
+                  <label>Diocese | Order</label>
                   <input
                     onChange={this.handleChange}
                     value={this.state.inputdiocese}
-                    onDrop={this.dragStopText.bind(this)}
-                    onDragEnter={this.dragEnterText.bind(this)}
-                    onDragOver={this.dragOverText.bind(this)}
-                    onDragLeave={this.dragLeaveText.bind(this)}
+                    onDrop={(e)=>this.dragStopText(e)}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
                     data-target="inputdiocese"
-                    type="text" className="form-control" name="inputdiocese" />
+                    type="text" className={"form-control "+dioceseActive} name="inputdiocese" />
+                  <select
+                    style={{marginTop: "5px"}}
+                    className={"form-control "+dioceseTypeActive}
+                    onChange={this.handleChange}
+                    value={this.state.inputdioceseType}
+                    onDrop={(e)=>this.dragStopText(e)}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
+                    name="inputdioceseType">
+                    <option value="diocese">Diocese</option>
+                    <option value="order">Order</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Type</label>
+                  <select name="inputtype" className={"form-control "+typeActive}
+                    onDrop={this.dragStopText}
+                    onDragEnter={this.dragEnterText}
+                    onDragOver={this.dragOverText}
+                    onDragLeave={this.dragLeaveText}
+                    onChange={this.handleChange}
+                    data-target="inputtype"
+                    value={this.state.inputtype}>
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="guestOfHonor">Guest of honor</option>
+                  </select>
                 </div>
               </div>
 
@@ -855,23 +1320,12 @@ export default class ImportClassPieceToDB extends Component {
                   <div className="selected-item-thumbnail">
                     {duplicateThumbnail}
                   </div>
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <div
-                      draggable="true"
-                      onDragStart={this.startDragText.bind(this)}
-                      className="thumbnail-textbox">{duplicateFace.firstName}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <div
-                      draggable="true"
-                      onDragStart={this.startDragText.bind(this)}
-                      className="thumbnail-textbox">{duplicateFace.lastName}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Diocese</label>
-                  </div>
+                  {dbhp}
+                  {dbfn}
+                  {dbmn}
+                  {dbln}
+                  {dbdo}
+                  {dbty}
                 </div>
               </div>
 
@@ -884,19 +1338,46 @@ export default class ImportClassPieceToDB extends Component {
               </div>
               <div className="col-xs-12 col-sm-4"></div>
               <div className="col-xs-12 col-sm-4">
-                <div className="form-group">
+                <div className="form-group text-right">
                   <Button type="button" outline color="primary" size="sm" onClick={this.copyLeft}><i className="fa fa-angle-left" /> Copy left</Button>
                 </div>
               </div>
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button color="primary" outline type="submit">{this.state.mergePersonBtn}</Button>
-            <Button color="warning" outline type="button" onClick={this.undoMerge}>Undo Merge</Button>
-            <Button type="button" color="secondary" onClick={this.closeSelectedModal}>Cancel</Button>
+            <Button color="primary" size="sm" outline type="submit">{this.state.mergePersonBtn}</Button>
+            <Button color="warning" size="sm" outline type="button" onClick={this.undoMerge}>Undo Merge</Button>
+            <Button type="button" size="sm" color="secondary" onClick={this.closeSelectedModal}>Cancel</Button>
           </ModalFooter>
         </form>
       </Modal>;
+
+      let updateHonorificPrefixInputs = this.state.updateHonorificPrefix.map((h,i)=>{
+        let honorificPrefixActive = "";
+        if (this.state.draggedElem==="updateHonorificPrefix" && parseInt(this.state.draggedIndex,10)===i) {
+          honorificPrefixActive = "active";
+        }
+        let item = <InputGroup key={i}>
+          <Input className={honorificPrefixActive} type="text" name="updateHonorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..."
+          data-target="updateHonorificPrefix" data-index={i} value={this.state.updateHonorificPrefix[i]}
+          onDrop={(e)=>this.dragStopText(e,i)}
+          onDragEnter={this.dragEnterText}
+          onDragOver={this.dragOverText}
+          onDragLeave={this.dragLeaveText}
+           onChange={(e)=>this.handleMultipleChange(e,i)}/>
+            <InputGroupAddon addonType="append">
+              <Button type="button" color="info" outline onClick={()=>this.removeHP(i, "updateHonorificPrefix")}><b><i className="fa fa-minus" /></b></Button>
+            </InputGroupAddon>
+        </InputGroup>
+        if (i===0) {
+          item = <Input className={honorificPrefixActive} data-index={i} style={{marginBottom: "5px"}} key={i} type="text" name="updateHonorificPrefix" placeholder="Person honorific prefix..." value={this.state.updateHonorificPrefix[i]}
+          data-target={"updateHonorificPrefix"} onDrop={(e)=>this.dragStopText(e,i)}
+          onDragEnter={this.dragEnterText}
+          onDragOver={this.dragOverText}
+          onDragLeave={this.dragLeaveText} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+        }
+        return item;
+      });
 
       let updateModal = <Modal isOpen={this.state.updateModal} toggle={this.toggleUpdateModal} className={this.props.className+" update-modal"}>
         <form onSubmit={this.updatePerson}>
@@ -909,11 +1390,26 @@ export default class ImportClassPieceToDB extends Component {
               </div>
               <div className="col-xs-12 col-sm-8 col-md-8">
                 <div className="form-group">
+                  <label>Honorific Prefix</label>
+                  {updateHonorificPrefixInputs}
+
+                  <div className="text-right">
+                    <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP("updateHonorificPrefix")}>Add new <i className="fa fa-plus" /></Button>
+                  </div>
+                </div>
+                <div className="form-group">
                   <label>First Name</label>
                   <input
                     onChange={this.handleChange}
                     value={this.state.updateFirstName}
                     type="text" className="form-control" name="updateFirstName" />
+                </div>
+                <div className="form-group">
+                  <label>Middle Name</label>
+                  <input
+                    onChange={this.handleChange}
+                    value={this.state.updateMiddleName}
+                    type="text" className="form-control" name="updateMiddleName" />
                 </div>
                 <div className="form-group">
                   <label>Last Name</label>
@@ -923,19 +1419,38 @@ export default class ImportClassPieceToDB extends Component {
                     type="text" className="form-control" name="updateLastName" />
                 </div>
                 <div className="form-group">
-                  <label>Diocese</label>
+                  <label>Diocese | Order</label>
                   <input
                     onChange={this.handleChange}
                     value={this.state.updateDiocese}
                     type="text" className="form-control" name="updateDiocese" />
+                  <select
+                    style={{marginTop: "5px"}}
+                    className="form-control"
+                    onChange={this.handleChange}
+                    value={this.state.updateDioceseType}
+                    name="updateDioceseType">
+                    <option value="diocese">Diocese</option>
+                    <option value="order">Order</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Type</label>
+                  <select name="updateType" className="form-control"
+                    onChange={this.handleChange}
+                    value={this.state.updateType}>
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="guestOfHonor">Guest of honor</option>
+                  </select>
                 </div>
               </div>
 
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button color="primary" outline type="submit">Update person</Button>
-            <Button type="button" color="secondary" onClick={this.closeSelectedModal}>Cancel</Button>
+            <Button color="primary" outline type="submit" size="sm">Update person</Button>
+            <Button type="button" color="secondary" onClick={this.closeSelectedModal} size="sm">Cancel</Button>
           </ModalFooter>
         </form>
       </Modal>;
@@ -992,6 +1507,7 @@ export default class ImportClassPieceToDB extends Component {
     ];
     return (
       <div>
+        {redirect}
         <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">

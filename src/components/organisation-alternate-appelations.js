@@ -12,20 +12,16 @@ const mapStateToProps = state => {
    };
 };
 
-class PersonAppelations extends Component {
+class OrganisationAppelations extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       editOpen: false,
-      appelation: '',
-      firstName: '',
-      middleName: '',
-      lastName: '',
+      label: '',
       note: '',
       language: '',
       activeIndex: null,
-      simple: true,
       updating: false,
       updateBtn: <span><i className="fa fa-save" /> Update</span>,
       errorVisible: false,
@@ -38,7 +34,6 @@ class PersonAppelations extends Component {
     this.select2Change = this.select2Change.bind(this);
     this.submit = this.submit.bind(this);
     this.delete = this.delete.bind(this);
-    this.toggleForm = this.toggleForm.bind(this);
     this.loadLanguageOptions = this.loadLanguageOptions.bind(this);
   }
 
@@ -53,18 +48,9 @@ class PersonAppelations extends Component {
     };
     if (index!==null && index!=="new") {
       let appelation = this.props.data[index];
-      update.appelation = appelation.appelation;
-      update.firstName = appelation.firstName;
-      update.middleName = appelation.middleName;
-      update.lastName = appelation.lastName;
+      update.label = appelation.label;
       update.note = appelation.note;
       update.language = appelation.language;
-      if (update.appelation.length<2 && update.firstName>2) {
-        update.simple = false;
-      }
-      else {
-        update.simple = true;
-      }
     }
     this.setState(update)
   }
@@ -74,10 +60,7 @@ class PersonAppelations extends Component {
       editOpen: false,
       errorVisible: false,
       errorText: [],
-      appelation: '',
-      firstName: '',
-      middleName: '',
-      lastName: '',
+      label: '',
       note: '',
       language: '',
     })
@@ -94,7 +77,6 @@ class PersonAppelations extends Component {
   }
 
   select2Change(selectedOption, element=null) {
-    console.log(selectedOption);
     if (element===null) {
       return false;
     }
@@ -105,18 +87,15 @@ class PersonAppelations extends Component {
 
   submit() {
     let newItem = {
-      appelation: this.state.appelation,
-      firstName: this.state.firstName,
-      middleName: this.state.middleName,
-      lastName: this.state.lastName,
+      label: this.state.label,
       note: this.state.note,
       language: this.state.language,
     }
     let error = false;
     let errorText = [];
-    if (newItem.appelation.length<2 && newItem.firstName.length<2) {
+    if (newItem.label.length<2) {
       error = true;
-      errorText = <div className="text-center">Please enter an appelation or a first name to continue.</div>
+      errorText = <div className="text-center">Please enter a label to continue.</div>
     }
     if (error) {
       this.setState({
@@ -134,12 +113,6 @@ class PersonAppelations extends Component {
   delete() {
     this.props.remove(this.state.activeIndex);
     this.closeEdit();
-  }
-
-  toggleForm() {
-    this.setState({
-      simple:!this.state.simple
-    })
   }
 
   loadLanguageOptions() {
@@ -161,11 +134,8 @@ class PersonAppelations extends Component {
     let rows = [];
     for (let i=0;i<this.props.data.length; i++) {
       let appelation = this.props.data[i];
-      let appelationText = []
-      appelationText.push(<span key="simple">{appelation.appelation}</span>);
-      if (appelation.firstName!=="" || appelation.middleName!=="" || appelation.lastName!=="") {
-        appelationText.push(<span key="advanced">{appelation.firstName} {appelation.middleName} {appelation.lastName}</span>)
-      }
+      let appelationText = [];
+      appelationText.push(<span key={appelation.label}>{appelation.label}</span>);
       let row = <div key={i} className="appelation-row">
         <div className="appelation-details">{appelationText}</div>
         <div className="appelation-actions">
@@ -182,13 +152,6 @@ class PersonAppelations extends Component {
     if (this.state.activeIndex==="new") {
       popoverTitle = "Add appelation";
       deleteButton = <button type="button" className="btn btn-xs btn-outline-danger" onClick={()=>this.closeEdit()}><i className="fa fa-times" /> Cancel</button>
-    }
-
-    let simpleFormClass="";
-    let advancedFormClass="hidden";
-    if (!this.state.simple) {
-      simpleFormClass="hidden";
-      advancedFormClass="";
     }
     let errorContainerClass = " hidden";
     if (this.state.errorVisible) {
@@ -209,40 +172,22 @@ class PersonAppelations extends Component {
           <ModalHeader toggle={this.closeEdit}>{popoverTitle}</ModalHeader>
           <ModalBody>
             {errorContainer}
-            <div className={simpleFormClass}>
-              <FormGroup>
-                <Label for="Appelation">Appelation</Label>
-                <Input type="text" name="appelation" id="Appelation" placeholder="Person alternate appelation..." value={this.state.appelation} onChange={this.handleChange}/>
-              </FormGroup>
-              <span className="toggle-advanced" onClick={this.toggleForm}>Advanced</span>
-            </div>
-            <div className={advancedFormClass}>
-              <FormGroup>
-                <Label for="firstName">First name</Label>
-                <Input type="text" name="firstName" id="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
-              </FormGroup>
-              <FormGroup>
-                <Label for="middleName">Middle name</Label>
-                <Input type="text" name="middleName" id="middleName" placeholder="Person middle name prefix..." value={this.state.middleName} onChange={this.handleChange}/>
-              </FormGroup>
-              <FormGroup>
-                <Label for="lastName">Last name</Label>
-                <Input type="text" name="lastName" id="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
-              </FormGroup>
-              <FormGroup style={{marginTop: '15px'}}>
-                <Label>Language</Label>
-                <Select
-                  value={this.state.language}
-                  onChange={(selectedOption)=>this.select2Change(selectedOption, "language")}
-                  options={this.state.languageOptions}
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label for="note">Note</Label>
-                <Input type="textarea" name="note" id="note" placeholder="A note about this alternate appelation..." value={this.state.note} onChange={this.handleChange}/>
-              </FormGroup>
-              <span className="toggle-advanced" onClick={this.toggleForm}>Simple</span>
-            </div>
+            <FormGroup>
+              <Label>Label</Label>
+              <Input type="text" name="label" placeholder="Label..." value={this.state.label} onChange={this.handleChange}/>
+            </FormGroup>
+            <FormGroup style={{marginTop: '15px'}}>
+              <Label>Language</Label>
+              <Select
+                value={this.state.language}
+                onChange={(selectedOption)=>this.select2Change(selectedOption, "language")}
+                options={this.state.languageOptions}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>Note</Label>
+              <Input type="textarea" name="note" placeholder="A note about this alternate appelation..." value={this.state.note} onChange={this.handleChange}/>
+            </FormGroup>
             <div className="text-left">
               {deleteButton}
               <button type="button" className="btn btn-xs btn-outline-info pull-right" onClick={()=>this.submit()}>{this.state.updateBtn}</button>
@@ -254,4 +199,4 @@ class PersonAppelations extends Component {
   }
 
 }
-export default PersonAppelations = connect(mapStateToProps, [])(PersonAppelations);
+export default OrganisationAppelations = connect(mapStateToProps, [])(OrganisationAppelations);

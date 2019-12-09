@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import {
   Card, CardTitle, CardBody,
-  Button,
+  Button, ButtonGroup,
   Form, FormGroup, Label, Input,
   Collapse,
   Modal, ModalHeader, ModalBody, ModalFooter
@@ -32,6 +32,7 @@ class ViewResource extends Component {
   constructor(props) {
     super(props);
     let resource = this.props.resource;
+    let status = 'private';
     let newLabel = '';
     let newDescription = '';
     let newSystemType = 'undefined';
@@ -59,8 +60,10 @@ class ViewResource extends Component {
       systemType: newSystemType,
       description: newDescription,
       updateFileModal: false,
-      imageViewerVisible: false
+      imageViewerVisible: false,
+      status: status,
     }
+    this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
@@ -71,10 +74,20 @@ class ViewResource extends Component {
     this.toggleImageViewer = this.toggleImageViewer.bind(this);
   }
 
+  updateStatus(value) {
+    this.setState({status:value});
+  }
+
+
   formSubmit(e) {
     e.preventDefault();
 
-    let updateData = {label: this.state.label, systemType: this.state.systemType, description: this.state.description};
+    let updateData = {
+      label: this.state.label,
+      systemType: this.state.systemType,
+      description: this.state.description,
+      status: this.state.status,
+    };
     this.props.update(updateData);
   }
 
@@ -282,6 +295,15 @@ class ViewResource extends Component {
     if (!this.state.resourcesOpen) {
       resourcesOpenActive = "";
     }
+    let statusPublic = "secondary";
+    let statusPrivate = "secondary";
+    let publicOutline = true;
+    let privateOutline = false;
+    if (resource.status==="public") {
+      statusPublic = "success";
+      publicOutline = false;
+      privateOutline = true;
+    }
 
     let relatedEvents = loadRelatedEvents(this.props.resource, this.deleteRef);
     let relatedOrganisations = loadRelatedOrganisations(this.props.resource, this.deleteRef);
@@ -329,6 +351,12 @@ class ViewResource extends Component {
                 {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
+                    <div className="text-right">
+                      <ButtonGroup>
+                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
+                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                      </ButtonGroup>
+                    </div>
                     <FormGroup>
                       <Label for="labelInput">Label</Label>
                       <Input type="text" name="label" id="labelInput" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>

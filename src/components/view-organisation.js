@@ -1,5 +1,10 @@
 import React, { Component } from 'react';
-import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
+import {
+  Card, CardTitle, CardBody,
+  Button, ButtonGroup,
+  Form, FormGroup, Label, Input,
+  Collapse
+} from 'reactstrap';
 import {
   getThumbnailURL,
   loadRelatedEvents,
@@ -8,15 +13,31 @@ import {
   loadRelatedResources
 } from '../helpers/helpers';
 import axios from 'axios';
+import OrganisationAppelations from './organisation-alternate-appelations';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ViewOrganisation extends Component {
   constructor(props) {
     super(props);
 
-    let label = '';
+    let organisation = this.props.organisation;
+    let status = 'private', label = '', description = '', organisationType = '', alternateAppelations = [];
     if (typeof this.props.label!=="undefined" && this.props.label!==null) {
       label = this.props.label;
+    }
+    if (organisation!==null) {
+      if (typeof organisation.description!=="undefined" && organisation.description!==null) {
+        description = organisation.description;
+      }
+      if (typeof organisation.organisationType!=="undefined" && organisation.organisationType!==null) {
+        organisationType = organisation.organisationType;
+      }
+      if (typeof organisation.alternateAppelations!=="undefined" && organisation.alternateAppelations!==null) {
+        alternateAppelations = organisation.alternateAppelations;
+      }
+      if (typeof organisation.status!=="undefined" && organisation.status!==null) {
+        status = organisation.status;
+      }
     }
     this.state = {
       detailsOpen: true,
@@ -24,20 +45,35 @@ export default class ViewOrganisation extends Component {
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,
-      label: label
+      label: label,
+      description: description,
+      organisationType: organisationType,
+      status: status,
+      alternateAppelations: alternateAppelations,
     }
+    this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
+    this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
+    this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
+  }
+
+  updateStatus(value) {
+    this.setState({status:value});
   }
 
   formSubmit(e) {
     e.preventDefault();
     let newData = {
-      label: this.state.label
+      label: this.state.label,
+      description: this.state.description,
+      organisationType: this.state.organisationType,
+      alternateAppelations: this.state.alternateAppelations,
+      status: this.state.status,
     }
     this.props.update(newData);
   }
@@ -132,6 +168,49 @@ export default class ViewOrganisation extends Component {
 	  });
   }
 
+  updateAlternateAppelation(index, data) {
+    let organisation = this.props.organisation;
+    let alternateAppelations = organisation.alternateAppelations;
+    if (index==="new") {
+      alternateAppelations.push(data);
+    }
+    else if (index!==null) {
+      alternateAppelations[index] = data;
+    }
+    this.setState({
+      alternateAppelations: alternateAppelations
+    },()=> {
+      let newData = {
+        label: this.state.label,
+        description: this.state.description,
+        organisationType: this.state.organisationType,
+        alternateAppelations: this.state.alternateAppelations,
+        status: this.state.status,
+      }
+      this.props.update(newData);
+    });
+  }
+
+  removeAlternateAppelation(index) {
+    let organisation = this.props.organisation;
+    let alternateAppelations = organisation.alternateAppelations;
+    if (index!==null) {
+      alternateAppelations.splice(index,1);
+    }
+    this.setState({
+      alternateAppelations: alternateAppelations
+    },()=> {
+      let newData = {
+        label: this.state.label,
+        description: this.state.description,
+        organisationType: this.state.organisationType,
+        alternateAppelations: this.state.alternateAppelations,
+        status: this.state.status,
+      }
+      this.props.update(newData);
+    });
+  }
+
   render() {
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
@@ -156,6 +235,16 @@ export default class ViewOrganisation extends Component {
     let resourcesOpenActive = " active";
     if (!this.state.resourcesOpen) {
       resourcesOpenActive = "";
+    }
+
+    let statusPublic = "secondary";
+    let statusPrivate = "secondary";
+    let publicOutline = true;
+    let privateOutline = false;
+    if (this.state.status==="public") {
+      statusPublic = "success";
+      publicOutline = false;
+      privateOutline = true;
     }
 
     let metadataItems = this.parseMetadata();
@@ -200,6 +289,15 @@ export default class ViewOrganisation extends Component {
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
 
+    let organisationAppelationsData = [];
+    if (this.props.organisation!==null) {
+      organisationAppelationsData = this.props.organisation.alternateAppelations;
+    }
+
+    let organisationTypesOptions = [];
+    if (this.props.organisationTypes.length>0) {
+      organisationTypesOptions = this.props.organisationTypes.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
+    }
 
     return (
       <div className="row">
@@ -214,9 +312,31 @@ export default class ViewOrganisation extends Component {
                 {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
+                    <div className="text-right">
+                      <ButtonGroup>
+                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
+                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                      </ButtonGroup>
+                    </div>
                     <FormGroup>
-                      <Label for="labelInput">Label</Label>
-                      <Input type="text" name="label" id="labelInput" placeholder="Organisation label..." value={this.state.label} onChange={this.handleChange}/>
+                      <Label>Label</Label>
+                      <Input type="text" name="label" placeholder="Organisation label..." value={this.state.label} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <div className="alternate-appelations">
+                      <div className="label">Alternate labels</div>
+                      <OrganisationAppelations
+                        data={organisationAppelationsData}
+                        update={this.updateAlternateAppelation}
+                        remove={this.removeAlternateAppelation}
+                      />
+                    </div>
+                    <FormGroup>
+                      <Label>Description</Label>
+                      <Input type="textarea" name="description" placeholder="Organisation description..." value={this.state.description} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>Type</Label>
+                      <Input type="select" name="organisationType" placeholder="Organisation type..." value={this.state.organisationType} onChange={this.handleChange}>{organisationTypesOptions}</Input>
                     </FormGroup>
                     <div className="text-right">
                       {deleteBtn}

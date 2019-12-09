@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { BrowserRouter as Router, Route, Switch , Redirect} from 'react-router-dom';
-import {loadProgressBar} from 'axios-progress-bar';
 
 import 'axios-progress-bar/dist/nprogress.css';
 import 'bootstrap/dist/css/bootstrap.css';
@@ -10,10 +9,12 @@ import './assets/fonts/roboto/css/roboto.css';
 import './assets/fonts/font-awesome/css/font-awesome.min.css';
 import "./assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css";
 import './App.css';
+import {loadProgressBar} from 'axios-progress-bar';
 
 // routes
 import indexRoutes from "./routes/index";
 import Login from "./views/login";
+import Seed from "./views/seed";
 
 // layout components
 import Header from "./components/header";
@@ -24,8 +25,11 @@ import {
   getSystemTypes,
   getPeopleRoles,
   loadDefaultEntities,
+  loadSettings,
   checkSession,
   resetLoginRedirect,
+  resetSeedRedirect,
+  getLanguageCodes
 } from "./redux/actions/main-actions";
 
 // set default axios token;
@@ -38,17 +42,22 @@ if (typeof authToken!=="undefined" && authToken!==null) {
 const mapStateToProps = state => {
   return {
     sessionActive: state.sessionActive,
-    loginRedirect: state.loginRedirect
+    loginRedirect: state.loginRedirect,
+    seedRedirect: state.seedRedirect,
+    settings: state.settings
    };
 };
 
 function mapDispatchToProps(dispatch) {
   return {
+    loadSettings: () => dispatch(loadSettings()),
     getSystemTypes: () => dispatch(getSystemTypes()),
     getPeopleRoles: () => dispatch(getPeopleRoles()),
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
     checkSession: () => dispatch(checkSession()),
     resetLoginRedirect: ()=>dispatch(resetLoginRedirect()),
+    resetSeedRedirect: ()=>dispatch(resetSeedRedirect()),
+    getLanguageCodes: ()=>dispatch(getLanguageCodes()),
   }
 }
 
@@ -58,7 +67,7 @@ class App extends Component {
     this.state = {
       backgroundColor: "black",
       activeColor: "info",
-      loginRedirect: false,
+      loginRedirect: false
     }
 
     this.openSidebar = this.openSidebar.bind(this);
@@ -107,7 +116,9 @@ class App extends Component {
   }
 
   componentDidMount() {
+    this.props.loadSettings();
     this.props.checkSession();
+    this.props.getLanguageCodes();
   }
 
   componentDidUpdate(prevProps) {
@@ -121,19 +132,36 @@ class App extends Component {
     if (this.props.loginRedirect) {
       this.props.resetLoginRedirect();
     }
+    if (this.props.seedRedirect) {
+      this.props.resetSeedRedirect();
+    }
   }
 
   render() {
+    let settings = this.props.settings;
     let routes = this.parseRoutes();
     let loginRedirect = [];
+    let seedRedirect = [];
+
     if (this.props.loginRedirect) {
       loginRedirect = <Redirect to='/' />
     }
-    let AppHTML =  <Router basename={process.env.REACT_APP_BASENAME}>
-        <Login />
-      </Router>;
-    if (this.props.sessionActive) {
-      AppHTML = <Router basename='/'>
+    if (this.props.seedRedirect) {
+      seedRedirect = <Redirect to='/' />
+    }
+    let AppHTML = [];
+    if (typeof settings.seedingAllowed!=="undefined" && settings.seedingAllowed) {
+      AppHTML = <Router basename={process.env.REACT_APP_BASENAME}>
+        {seedRedirect}
+        <Seed />
+      </Router>
+    }
+    else if (!this.props.sessionActive) {
+      AppHTML = <Login />
+    }
+    // note to handle session active but no login
+    else if (this.props.sessionActive) {
+      AppHTML = <Router basename={process.env.REACT_APP_BASENAME}>
         <div className="wrapper" id="main-wrapper">
           {loginRedirect}
           <Sidebar

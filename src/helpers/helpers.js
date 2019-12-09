@@ -17,6 +17,9 @@ export const getThumbnailURL = (item) => {
       let thumbnailPaths = thumbnailResource[0].ref.paths;
       if (typeof thumbnailResource[0].ref.paths[0]==="string") {
         thumbnailPaths = thumbnailResource[0].ref.paths.map(path=>JSON.parse(path));
+        if (typeof thumbnailPaths[0]==="string") {
+          thumbnailPaths = thumbnailPaths.map(path=>JSON.parse(path));
+        }
       }
       let thumbnailPathFilter = thumbnailPaths.filter((item)=>{return (item.pathType==="thumbnail")});
       thumbnailPath = domain+"/"+thumbnailPathFilter[0].path;
@@ -186,7 +189,7 @@ export const loadRelatedEvents = (item=null, deleteRef) => {
 }
 
 export const loadRelatedOrganisations = (item=null, deleteRef) => {
-  if (item===null || item.length===0 || typeof item.events==="undefined") {
+  if (item===null || item.length===0 || typeof item.organisations==="undefined") {
     return [];
   }
   let references = item.organisations;
@@ -209,54 +212,93 @@ export const loadRelatedOrganisations = (item=null, deleteRef) => {
 }
 
 export const loadRelatedPeople = (item=null, deleteRef) => {
-  if (item===null || item.length===0 || typeof item.events==="undefined") {
+  if (item===null || item.length===0 || typeof item.people==="undefined") {
     return [];
   }
   let references = item.people;
-  let output = [];
-  for (let i=0;i<references.length; i++) {
-    let reference = references[i];
-    if (reference.ref!==null) {
-      let label = reference.ref.firstName;
-      if (reference.ref.lastName!=="") {
-        label+= " "+reference.ref.lastName
-      }
-      let newRow = <div key={i} className="ref-item">
-        <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
-          <i>{reference.term.label}</i> <b>{label}</b>
-        </Link>
-        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Person")}><i className="fa fa-times" /></div>
-      </div>
-      output.push(newRow);
+  let output = references.filter(r=>r.ref!==null).map((reference, i)=>{
+    let label = reference.ref.firstName;
+    if (reference.ref.lastName!=="") {
+      label+= " "+reference.ref.lastName
     }
-  }
+    let role = [];
+    if (typeof reference.term.role!=="undefined" && reference.term.role!=="null") {
+      role = <label>as {reference.term.roleLabel}</label>
+    }
+    let newRow = <div key={i} className="ref-item">
+      <Link to={"/person/"+reference.ref._id} href={"/person/"+reference.ref._id}>
+        <i>{reference.term.label}</i> <b>{label}</b> {role}
+      </Link>
+      <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Person")}><i className="fa fa-times" /></div>
+    </div>
+    return newRow;
+  });
   return output;
 }
 
 export const loadRelatedResources = (item=null, deleteRef) => {
-  if (item===null || item.length===0 || typeof item.events==="undefined") {
+  if (item===null || item.length===0 || typeof item.resources==="undefined") {
     return [];
   }
   let references = item.resources;
-  let output = [];
-  for (let i=0;i<references.length; i++) {
-    let reference = references[i];
-    if (reference.ref!==null) {
-      let thumbnailPath = getResourceThumbnailURL(reference.ref);
-      let thumbnailImage = [];
-      if (thumbnailPath!==null) {
-        thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
-      }
-      let newRow = <div key={i} className="img-thumbnail related-resource">
-          <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
-            <i>{reference.term.label}</i>
-            {thumbnailImage}
-            <label>{reference.ref.label}</label>
-          </Link>
-          <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Resource")}><i className="fa fa-times" /></div>
-        </div>
-      output.push(newRow);
+  let output = references.filter(r=>r.ref!==null).map((reference, i)=>{
+    let thumbnailPath = getResourceThumbnailURL(reference.ref);
+    let thumbnailImage = [];
+    if (thumbnailPath!==null) {
+      thumbnailImage = <img src={thumbnailPath} alt={reference.label} className="img-fluid"/>
     }
+    let role = [];
+    if (typeof reference.term.role!=="undefined" && reference.term.role!=="null") {
+      role = <label>as {reference.term.roleLabel}</label>
+    }
+    let newRow = <div key={i} className="img-thumbnail related-resource">
+        <Link to={"/resource/"+reference.ref._id} href={"/resource/"+reference.ref._id}>
+          <i>{reference.term.label}</i>
+          {thumbnailImage}
+          <label>{reference.ref.label}</label>
+          {role}
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Resource")}><i className="fa fa-times" /></div>
+      </div>
+    return newRow;
+  });
+  return output;
+}
+
+export const stringDimensionToInteger = (dimension) => {
+  if (typeof dimension==="string") {
+    dimension = dimension.replace("px", "");
+    dimension = parseInt(dimension,10);
   }
+  return dimension;
+}
+
+export const capitalizeOnlyFirst = (str) => {
+  if (typeof str!=='string') {
+    return str;
+  }
+  let firstLetter = str.charAt(0).toUpperCase();
+  let restOfString = lowerCaseStr(str.slice(1));
+  return  firstLetter+restOfString;
+}
+
+const lowerCaseStr = (str) => {
+  let chars = str.split("");
+  let lowerChars = chars.map((c,i)=> {
+    let outputChar = c;
+    if (i===0) {
+      outputChar = c.toLowerCase();
+    }
+    if (i>0) {
+      let prevIndex = i-1;
+      let prevChar = chars[prevIndex];
+      let regexp = /[\\^'" .]/g
+      if (!prevChar.match(regexp)) {
+        outputChar = c.toLowerCase();
+      }
+    }
+    return outputChar;
+  });
+  let output = lowerChars.join("");
   return output;
 }

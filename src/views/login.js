@@ -8,6 +8,7 @@ import {
   Alert
 } from 'reactstrap';
 import crypto from 'crypto-js';
+import {Redirect} from 'react-router-dom';
 
 import {
   login
@@ -19,6 +20,7 @@ const mapStateToProps = state => {
   return {
     loginError: state.loginError,
     loginErrorText: state.loginErrorText,
+    sessionActive: state.sessionActive,
    };
 };
 
@@ -87,9 +89,15 @@ class Login extends Component {
     if (this.state.loginError) {
       errorClass = "";
     }
-    let errorContainer = <Alert style={{margin: "20px 0"}} className={errorClass} color="danger"><i className="fa fa-times" /> {this.state.loginErrorText}</Alert>
+    let errorContainer = <Alert style={{margin: "20px 0"}} className={errorClass} color="danger"><i className="fa fa-times" /> {this.state.loginErrorText}</Alert>;
+
+    let loggedInRedirect = [];
+    if (this.props.sessionActive) {
+      loggedInRedirect = <Redirect to='/' />
+    }
     return(
       <div className="wrapper">
+      {loggedInRedirect}
         <div className="login-container">
           <Container>
             <Row>

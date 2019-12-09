@@ -1,11 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import {
   Collapse,
   Navbar,
   NavbarToggler,
   Nav,
-  NavItem,
   Dropdown,
   DropdownToggle,
   DropdownMenu,
@@ -121,7 +119,7 @@ class Header extends React.Component {
 
     return (
       <Navbar
-        expand="lg"
+        expand="md"
         className="main-navbar"
       >
         <Container fluid>
@@ -158,23 +156,12 @@ class Header extends React.Component {
               >
                 <DropdownToggle caret nav>
                   <i className="pe-header-bar-icon pe-7s-user" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Some Actions</span>
-                  </p>
                 </DropdownToggle>
                 <DropdownMenu right>
-                  <DropdownItem>Welcome {userName}</DropdownItem>
+                  <DropdownItem header>Welcome {userName}</DropdownItem>
                   <DropdownItem tag="a" onClick={()=>this.props.logout()}>Logout</DropdownItem>
                 </DropdownMenu>
               </Dropdown>
-              <NavItem>
-                <Link to="#" className="nav-link btn-rotate">
-                  <i className="nc-icon nc-settings-gear-65" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Account</span>
-                  </p>
-                </Link>
-              </NavItem>
             </Nav>
           </Collapse>
         </Container>
