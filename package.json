@@ -36,7 +36,7 @@
   "eslintConfig": {
     "extends": "react-app"
   },
-  "homepage": "http://localhost/ahi/clericus-front/build/",
+  "homepage": "http://localhost",
   "browserslist": [
     ">0.2%",
     "not dead",
