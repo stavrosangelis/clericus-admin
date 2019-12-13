@@ -275,9 +275,6 @@ export default class ParseClassPieceThumbnails extends Component {
       url: APIPath+'update-class-piece-faces?file='+fileName,
       crossDomain: true,
       data: postData,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
     })
 	  .then(function (response) {
       return response.data;
@@ -979,9 +976,6 @@ export default class ParseClassPieceThumbnails extends Component {
         url: APIPath+'update-class-piece-faces?file='+fileName,
         crossDomain: true,
         data: postData,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
       })
   	  .then(function (response) {
         return response.data;
