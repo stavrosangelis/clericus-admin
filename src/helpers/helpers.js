@@ -40,7 +40,7 @@ export const getPersonLabel = (person) => {
 }
 
 export const getResourceThumbnailURL = (resource) => {
-  if (resource===null || typeof resource.paths==="undefined" || resource.paths===null) {
+  if (resource===null || typeof resource.paths==="undefined" || resource.paths===null || resource.paths.length===0) {
     return null;
   }
   if(typeof resource.paths[0].path==="undefined") {
@@ -142,6 +142,8 @@ export const parseReferenceTypes = (properties) => {
   let referenceTypesOrganisation = [];
   let referenceTypesPerson = [];
   let referenceTypesResource = [];
+  let referenceTypesTemporal = [];
+  let referenceTypesSpatial = [];
   for (let i=0;i<properties.length; i++) {
     let property = properties[i];
     if (property.entityRef.label==="Event") {
@@ -156,12 +158,20 @@ export const parseReferenceTypes = (properties) => {
     if (property.entityRef.label==="Resource") {
       referenceTypesResource.push(property);
     }
+    if (property.entityRef.label==="Temporal") {
+      referenceTypesTemporal.push(property);
+    }
+    if (property.entityRef.label==="Spatial") {
+      referenceTypesSpatial.push(property);
+    }
   }
   let referenceTypes = {
     event: referenceTypesEvent,
     organisation: referenceTypesOrganisation,
     person: referenceTypesPerson,
     resource: referenceTypesResource,
+    temporal: referenceTypesTemporal,
+    spatial: referenceTypesSpatial,
   }
   return referenceTypes;
 }
@@ -262,6 +272,49 @@ export const loadRelatedResources = (item=null, deleteRef) => {
       </div>
     return newRow;
   });
+  return output;
+}
+
+export const loadRelatedTemporal = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.temporal==="undefined") {
+    return [];
+  }
+  let references = item.temporal;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let label = reference.ref.label;
+      let newRow = <div key={i} className="ref-item">
+        <Link to={"/temporal/"+reference.ref._id} href={"/temporal/"+reference.ref._id}>
+          <i>{reference.term.label}</i> <b>{label}</b>
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Temporal")}><i className="fa fa-times" /></div>
+      </div>
+      output.push(newRow);
+    }
+  }
+  return output;
+}
+export const loadRelatedSpatial = (item=null, deleteRef) => {
+  if (item===null || item.length===0 || typeof item.spatial==="undefined") {
+    return [];
+  }
+  let references = item.spatial;
+  let output = [];
+  for (let i=0;i<references.length; i++) {
+    let reference = references[i];
+    if (reference.ref!==null) {
+      let label = reference.ref.label;
+      let newRow = <div key={i} className="ref-item">
+        <Link to={"/spatial/"+reference.ref._id} href={"/spatial/"+reference.ref._id}>
+          <i>{reference.term.label}</i> <b>{label}</b>
+        </Link>
+        <div className="delete-ref" onClick={()=>deleteRef(reference.ref._id, reference.term.label, "Spatial")}><i className="fa fa-times" /></div>
+      </div>
+      output.push(newRow);
+    }
+  }
   return output;
 }
 

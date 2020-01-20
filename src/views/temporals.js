@@ -19,7 +19,7 @@ import {
 const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
-    eventsPagination: state.eventsPagination,
+    temporalsPagination: state.temporalsPagination,
    };
 };
 
@@ -29,7 +29,7 @@ function mapDispatchToProps(dispatch) {
   }
 }
 
-class Events extends Component {
+class Temporals extends Component {
   constructor(props) {
     super(props);
 
@@ -37,9 +37,9 @@ class Events extends Component {
       loading: true,
       tableLoading: true,
       items: [],
-      page: this.props.eventsPagination.page,
-      gotoPage: this.props.eventsPagination.page,
-      limit: this.props.eventsPagination.limit,
+      page: this.props.temporalsPagination.page,
+      gotoPage: this.props.temporalsPagination.page,
+      limit: this.props.temporalsPagination.limit,
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
@@ -66,7 +66,7 @@ class Events extends Component {
       page: this.state.page,
       limit: this.state.limit
     }
-    let url = APIPath+'events';
+    let url = APIPath+'temporals';
     axios({
       method: 'get',
       url: url,
@@ -134,11 +134,11 @@ class Events extends Component {
       limit:limit,
       page:page,
     }
-    this.props.setPaginationParams("events", payload);
+    this.props.setPaginationParams("temporals", payload);
   }
 
   gotoPage(e) {
-    e.preventDefault();
+    e.prtemporalDefault();
     let gotoPage = this.state.gotoPage;
     let page = this.state.page;
     if (gotoPage>0 && gotoPage!==page) {
@@ -190,9 +190,9 @@ class Events extends Component {
         </td>
         <td>{count}</td>
         <td>
-          <Link href={"/event/"+item._id} to={"/event/"+item._id}>{label}</Link>
+          <Link href={"/temporal/"+item._id} to={"/temporal/"+item._id}>{label}</Link>
         </td>
-        <td><Link href={"/event/"+item._id} to={"/event/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
+        <td><Link href={"/temporal/"+item._id} to={"/temporal/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
     }
@@ -224,13 +224,13 @@ class Events extends Component {
   }
 
   async deleteSelected() {
-    let selectedEvents = this.state.items.filter(item=>{
+    let selectedTemporals = this.state.items.filter(item=>{
       return item.checked;
     }).map(item=>item._id);
     let data = {
-      _ids: selectedEvents,
+      _ids: selectedTemporals,
     }
-    let url = APIPath+'events';
+    let url = APIPath+'temporals';
     await axios({
       method: 'delete',
       url: url,
@@ -253,14 +253,14 @@ class Events extends Component {
     if (_id==null) {
       return false;
     }
-    let newEvents = this.state.items.map(item=> {
+    let newTemporals = this.state.items.map(item=> {
       if (item._id===_id) {
         item.checked = false;
       }
       return item;
     });
     this.setState({
-      items: newEvents
+      items: newTemporals
     });
   }
 
@@ -269,9 +269,9 @@ class Events extends Component {
   }
 
   render() {
-    let heading = "Events";
+    let heading = "Temporal";
     let breadcrumbsItems = [
-      {label: heading, icon: "pe-7s-date", active: true, path: ""}
+      {label: heading, icon: "pe-7s-clock", active: true, path: ""}
     ];
 
     let pageActions = <PageActions
@@ -296,10 +296,10 @@ class Events extends Component {
       {pageActions}
     </div>
     if (!this.state.loading) {
-      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/event/new" href="/event/new"><i className="fa fa-plus" /></Link>;
+      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/temporal/new" href="/temporal/new"><i className="fa fa-plus" /></Link>;
 
       let tableLoadingSpinner = <tr>
-        <td colSpan={4}><Spinner type="grow" color="info" /> <i>loading...</i></td>
+        <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
       let itemsRows = [];
       if (this.state.tableLoading) {
@@ -313,14 +313,14 @@ class Events extends Component {
         allChecked = "checked";
       }
 
-      let selectedEvents = this.state.items.filter(item=>{
+      let selectedTemporals = this.state.items.filter(item=>{
           return item.checked;
       });
 
       let batchActions = <BatchActions
-        items={selectedEvents}
+        items={selectedTemporals}
         removeSelected={this.removeSelected}
-        type="Event"
+        type="Temporal"
         relationProperties={[]}
         deleteSelected={this.deleteSelected}
         selectAll={this.toggleSelectedAll}
@@ -392,4 +392,4 @@ class Events extends Component {
     );
   }
 }
-export default Events = connect(mapStateToProps, mapDispatchToProps)(Events);
+export default Temporals = connect(mapStateToProps, mapDispatchToProps)(Temporals);

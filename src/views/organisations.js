@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import {
   Table,
-  Button,
   Card, CardBody,
-  Modal, ModalHeader, ModalBody, ModalFooter
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
@@ -11,7 +9,8 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import PageActions from '../components/page-actions';
-import {getThumbnailURL} from '../helpers/helpers'
+import {getThumbnailURL} from '../helpers/helpers';
+import BatchActions from '../components/add-batch-relations';
 
 import {connect} from "react-redux";
 import {
@@ -46,7 +45,6 @@ class Organisations extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      deleteModalOpen: false
     }
     this.load = this.load.bind(this);
     this.updatePage = this.updatePage.bind(this);
@@ -56,48 +54,52 @@ class Organisations extends Component {
     this.organisationsTableRows = this.organisationsTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
-    this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
-    this.deleteOrganisationsList = this.deleteOrganisationsList.bind(this);
     this.deleteSelected = this.deleteSelected.bind(this);
+    this.removeSelected = this.removeSelected.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
     })
-    let context = this;
     let params = {
       page: this.state.page,
       limit: this.state.limit
     }
     let url = APIPath+'organisations';
-    axios({
-        method: 'get',
-        url: url,
-        crossDomain: true,
-        params: params
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let organisations = responseData.data;
-        let newOrganisations = [];
-        for (let i=0;i<organisations.length; i++) {
-          let organisation = organisations[i];
-          organisation.checked = false;
-          newOrganisations.push(organisation);
-        }
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: responseData.currentPage,
-          totalPages: responseData.totalPages,
-          organisations: newOrganisations
-        });
+    let responseData = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if (this.cancelLoad) {
+      return false;
+    }
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+    let organisations = responseData.data;
+    let newOrganisations = [];
+    for (let i=0;i<organisations.length; i++) {
+      let organisation = organisations[i];
+      organisation.checked = false;
+      newOrganisations.push(organisation);
+    }
+    this.setState({
+      loading: false,
+      tableLoading: false,
+      page: responseData.currentPage,
+      totalPages: responseData.totalPages,
+      organisations: newOrganisations
+    });
   }
 
   updatePage(e) {
@@ -178,12 +180,12 @@ class Organisations extends Component {
         thumbnailImage = <img src={thumbnailURL} className="organisations-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
       let row = <tr key={i}>
-        {/*<td>
+        <td>
           <div className="select-checkbox-container">
             <input type="checkbox" value={i} checked={organisations[i].checked} onChange={() => {return false}}/>
-            <span className="select-checkbox" onClick={this.toggleSelected.bind(this,i)}></span>
+            <span className="select-checkbox" onClick={()=>this.toggleSelected(i)}></span>
           </div>
-        </td>*/}
+        </td>
         <td>{count}</td>
         <td><Link href={"/organisation/"+organisation._id} to={"/organisation/"+organisation._id}>{thumbnailImage}</Link></td>
         <td><Link href={"/organisation/"+organisation._id} to={"/organisation/"+organisation._id}>{organisation.label}</Link></td>
@@ -218,75 +220,54 @@ class Organisations extends Component {
     })
   }
 
-  toggleDeleteModal() {
-    this.setState({
-      deleteModalOpen: !this.state.deleteModalOpen
-    })
-  }
-
-  deleteOrganisationsList(){
-    let organisations = this.state.organisations;
-    let rows = [];
-    for (let i=0;i<organisations.length; i++) {
-      let organisation = organisations[i];
-      if (organisation.checked) {
-        let countPage = parseInt(this.state.page,10)-1;
-        let count = (i+1) + (countPage*this.state.limit);
-        let label = organisation.firstName;
-        if (organisation.lastName!=="") {
-          label +=" "+organisation.lastName;
-        }
-        let thumbnailImage = [];
-        let thumbnailURL = getThumbnailURL(organisation);
-        if (thumbnailURL!==null) {
-          thumbnailImage = <img src={thumbnailURL} className="organisations-list-thumbnail img-fluid img-thumbnail" alt={label} />
-        }
-        let row = <tr key={i}>
-          <td>{count}</td>
-          <td>{thumbnailImage}</td>
-          <td>{organisation.firstName}</td>
-          <td>{organisation.lastName}</td>
-        </tr>
-        rows.push(row);
-      }
-    }
-    return rows;
-  }
-
-  deleteSelected() {
-    let organisations = this.state.organisations;
-    let newOrganisations = [];
-    for (let i=0; i<organisations.length; i++) {
-      let organisation = organisations[i];
-      if (organisation.checked) {
-        newOrganisations.push(organisation._id)
-      }
-    }
-    let context = this;
+  async deleteSelected() {
+    let selectedOrganisations = this.state.organisations.filter(item=>{
+      return item.checked;
+    }).map(item=>item._id);
     let data = {
-      _ids: newOrganisations,
+      _ids: selectedOrganisations,
     }
     let url = APIPath+'organisations';
-    axios({
-        method: 'delete',
-        url: url,
-        crossDomain: true,
-        data: data
-      })
-  	  .then(function (response) {
-        context.setState({
-          allChecked: false,
-          deleteModalOpen: false,
-        })
-        context.load();
+    await axios({
+      method: 'delete',
+      url: url,
+      crossDomain: true,
+      data: data
+    })
+	  .then(function (response) {
+      return true;
+	  })
+	  .catch(function (error) {
+	  });
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+    this.setState({
+      allChecked: false,
+      deleteModalOpen: false,
+    })
+    this.load();
+  }
+
+  removeSelected(_id=null) {
+    if (_id==null) {
+      return false;
+    }
+    let newOrganisations = this.state.organisations.map(item=> {
+      if (item._id===_id) {
+        item.checked = false;
+      }
+      return item;
+    });
+    this.setState({
+      organisations: newOrganisations
+    });
   }
 
   componentDidMount() {
     this.load();
+  }
+
+  componentWillUnmount() {
+    this.cancelLoad=true;
   }
 
   render() {
@@ -318,6 +299,8 @@ class Organisations extends Component {
       {pageActions}
     </div>
     if (!this.state.loading) {
+      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/organisation/new" href="/organisation/new"><i className="fa fa-plus" /></Link>;
+
       let tableLoadingSpinner = <tr>
         <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
@@ -328,26 +311,23 @@ class Organisations extends Component {
       else {
         organisationsRows = this.organisationsTableRows();
       }
-      /*let allChecked = "";
+      let allChecked = "";
       if (this.state.allChecked) {
         allChecked = "checked";
-      }*/
-      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/organisation/new" href="/organisation/new"><i className="fa fa-plus" /></Link>;
+      }
+      let selectedOrganisations = this.state.organisations.filter(item=>{
+          return item.checked;
+      });
 
-      let deleteOrganisationsList = this.deleteOrganisationsList();
-      let deleteConfirmModal = <Modal isOpen={this.state.deleteModalOpen} toggle={this.toggleDeleteModal}>
-          <ModalHeader toggle={this.toggleDeleteModal}>Confirm delete</ModalHeader>
-          <ModalBody>
-            <p>The following organisations will be deleted. Continue?</p>
-            <div className="delete-organisations-list-container">
-              <Table hover><tbody>{deleteOrganisationsList}</tbody></Table>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="danger" onClick={this.deleteSelected}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggle}>Cancel</Button>
-          </ModalFooter>
-        </Modal>;
+      let batchActions = <BatchActions
+        items={selectedOrganisations}
+        removeSelected={this.removeSelected}
+        type="Organisation"
+        relationProperties={[]}
+        deleteSelected={this.deleteSelected}
+        selectAll={this.toggleSelectedAll}
+        allChecked={this.state.allChecked}
+      />
 
       content = <div className="organisations-container">
         {pageActions}
@@ -355,19 +335,22 @@ class Organisations extends Component {
           <div className="col-12">
             <Card>
               <CardBody>
+                <div className="pull-right">
+                  {batchActions}
+                </div>
                 <Table hover>
                   <thead>
                     <tr>
-                      {/*<th>
+                      <th style={{width: "30px"}}>
                         <div className="select-checkbox-container default">
                           <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
                         </div>
-                      </th>*/}
-                      <th>#</th>
+                      </th>
+                      <th style={{width: '40px'}}>#</th>
                       <th>Thumbnail</th>
                       <th>Label</th>
-                      <th></th>
+                      <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -375,12 +358,12 @@ class Organisations extends Component {
                   </tbody>
                   <tfoot>
                     <tr>
-                      {/*<th>
+                      <th>
                         <div className="select-checkbox-container default">
                           <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
                           <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
                         </div>
-                      </th>*/}
+                      </th>
                       <th>#</th>
                       <th>Thumbnail</th>
                       <th>Label</th>
@@ -388,18 +371,14 @@ class Organisations extends Component {
                     </tr>
                   </tfoot>
                 </Table>
-              </CardBody>
-              {/*<CardFooter>
-                <div className="text-right">
-                  <Button size="sm" onClick={this.toggleDeleteModal} outline color="danger"><i className="fa fa-trash-o" /> Delete selected</Button>
+                <div className="pull-right">
+                  {batchActions}
                 </div>
-              </CardFooter>*/}
-
+              </CardBody>
             </Card>
           </div>
         </div>
         {pageActions}
-        {deleteConfirmModal}
         {addNewBtn}
       </div>
     }

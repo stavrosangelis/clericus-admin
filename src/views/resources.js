@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 import PageActions from '../components/resources-page-actions';
+import BatchActions from '../components/add-batch-relations'
 
 import axios from 'axios';
 import {getResourceThumbnailURL} from '../helpers/helpers';
@@ -36,18 +37,17 @@ class Resources extends Component {
       tableLoading: true,
       systemTypes: this.props.systemTypes,
       activeSystemType: this.props.resourcesPagination.activeSystemType,
-      resources: [],
       page: this.props.resourcesPagination.page,
       gotoPage: this.props.resourcesPagination.page,
       limit: this.props.resourcesPagination.limit,
       totalPages: 0,
       totalItems: 0,
       insertModalVisible: false,
-      searchInput: ''
+      searchInput: '',
+      allowSelections: false,
     }
     this.getSystemTypes = this.getSystemTypes.bind(this);
     this.load = this.load.bind(this);
-    this.fileOutput = this.fileOutput.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
@@ -57,32 +57,37 @@ class Resources extends Component {
     this.updateStorePagination = this.updateStorePagination.bind(this);
     this.search = this.search.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
+    this.toggleSelected = this.toggleSelected.bind(this);
+    this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
+    this.deleteSelected = this.deleteSelected.bind(this);
+    this.removeSelected = this.removeSelected.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  getSystemTypes() {
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'resource-system-types',
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-        if (responseData.status) {
-          context.setState({
-            systemTypes: responseData.data,
-          });
-        }
-  	  })
-  	  .catch(function (error) {
-  	  });
+  async getSystemTypes() {
+    let responseData = await axios({
+      method: 'get',
+      url: APIPath+'resource-system-types',
+      crossDomain: true,
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if (responseData.status && !this.cancelLoad) {
+      this.setState({
+        systemTypes: responseData.data,
+      });
+    }
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
-    })
-    let context = this;
+    });
     let params = {
       page: this.state.page,
       limit: this.state.limit,
@@ -92,50 +97,46 @@ class Resources extends Component {
     if (this.state.activeSystemType!==null) {
       params.systemType = this.state.activeSystemType;
     }
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let filesOutput = [];
-      for (let i=0; i<responseData.data.length; i++) {
-        let file = responseData.data[i];
-        filesOutput.push(context.fileOutput(i, file));
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: currentPage,
-          totalPages: responseData.totalPages,
-          totalItems: responseData.totalItems,
-          resources: filesOutput,
-        });
-      }
-
-
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    if (this.cancelLoad) {
+      return false;
+    }
+
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && responseData.data.length===0) {
+      this.setState({
+        page: currentPage-1
+      }, () => {
+        this.load();
+      })
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: currentPage,
+        totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
+        resources: responseData.data
+      });
+    }
   }
 
-  search(e) {
+  async search(e) {
     e.preventDefault();
     if (this.state.searchInput<2) {
       return false;
@@ -144,7 +145,6 @@ class Resources extends Component {
     this.setState({
       tableLoading: true
     })
-    let context = this;
     let params = {
       page: this.state.page,
       limit: this.state.limit,
@@ -154,47 +154,39 @@ class Resources extends Component {
     if (this.state.activeSystemType!==null) {
       params.systemType = this.state.activeSystemType;
     }
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let filesOutput = [];
-      for (let i=0; i<responseData.data.length; i++) {
-        let file = responseData.data[i];
-        filesOutput.push(context.fileOutput(i, file));
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: currentPage,
-          totalPages: responseData.totalPages,
-          totalItems: responseData.totalItems,
-          resources: filesOutput,
-        });
-      }
-
-
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && responseData.data.length===0) {
+      this.setState({
+        page: currentPage-1
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: currentPage,
+        totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
+        resources: responseData.data
+      });
+    }
   }
 
   clearSearch() {
@@ -207,27 +199,6 @@ class Resources extends Component {
     .then(()=> {
       this.load();
     });
-  }
-
-  fileOutput(i, file) {
-    let parseUrl = "/resource/"+file._id;
-    let thumbnailImage = [];
-    let thumbnailPath = getResourceThumbnailURL(file);
-    if (thumbnailPath!==null) {
-      thumbnailImage = <Link to={parseUrl} href={parseUrl}><CardImg src={thumbnailPath} alt={file.label} /></Link>
-    }
-
-    let fileOutput = <div key={i} className="col-12 col-sm-6 col-md-3">
-      <Card style={{marginBottom: '15px'}}>
-        {thumbnailImage}
-        <CardBody>
-          <CardText className="text-center">
-            <label className="resources-list-label"><Link to={parseUrl} href={parseUrl}>{file.label}</Link></label>
-          </CardText>
-        </CardBody>
-      </Card>
-    </div>;
-    return fileOutput;
   }
 
   updatePage(e) {
@@ -315,6 +286,95 @@ class Resources extends Component {
     })
   }
 
+  toggleSelected(i) {
+    let resources = this.state.resources;
+    let newResourceChecked = !resources[i].checked;
+    resources[i].checked = newResourceChecked;
+    this.setState({
+      resources: resources
+    },()=> {
+      let checked = this.state.resources.find(r=>r.checked);
+      if (typeof checked!=="undefined") {
+        this.setState({
+          allowSelections: true
+        })
+      }
+      else {
+        this.setState({
+          allowSelections: false
+        })
+      }
+    });
+  }
+
+  toggleSelectedAll() {
+    let allChecked = !this.state.allChecked;
+    let resources = this.state.resources;
+    let newResources = [];
+    for (let i=0;i<resources.length; i++) {
+      let resource = resources[i];
+      resource.checked = allChecked;
+      newResources.push(resource);
+    }
+    this.setState({
+      resources: newResources,
+      allChecked: allChecked
+    },()=> {
+      let checked = this.state.resources.find(r=>r.checked);
+      if (typeof checked!=="undefined") {
+        this.setState({
+          allowSelections: true
+        })
+      }
+      else {
+        this.setState({
+          allowSelections: false
+        })
+      }
+    });
+  }
+
+  async deleteSelected() {
+    let selectedResources = this.state.resources.filter(item=>{
+      return item.checked;
+    }).map(item=>item._id);
+    let data = {
+      _ids: selectedResources,
+    }
+    let url = APIPath+'resources';
+    await axios({
+      method: 'delete',
+      url: url,
+      crossDomain: true,
+      data: data
+    })
+	  .then(function (response) {
+      return true;
+	  })
+	  .catch(function (error) {
+      console.log(error)
+	  });
+    this.setState({
+      allChecked: false
+    })
+    this.load();
+  }
+
+  removeSelected(_id=null) {
+    if (_id==null) {
+      return false;
+    }
+    let newResources = this.state.resources.map(item=> {
+      if (item._id===_id) {
+        item.checked = false;
+      }
+      return item;
+    });
+    this.setState({
+      resources: newResources
+    });
+  }
+
   componentDidMount() {
     this.load();
   }
@@ -325,6 +385,10 @@ class Resources extends Component {
         systemTypes: this.props.systemTypes
       })
     }
+  }
+
+  componentWillUnmount() {
+    this.cancelLoad=true;
   }
 
   render() {
@@ -343,6 +407,45 @@ class Resources extends Component {
     if (!this.state.loading) {
       let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/resource/new" href="/resource/new"><i className="fa fa-plus" /></Link>;
 
+      let linkVisible = "";
+      let plainVisible = "hidden";
+      if (this.state.allowSelections) {
+        linkVisible = "hidden";
+        plainVisible = "";
+      }
+
+      let resourcesOutput = this.state.resources.map((resource,i)=>{
+        let parseUrl = "/resource/"+resource._id;
+        let thumbnailImage = [];
+        let thumbnailPath = getResourceThumbnailURL(resource);
+        if (thumbnailPath!==null) {
+          thumbnailImage = <div>
+            <Link to={parseUrl} href={parseUrl} className={linkVisible}><CardImg src={thumbnailPath} alt={resource.label} /></Link>
+            <CardImg src={thumbnailPath} alt={resource.label} className={plainVisible} />
+          </div>
+        }
+
+        let checked = "";
+        if (typeof resource.checked!=="undefined" && resource.checked) {
+          checked = " checked";
+        }
+        let label = <Link to={parseUrl} href={parseUrl}>{resource.label}</Link>;
+        let resourceOutput = <div key={i} className="col-12 col-sm-6 col-md-3">
+          <Card style={{marginBottom: '15px'}} className={"resource-card"+checked}>
+            <div className="select-resource" onClick={()=>this.toggleSelected(i)}>
+              <i className="fa circle" />
+            </div>
+            {thumbnailImage}
+            <CardBody>
+              <CardText className="text-center">
+                <label className="resources-list-label">{label}</label>
+              </CardText>
+            </CardBody>
+          </Card>
+        </div>;
+        return resourceOutput;
+      });
+
       let pageActions = <PageActions
         limit={this.state.limit}
         current_page={this.state.page}
@@ -359,10 +462,41 @@ class Resources extends Component {
         clearSearch={this.clearSearch}
         searchInput={this.state.searchInput}
       />
+      let selectionsClass="";
+      if (this.state.allowSelections) {
+        selectionsClass = " allow-selections";
+      }
+
+      let selectedResources = this.state.resources.filter(item=>{
+          return item.checked;
+      });
+
+      let batchActions = <BatchActions
+        items={selectedResources}
+        removeSelected={this.removeSelected}
+        type="Resource"
+        relationProperties={[]}
+        deleteSelected={this.deleteSelected}
+        className="resources-actions"
+        selectAll={this.toggleSelectedAll}
+        allChecked={this.state.allChecked}
+      />
+
       content = <div className="resources-container">
         {pageActions}
         <div className="row">
-          {this.state.resources}
+          <div className="col-12 text-right">
+            {batchActions}
+          </div>
+        </div>
+        <div className={"row"+selectionsClass}>
+          {resourcesOutput}
+        </div>
+
+        <div className="row">
+          <div className="col-12 text-right">
+            {batchActions}
+          </div>
         </div>
         {pageActions}
         {addNewBtn}

@@ -358,7 +358,7 @@ export default class ViewOrganisation extends Component {
 
             <Card className={relatedEventsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.eventsOpen}>
                   {relatedEvents}
                 </Collapse>
@@ -367,7 +367,7 @@ export default class ViewOrganisation extends Component {
 
             <Card className={relatedOrganisationsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.organisationsOpen}>
                   {relatedOrganisations}
                 </Collapse>
@@ -376,7 +376,7 @@ export default class ViewOrganisation extends Component {
 
             <Card className={relatedPeopleCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.peopleOpen}>
                   {relatedPeople}
                 </Collapse>
@@ -385,7 +385,7 @@ export default class ViewOrganisation extends Component {
 
             <Card className={relatedResourcesCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.resourcesOpen}>
                   {relatedResources}
                 </Collapse>

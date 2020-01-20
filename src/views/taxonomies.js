@@ -40,6 +40,8 @@ export default class Taxonomies extends React.Component {
       taxonomyErrorVisible: false,
       taxonomyErrorText: [],
       taxonomySaveBtn: <span><i className="fa fa-save"/> Save</span>,
+
+      deleteModalVisible: false,
     }
 
     this.load = this.load.bind(this);
@@ -59,24 +61,24 @@ export default class Taxonomies extends React.Component {
     this.deleteTerm = this.deleteTerm.bind(this);
     this.linkNewTermToTaxonomy = this.linkNewTermToTaxonomy.bind(this);
     this.deleteTaxonomy = this.deleteTaxonomy.bind(this);
+    this.deleteModalToggle = this.deleteModalToggle.bind(this);
   }
 
-  load() {
-    let context = this;
-    axios({
+  async load() {
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'taxonomies',
         crossDomain: true,
       })
     .then(function (response) {
-      let responseData = response.data.data;
-      context.setState({
-        loading: false,
-        taxonomies: responseData.data,
-      })
+      return response.data.data;
     })
     .catch(function (error) {
     });
+    this.setState({
+      loading: false,
+      taxonomies: responseData.data,
+    })
   }
 
   async loadItem(_id=null) {
@@ -210,7 +212,7 @@ export default class Taxonomies extends React.Component {
               </Form>
               <div className="footer-box">
                 <Button size="sm" type="button" onClick={this.formSubmit} color="info" outline>{this.state.taxonomySaveBtn}</Button>
-                <Button size="sm" className="pull-left" color="danger" outline onClick={this.deleteTaxonomy}><i className="fa fa-trash-o" /> Delete</Button>
+                <Button size="sm" className="pull-left" color="danger" outline onClick={()=>this.deleteModalToggle()}><i className="fa fa-trash-o" /> Delete</Button>
               </div>
             </div>
           </div>
@@ -535,50 +537,50 @@ export default class Taxonomies extends React.Component {
     this.setState(updateState);
   }
 
-  loadTerm(term) {
-    let context = this;
+  async loadTerm(term) {
     let params = {
       _id: term._id
     }
-    axios({
+    let responseTerm = await axios({
         method: 'get',
         url: APIPath+'taxonomy-term',
         crossDomain: true,
         params: params,
       })
     .then(function (response) {
-      let responseTerm = response.data.data;
-      let termId = "";
-      if (typeof responseTerm._id!=="undefined" && responseTerm._id!==null) {
-        termId = responseTerm._id;
-      }
-      let termLabel = "";
-      if (typeof responseTerm.label!=="undefined" && responseTerm.label!==null) {
-        termLabel = responseTerm.label;
-      }
-      let termInverseLabel = "";
-      if (typeof responseTerm.inverseLabel!=="undefined" && responseTerm.inverseLabel!==null) {
-        termInverseLabel = responseTerm.inverseLabel;
-      }
-      let scopeNote = "";
-      if (typeof responseTerm.scopeNote!=="undefined" && responseTerm.scopeNote!==null) {
-        scopeNote = responseTerm.scopeNote;
-      }
-      let count = "";
-      if (typeof responseTerm.count!=="undefined" && responseTerm.count!==null) {
-        count = parseInt(responseTerm.count,10);
-      }
-      let parentRef = "";
-      context.setState({
-        termId: termId,
-        termLabel: termLabel,
-        termInverseLabel: termInverseLabel,
-        termScopeNote: scopeNote,
-        termParentRef: parentRef,
-        termCount: count,
-      });
+      return response.data.data;
     })
     .catch(function (error) {
+    });
+
+    let termId = "";
+    if (typeof responseTerm._id!=="undefined" && responseTerm._id!==null) {
+      termId = responseTerm._id;
+    }
+    let termLabel = "";
+    if (typeof responseTerm.label!=="undefined" && responseTerm.label!==null) {
+      termLabel = responseTerm.label;
+    }
+    let termInverseLabel = "";
+    if (typeof responseTerm.inverseLabel!=="undefined" && responseTerm.inverseLabel!==null) {
+      termInverseLabel = responseTerm.inverseLabel;
+    }
+    let scopeNote = "";
+    if (typeof responseTerm.scopeNote!=="undefined" && responseTerm.scopeNote!==null) {
+      scopeNote = responseTerm.scopeNote;
+    }
+    let count = "";
+    if (typeof responseTerm.count!=="undefined" && responseTerm.count!==null) {
+      count = parseInt(responseTerm.count,10);
+    }
+    let parentRef = "";
+    this.setState({
+      termId: termId,
+      termLabel: termLabel,
+      termInverseLabel: termInverseLabel,
+      termScopeNote: scopeNote,
+      termParentRef: parentRef,
+      termCount: count,
     });
   }
 
@@ -635,6 +637,10 @@ export default class Taxonomies extends React.Component {
       console.log(error);
     });
     if (deleteTax.status) {
+      this.setState({
+        deleteModalVisible: false,
+        taxonomy: null,
+      })
       this.load();
     }
     else {
@@ -645,9 +651,15 @@ export default class Taxonomies extends React.Component {
       }
       this.setState({
         taxonomyErrorVisible: true,
-        taxonomyErrorText: errorText
+        taxonomyErrorText: errorText,
       });
     }
+  }
+
+  deleteModalToggle() {
+    this.setState({
+      deleteModalVisible: !this.state.deleteModalVisible
+    })
   }
 
   componentDidMount() {
@@ -670,6 +682,7 @@ export default class Taxonomies extends React.Component {
         </div>
       </div>
     </div>
+    let deleteModal = [];
     if (!this.state.loading) {
       let taxonomiesHTML = this.list(this.state.taxonomies);
 
@@ -735,6 +748,23 @@ export default class Taxonomies extends React.Component {
           </ModalFooter>
         </Modal>;
 
+      let deleteLabel = "";
+      if (this.state.taxonomy!==null && typeof this.state.taxonomy.label!=="undefined") {
+        deleteLabel = this.state.taxonomy.label;
+      }
+      deleteModal = <Modal isOpen={this.state.deleteModalVisible} toggle={this.deleteModalToggle}>
+        <ModalHeader toggle={this.deleteModalToggle}>Delete "{deleteLabel}"</ModalHeader>
+        <ModalBody>
+          <div className="form-group">
+            <p>The taxonomy "{deleteLabel}" will be deleted. Continue?</p>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" size="sm" onClick={()=>this.deleteTaxonomy()}><i className="fa fa-trash-o" /> Delete</Button>
+          <Button color="secondary" className="pull-left" size="sm" onClick={this.deleteModalToggle}>Cancel</Button>
+        </ModalFooter>
+      </Modal>
+
       content = <div>
         <div className="row">
           <div className="col-12">
@@ -746,6 +776,7 @@ export default class Taxonomies extends React.Component {
             </Card>
             {taxonomyHTML}
             {addTermModal}
+            {deleteModal}
           </div>
         </div>
       </div>

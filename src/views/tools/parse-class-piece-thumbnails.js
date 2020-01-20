@@ -639,7 +639,7 @@ export default class ParseClassPieceThumbnails extends Component {
         if (typeof selectedFaceData.type!=="undefined" && selectedFaceData.type!=="") {
           inputtype = selectedFaceData.type;
         }
-        if (inputhonorificprefix==="" && inputfirstname==="" && inputmiddlename==="" && inputlastname==="" && inputdiocese==="") {
+        if (inputhonorificprefix[0]==="" && inputfirstname==="" && inputmiddlename==="" && inputlastname==="" && inputdiocese==="") {
           let texts = selectedText.map(i=> this.state.texts[i]);
           let words = texts.map(item=>item.text);
           let matchedTexts = await this.matchTexts(words);
@@ -660,7 +660,7 @@ export default class ParseClassPieceThumbnails extends Component {
               }
             }
           }
-          inputhonorificprefix = inputhonorificprefix.trim();
+          //inputhonorificprefix = inputhonorificprefix.trim();
           inputfirstname = inputfirstname.trim();
           inputmiddlename = inputmiddlename.trim();
           inputlastname = inputlastname.trim();

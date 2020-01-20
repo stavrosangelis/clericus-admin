@@ -11,6 +11,10 @@ import Entities from "../views/entities";
 import Taxonomies from "../views/taxonomies";
 import Login from "../views/login";
 import Register from "../views/register";
+import Spatials from "../views/spatials";
+import Spatial from "../views/spatial";
+import Temporals from "../views/temporals";
+import Temporal from "../views/temporal";
 import Users from "../views/users";
 import User from "../views/user";
 import Usergroups from "../views/usergroups";
@@ -97,13 +101,47 @@ var indexRoutes = [
     icon: "pe-7s-date",
     component: Events,
     showMenu: true,
-    children: [{
-      path: "/event/:_id",
-      name: "Event",
-      icon: "fa fa-circle-o",
-      component: Event,
-      showMenu: false,
-    }]
+    children: [
+      {
+        path: "/event/:_id",
+        name: "Event",
+        icon: "fa fa-circle-o",
+        component: Event,
+        showMenu: false,
+      },
+    ]
+  },
+  {
+    path: "/temporals",
+    name: "Temporal",
+    icon: "pe-7s-clock",
+    component: Temporals,
+    showMenu: true,
+    children: [
+      {
+        path: "/temporal/:_id",
+        name: "Temporal",
+        icon: "fa fa-circle-o",
+        component: Temporal,
+        showMenu: false,
+      },
+    ]
+  },
+  {
+    path: "/spatials",
+    name: "Spatial",
+    icon: "pe-7s-map",
+    component: Spatials,
+    showMenu: true,
+    children: [
+      {
+        path: "/spatial/:_id",
+        name: "Spatial",
+        icon: "fa fa-circle-o",
+        component: Spatial,
+        showMenu: false,
+      },
+    ]
   },
   {
     path: "#",

@@ -350,8 +350,8 @@ class Organisation extends Component {
           The organisation "{label}" will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button className="pull-left" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+            <Button size="sm" className="pull-left" color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
     }

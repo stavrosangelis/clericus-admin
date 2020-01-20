@@ -1,31 +1,34 @@
 import React, { Component } from 'react';
 import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
+
 import axios from 'axios';
-import ViewResource from '../components/view-resource';
+
+import ViewSpatial from '../components/view-spatial';
 import AddRelation from '../components/add-relations';
+
 import {Redirect} from 'react-router-dom';
+
 import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
 
 import {connect} from "react-redux";
-const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
-    resourceEntity: state.resourceEntity,
-    systemTypes: state.systemTypes
+    spatialEntity: state.spatialEntity,
    };
 };
 
-class Resource extends Component {
+const APIPath = process.env.REACT_APP_APIPATH;
+
+class Spatial extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       reload: false,
       loading: true,
-      resource: null,
-      systemType: null,
+      item: null,
       newId: null,
       redirect: false,
       redirectReload: false,
@@ -34,6 +37,7 @@ class Resource extends Component {
       updateBtn: <span><i className="fa fa-save" /> Update</span>,
       errorVisible: false,
       errorText: [],
+      deleteBtn: <span><i className="fa fa-trash-o" /> Delete</span>,
       closeUploadModal: false,
 
       addReferencesVisible: true,
@@ -48,46 +52,44 @@ class Resource extends Component {
     }
     this.load = this.load.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
-    this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
     this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
     this.delete = this.delete.bind(this);
     this.reload = this.reload.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
         loading: false,
         addReferencesVisible: false
-      })
+      });
     }
     else {
       let params = {_id:_id}
-      axios({
+      let responseData = await axios({
         method: 'get',
-        url: APIPath+'resource',
+        url: APIPath+'spatial',
         crossDomain: true,
         params: params
       })
   	  .then(function (response) {
-        let responseData = response.data.data;
-        context.setState({
-          loading: false,
-          resource: responseData,
-          systemType: responseData.systemType,
-          reload: false,
-        });
+        return response.data.data;
   	  })
   	  .catch(function (error) {
+        console.log(error);
   	  });
+      this.setState({
+        loading: false,
+        item: responseData,
+        reload: false,
+      });
     }
   }
 
   loadReferenceLabelsNTypes() {
-    let properties = this.props.resourceEntity.properties;
+    let properties = this.props.spatialEntity.properties;
     let referencesLabels = parseReferenceLabels(properties);
     let referencesTypes = parseReferenceTypes(properties);
     this.setState({
@@ -97,87 +99,80 @@ class Resource extends Component {
     })
   }
 
-  uploadResponse(data) {
-    if (data.status) {
-      if (this.state.newId===null) {
-        this.setState({
-          newId: data.data._id,
-          redirectReload: true,
-          errorVisible: false,
-          errorText: []
-        })
-      }
-      if (this.state.resource!==null && typeof this.state.resource._id!=="undefined") {
-        this.setState({
-          closeUploadModal: true
-        })
-      }
-    }
-    else {
-      let errorText = [];
-      if (typeof data.error!=="undefined" && data.error.length>0) {
-        let i=0;
-        for (let key in data.error) {
-          errorText.push(<div key={i}>{data.error[key]}</div>);
-          i++;
-        }
-      }
-
-      this.setState({
-        errorVisible: true,
-        errorText: errorText
-      })
-    }
-  }
-
   update(newData) {
     if (this.state.updating) {
       return false;
     }
     this.setState({
-      updating: true,
-      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
-    })
-    let resource = this.state.resource;
-    if (resource===null) {
-      resource = {};
-    }
-    resource.label = newData.label;
-    resource.systemType = newData.systemType;
-    resource.description = newData.description;
-    resource.status = newData.status;
-    delete resource.events;
-    delete resource.people;
-    delete resource.organisations;
-    delete resource.resources;
-
-    let postData = {
-      resource: resource
-    }
-    let context = this;
-    axios({
-      method: 'put',
-      url: APIPath+'resource',
-      crossDomain: true,
-      data: postData,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      }
-    })
-    .then(function (response) {
-      context.setState({
-        updating: false,
-        updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
-      });
-
-      setTimeout(function() {
-        context.setState({
-          updateBtn: <span><i className="fa fa-save" /> Update success</span>
-        });
-      },2000);
-    })
-    .catch(function (error) {
+      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>,
+      updating: true
     });
+    let postData = {
+      label: newData.label,
+      streetAddress: newData.streetAddress,
+      locality: newData.locality,
+      region: newData.region,
+      postalCode: newData.postalCode,
+      country: newData.country,
+      latitude: newData.latitude,
+      longitude: newData.longitude,
+      locationType: newData.locationType,
+      rawData: JSON.stringify(newData.rawData),
+      note: newData.note,
+    }
+    let _id = this.props.match.params._id;
+    if (_id!=="new") {
+      postData._id = _id;
+    }
+    let isValid = this.validate(postData);
+    if (isValid) {
+      let context = this;
+      axios({
+          method: 'put',
+          url: APIPath+'spatial',
+          crossDomain: true,
+          data: postData
+        })
+      .then(function (response) {
+        let responseData = response.data;
+        let newState = {
+          updating: false,
+          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+          reload: true
+        };
+        if (_id==="new") {
+          newState.redirectReload = true;
+          newState.newId = responseData.data._id;
+        }
+        context.setState(newState);
+
+        setTimeout(function() {
+          context.setState({
+            updateBtn: <span><i className="fa fa-save" /> Update</span>
+          });
+        },2000);
+      })
+      .catch(function (error) {
+      });
+    }
+  }
+
+  validate(postData) {
+    if (postData.label==="") {
+      this.setState({
+        updating: false,
+        errorVisible: true,
+        errorText: <div>Please enter the <b>Label</b> to continue!</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    this.setState({
+      updating: false,
+      errorVisible: false,
+      errorText: []
+    })
+    return true;
   }
 
   toggleDeleteModal() {
@@ -188,23 +183,30 @@ class Resource extends Component {
 
   async delete() {
     let _id = this.props.match.params._id;
-    let params = {_id: _id};
-    let responseData = await axios({
-      method: 'delete',
-      url: APIPath+'resource',
-      crossDomain: true,
-      params: params
-    })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-    });
-    if (responseData.status) {
+    if (_id==="new") {
       this.setState({
-        redirect: true
-      });
+        loading: false
+      })
     }
+    else {
+      let responseData = await axios({
+        method: 'delete',
+        url: APIPath+'spatial?_id='+_id,
+        crossDomain: true,
+      })
+  	  .then(function (response) {
+        return response.data;
+  	  })
+  	  .catch(function (error) {
+  	  });
+
+      if (responseData.status) {
+        this.setState({
+          redirect: true
+        });
+      }
+    }
+
   }
 
   reload() {
@@ -242,26 +244,20 @@ class Resource extends Component {
     if (this.props.entitiesLoaded && !this.state.referencesLoaded) {
       this.loadReferenceLabelsNTypes();
     }
-    if (this.props.match.params._id==="new" && this.state.systemType===null && this.props.systemTypes.length>0) {
-      let defaultSystemType = this.props.systemTypes.find(item=>item.labelId==="Thumbnail");
-      this.setState({
-        systemType: {ref:defaultSystemType._id},
-      })
-    }
   }
 
   render() {
     let label = '';
-    if (this.state.resource!==null && typeof this.state.resource.label!=="undefined") {
-      label = this.state.resource.label;
+    if (this.state.item!==null && typeof this.state.item.label!=="undefined") {
+      label = this.state.item.label;
     }
     let heading = label;
     if (this.props.match.params._id==="new") {
-      heading = "Add new resource";
+      heading = "Add new spatial";
     }
     let breadcrumbsItems = [
-      {label: "Resources", icon: "pe-7s-photo", active: false, path: "/resources"},
-      {label: heading, icon: "pe-7s-photo", active: true, path: ""}
+      {label: "Spatials", icon: "pe-7s-map", active: false, path: "/spatials"},
+      {label: heading, icon: "", active: true, path: ""}
     ];
 
     let redirectElem = [];
@@ -276,54 +272,52 @@ class Resource extends Component {
       </div>
     </div>
     if (!this.state.loading) {
-      let viewComponent = <ViewResource
-        resource={this.state.resource}
-        file={label}
+      let viewComponent = <ViewSpatial
+        item={this.state.item}
         delete={this.toggleDeleteModal}
-        uploadResponse={this.uploadResponse}
         update={this.update}
         updateBtn={this.state.updateBtn}
+        deleteBtn={this.state.deleteBtn}
         errorVisible={this.state.errorVisible}
         errorText={this.state.errorText}
         closeUploadModal={this.state.closeUploadModal}
         reload={this.reload}
-        systemType={this.state.systemType}
         />;
-      content = <div className="resources-container">
+      content = <div className="items-container">
           {viewComponent}
       </div>
       if (this.state.redirect) {
-        redirectElem = <Redirect to="/resources" />;
+        redirectElem = <Redirect to="/spatials" />;
       }
       if (this.state.redirectReload) {
-        redirectReload = <Redirect to={"/resource/"+this.state.newId} />;
+        redirectReload = <Redirect to={"/spatial/"+this.state.newId} />;
       }
 
       deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal} className={this.props.className}>
           <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
           <ModalBody>
-          The resource "{label}" will be deleted. Continue?
+          The item "{label}" will be deleted. Continue?
           </ModalBody>
-          <ModalFooter className="text-left">
-            <Button size="sm" className="pull-right" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button size="sm" color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+          <ModalFooter className="text-right">
+            <Button size="sm" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+            <Button className="pull-left" color="secondary" size="sm" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
     }
     let relationReference = {
-      type: "Resource",
+      type: "Spatial",
       ref: this.props.match.params._id
     };
     let addRelation = [];
-    if (this.state.resource!==null) {
+    if (this.state.item!==null) {
       addRelation = <AddRelation
         reload={this.reload}
         reference={relationReference}
-        item={this.state.resource}
+        item={this.state.item}
         referencesLabels={this.state.referencesLabels}
         referencesTypes={this.state.referencesTypes}
-        type="resource"
-        />
+        type="spatial"
+      />
     }
     return(
       <div>
@@ -332,7 +326,7 @@ class Resource extends Component {
         <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>Resource "{heading}"</h2>
+            <h2>{heading}</h2>
           </div>
         </div>
         {content}
@@ -342,4 +336,4 @@ class Resource extends Component {
     );
   }
 }
-export default Resource = connect(mapStateToProps, [])(Resource);
+export default Spatial = connect(mapStateToProps, [])(Spatial);

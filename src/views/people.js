@@ -66,134 +66,133 @@ class People extends Component {
     this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
     this.updateAdvancedSearchInputs = this.updateAdvancedSearchInputs.bind(this);
     this.removeSelected = this.removeSelected.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
     })
-    let context = this;
     let params = {
       page: this.state.page,
       limit: this.state.limit
     };
-    if (this.state.simpleSearch) {
+    if (this.state.searchInput!=="" && !this.state.advancedSearch) {
       params.label = this.state.searchInput;
     }
-    else if (this.state.advancedSearch) {
+    else if (this.state.advancedSearchInputs.length>0 && !this.state.search) {
       for (let i=0; i<this.state.advancedSearchInputs.length; i++) {
         let searchInput = this.state.advancedSearchInputs[i];
         params[searchInput.select] = searchInput.input;
       }
     }
     let url = APIPath+'people';
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let people = responseData.data;
-      let newPeople = [];
-      for (let i=0;i<people.length; i++) {
-        let person = people[i];
-        person.checked = false;
-        newPeople.push(person);
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: responseData.currentPage,
-          totalPages: responseData.totalPages,
-          people: newPeople
-        });
-      }
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    if (this.cancelLoad) {
+      return false;
+    }
+
+    let people = responseData.data;
+    let newPeople = people.map((person)=>{
+      person.checked = false;
+      return person;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        people: newPeople
+      });
+    }
   }
 
-  simpleSearch(e) {
+  async simpleSearch(e) {
     e.preventDefault();
     if (this.state.searchInput<2) {
       return false;
     }
     this.setState({
       tableLoading: true
-    })
-    let context = this;
+    });
     let params = {
       page: this.state.page,
       limit: this.state.limit,
       label: this.state.searchInput,
     }
     let url = APIPath+'people';
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let people = responseData.data;
-      let newPeople = [];
-      for (let i=0;i<people.length; i++) {
-        let person = people[i];
-        person.checked = false;
-        newPeople.push(person);
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: responseData.currentPage,
-          totalPages: responseData.totalPages,
-          people: newPeople,
-          simpleSearch: true,
-          advancedSearch: false,
-        });
-      }
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+
+    let people = responseData.data;
+    let newPeople = people.map((person)=>{
+      person.checked = false;
+      return person;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        people: newPeople,
+        simpleSearch: true,
+        advancedSearch: false,
+      });
+    }
   }
 
-  advancedSearch(e) {
+  async advancedSearch(e) {
     e.preventDefault();
     this.setState({
       tableLoading: true
-    })
-    let context = this;
+    });
     let params = {
       page: this.state.page,
       limit: this.state.limit,
@@ -203,48 +202,45 @@ class People extends Component {
       params[searchInput.select] = searchInput.input;
     }
     let url = APIPath+'people';
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let people = responseData.data;
-      let newPeople = [];
-      for (let i=0;i<people.length; i++) {
-        let person = people[i];
-        person.checked = false;
-        newPeople.push(person);
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: responseData.currentPage,
-          totalPages: responseData.totalPages,
-          people: newPeople,
-          simpleSearch: false,
-          advancedSearch: true,
-        });
-      }
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    let people = responseData.data;
+    let newPeople = people.map((person)=>{
+      person.checked = false;
+      return person;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },() => {
+        this.load();
+      })
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        people: newPeople,
+        simpleSearch: false,
+        advancedSearch: true,
+      });
+    }
   }
 
   clearSearch() {
@@ -402,30 +398,30 @@ class People extends Component {
     })
   }
 
-  deleteSelected() {
+  async deleteSelected() {
     let selectedPeople = this.state.people.filter(item=>{
       return item.checked;
     }).map(item=>item._id);
-    let context = this;
     let data = {
       _ids: selectedPeople,
     }
-    let url = APIPath+'delete-people';
-    axios({
-      method: 'post',
+    let url = APIPath+'people';
+    await axios({
+      method: 'delete',
       url: url,
       crossDomain: true,
       data: data
     })
 	  .then(function (response) {
-      context.setState({
-        allChecked: false
-      })
-      context.load();
+      return true;
 	  })
 	  .catch(function (error) {
       console.log(error)
 	  });
+    this.setState({
+      allChecked: false
+    })
+    this.load();
   }
 
   removeSelected(_id=null) {
@@ -445,6 +441,10 @@ class People extends Component {
 
   componentDidMount() {
     this.load();
+  }
+
+  componentWillUnmount() {
+    this.cancelLoad=true;
   }
 
   render() {
@@ -519,6 +519,8 @@ class People extends Component {
         type="Person"
         relationProperties={[]}
         deleteSelected={this.deleteSelected}
+        selectAll={this.toggleSelectedAll}
+        allChecked={this.state.allChecked}
       />
 
 

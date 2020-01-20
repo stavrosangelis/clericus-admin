@@ -34,6 +34,14 @@ export const defaultState = {
     limit:25,
     page:1
   },
+  temporalsPagination: {
+    limit:25,
+    page:1
+  },
+  spatialsPagination: {
+    limit:25,
+    page:1
+  },
   usersPagination: {
     limit:25,
     page:1
@@ -56,6 +64,8 @@ export const defaultState = {
   organisationEntity: null,
   personEntity: null,
   resourceEntity: null,
+  temporalEntity: null,
+  spatialEntity: null,
 
 
 }

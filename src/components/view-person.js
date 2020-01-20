@@ -347,16 +347,28 @@ export default class ViewPerson extends Component {
     if (typeof this.state.honorificPrefix!=="string") {
       honorificPrefixInputs = this.state.honorificPrefix.map((h,i)=>{
         let item = <InputGroup key={i}>
-          <Input type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>
+          <Input type="text" name="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>
             <InputGroupAddon addonType="append">
               <Button type="button" color="info" outline onClick={()=>this.removeHP(i)}><b><i className="fa fa-minus" /></b></Button>
             </InputGroupAddon>
         </InputGroup>
         if (i===0) {
-          item = <Input style={{marginBottom: "5px"}} key={i} type="text" name="honorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+          item = <Input style={{marginBottom: "5px"}} key={i} type="text" name="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
         }
         return item;
       });
+    }
+
+    let alternateAppelationsBlock = [];
+    if (this.props.person!==null) {
+      alternateAppelationsBlock = <div className="alternate-appelations">
+        <div className="label">Alternate appelations</div>
+        <PersonAppelations
+          data={personAppelationsData}
+          update={this.updateAlternateAppelation}
+          remove={this.removeAlternateAppelation}
+        />
+      </div>
     }
 
     return (
@@ -379,35 +391,28 @@ export default class ViewPerson extends Component {
                       </ButtonGroup>
                     </div>
                     <FormGroup>
-                      <Label for="honorificPrefix">Honorific Prefix</Label>
+                      <Label>Honorific Prefix</Label>
                       {honorificPrefixInputs}
                       <div className="text-right">
                         <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP()}>Add new <i className="fa fa-plus" /></Button>
                       </div>
                     </FormGroup>
                     <FormGroup>
-                      <Label for="firstName">First name</Label>
-                      <Input type="text" name="firstName" id="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
+                      <Label>First name</Label>
+                      <Input type="text" name="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
-                      <Label for="middleName">Middle name</Label>
-                      <Input type="text" name="middleName" id="middleName" placeholder="Person middle name prefix..." value={this.state.middleName} onChange={this.handleChange}/>
+                      <Label>Middle name</Label>
+                      <Input type="text" name="middleName" placeholder="Person middle name prefix..." value={this.state.middleName} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
-                      <Label for="lastName">Last name</Label>
-                      <Input type="text" name="lastName" id="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
+                      <Label>Last name</Label>
+                      <Input type="text" name="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
                     </FormGroup>
-                    <div className="alternate-appelations">
-                      <div className="label">Alternate appelations</div>
-                      <PersonAppelations
-                        data={personAppelationsData}
-                        update={this.updateAlternateAppelation}
-                        remove={this.removeAlternateAppelation}
-                      />
-                    </div>
+                    {alternateAppelationsBlock}
                     <FormGroup>
-                      <Label for="description">Description</Label>
-                      <Input type="textarea" name="description" id="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>
+                      <Label>Description</Label>
+                      <Input type="textarea" name="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>
                     </FormGroup>
                     <div className="text-right">
                       {deleteBtn}
@@ -429,7 +434,7 @@ export default class ViewPerson extends Component {
 
             <Card className={relatedEventsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.eventsOpen}>
                   {relatedEvents}
                 </Collapse>
@@ -438,7 +443,7 @@ export default class ViewPerson extends Component {
 
             <Card className={relatedOrganisationsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.organisationsOpen}>
                   {relatedOrganisations}
                 </Collapse>
@@ -448,7 +453,7 @@ export default class ViewPerson extends Component {
 
             <Card className={relatedPeopleCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.peopleOpen}>
                   {relatedPeople}
                 </Collapse>
@@ -457,7 +462,7 @@ export default class ViewPerson extends Component {
 
             <Card className={relatedResourcesCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources  (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.resourcesOpen}>
                   {relatedResources}
                 </Collapse>

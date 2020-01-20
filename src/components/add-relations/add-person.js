@@ -53,65 +53,70 @@ export default class AddPerson extends Component {
     this.loadDefaultRefType = this.loadDefaultRefType.bind(this);
 
     this.listRef = React.createRef();
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  loadPeople() {
-    let context = this;
+  async loadPeople() {
     let params = {
       page: this.state.listPage,
       limit: this.state.listLimit,
       label: this.state.searchItem
     }
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'people',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
-      let responseData = response.data;
-      let items = responseData.data.data;
-      let list = context.state.list;
-      let listIds = [];
-      for (let j=0;j<listIds.length; j++) {
-        listIds.push(list[j]._id);
-      }
-      for (let i=0;i<items.length; i++) {
-        let item = items[i];
-        if (listIds.indexOf(item._id===-1)) {
-          let label = item.firstName;
-          if (item.lastName!=="") {
-            label += " "+item.lastName
-          }
-          item.key = item._id;
-          item.label = label;
-          list.push(item);
-        }
-      }
-      let currentPage = 1;
-      if (responseData.data.currentPage>1) {
-        currentPage = responseData.data.currentPage;
-      }
-      let loadMoreVisible = false;
-      if (currentPage<responseData.data.totalPages) {
-        loadMoreVisible = true;
-      }
-      let showingItems = parseInt(context.state.listLimit,10)*parseInt(currentPage,10);
-      if (showingItems>parseInt(responseData.data.totalItems,10)) {
-        showingItems = responseData.data.totalItems;
-      }
-      context.setState({
-        list: list,
-        loading: false,
-        loadMoreVisible: loadMoreVisible,
-        listTotalPages: responseData.data.totalPages,
-        listPage: currentPage,
-        showingItems: showingItems,
-        totalItems: responseData.data.totalItems,
-        loadingPage: false
-      });
+      return response.data;
     })
     .catch(function (error) {
+    });
+    if (this.cancelLoad) {
+      return false;
+    }
+    let items = responseData.data.data;
+    let list = this.state.list;
+    let listIds = [];
+    for (let j=0;j<listIds.length; j++) {
+      listIds.push(list[j]._id);
+    }
+    for (let i=0;i<items.length; i++) {
+      let item = items[i];
+      if (listIds.indexOf(item._id===-1)) {
+        let label = item.firstName;
+        if (item.lastName!=="") {
+          label += " "+item.lastName
+        }
+        item.key = item._id;
+        item.label = label;
+        list.push(item);
+      }
+    }
+    let currentPage = 1;
+    if (responseData.data.currentPage>1) {
+      currentPage = responseData.data.currentPage;
+    }
+    let loadMoreVisible = false;
+    if (currentPage<responseData.data.totalPages) {
+      loadMoreVisible = true;
+    }
+    let showingItems = parseInt(this.state.listLimit,10)*parseInt(currentPage,10);
+    if (showingItems>parseInt(responseData.data.totalItems,10)) {
+      showingItems = responseData.data.totalItems;
+    }
+    this.setState({
+      list: list,
+      loading: false,
+      loadMoreVisible: loadMoreVisible,
+      listTotalPages: responseData.data.totalPages,
+      listPage: currentPage,
+      showingItems: showingItems,
+      totalItems: responseData.data.totalItems,
+      loadingPage: false
     });
   }
 
@@ -342,6 +347,10 @@ export default class AddPerson extends Component {
     if (prevProps.item!==this.props.item) {
       this.loadDefaultRefType();
     }
+  }
+
+  componentWillUnmount() {
+    this.cancelLoad=true;
   }
 
   render() {

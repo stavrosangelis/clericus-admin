@@ -47,7 +47,6 @@ class ViewResource extends Component {
         newDescription = resource.description;
       }
     }
-
     this.state = {
       zoom: 100,
       detailsOpen: true,
@@ -81,10 +80,13 @@ class ViewResource extends Component {
 
   formSubmit(e) {
     e.preventDefault();
-
+    let systemType = this.state.systemType;
+    if(typeof systemType==="object") {
+      systemType = JSON.stringify(systemType);
+    }
     let updateData = {
       label: this.state.label,
-      systemType: this.state.systemType,
+      systemType: systemType,
       description: this.state.description,
       status: this.state.status,
     };
@@ -203,6 +205,20 @@ class ViewResource extends Component {
         systemType: this.props.systemType
       });
     }
+    if (this.props.resource!==null) {
+      if (
+        (prevProps.resource===null && this.props.resource._id!==null)
+         ||
+        (prevProps.resource._id!==this.props.resource._id)
+      ) {
+        this.setState({
+          detailsOpen: true,
+          metadataOpen: false,
+          eventsOpen: false,
+          organisationsOpen: false,
+        });
+      }
+    }
   }
 
   render() {
@@ -259,7 +275,7 @@ class ViewResource extends Component {
       let systemTypeOption = <option value={systemType._id} key={st}>{systemType.label}</option>;
       systemTypesOptions.push(systemTypeOption);
     }
-    let systemTypesSelect = <Input type="select" name="systemType" id="systemTypeInput" className="system-type-select" onChange={this.handleChange} value={this.state.systemType}>
+    let systemTypesSelect = <Input type="select" name="systemType" className="system-type-select" onChange={this.handleChange} value={this.state.systemType}>
       {systemTypesOptions}
     </Input>
 
@@ -299,7 +315,7 @@ class ViewResource extends Component {
     let statusPrivate = "secondary";
     let publicOutline = true;
     let privateOutline = false;
-    if (resource.status==="public") {
+    if (resource!==null && resource.status==="public") {
       statusPublic = "success";
       publicOutline = false;
       privateOutline = true;
@@ -358,16 +374,16 @@ class ViewResource extends Component {
                       </ButtonGroup>
                     </div>
                     <FormGroup>
-                      <Label for="labelInput">Label</Label>
-                      <Input type="text" name="label" id="labelInput" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>
+                      <Label>Label</Label>
+                      <Input type="text" name="label" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
-                     <Label for="systemTypeInput">Type</Label>
+                     <Label>Type</Label>
                       {systemTypesSelect}
                     </FormGroup>
                     <FormGroup>
-                      <Label for="DescriptionInput">Description</Label>
-                      <Input type="textarea" name="description" id="DescriptionInput" placeholder="Resource description..." value={this.state.description} onChange={this.handleChange}/>
+                      <Label>Description</Label>
+                      <Input type="textarea" name="description" placeholder="Resource description..." value={this.state.description} onChange={this.handleChange}/>
                     </FormGroup>
                     <div className="text-right">
                       {deleteBtn}
@@ -389,7 +405,7 @@ class ViewResource extends Component {
 
             <Card className={relatedEventsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.eventsOpen}>
                   {relatedEvents}
                 </Collapse>
@@ -398,7 +414,7 @@ class ViewResource extends Component {
 
             <Card className={relatedOrganisationsCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.organisationsOpen}>
                   {relatedOrganisations}
                 </Collapse>
@@ -408,7 +424,7 @@ class ViewResource extends Component {
 
             <Card className={relatedPeopleCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.peopleOpen}>
                   {relatedPeople}
                 </Collapse>
@@ -417,7 +433,7 @@ class ViewResource extends Component {
 
             <Card className={relatedResourcesCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.resourcesOpen}>
                   {relatedResources}
                 </Collapse>

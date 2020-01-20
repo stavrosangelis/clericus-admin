@@ -53,54 +53,59 @@ export default class AddEvent extends Component {
     this.postReferences = this.postReferences.bind(this);
 
     this.listRef = React.createRef();
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  loadEvents() {
-    let context = this;
+  async loadEvents() {
     let params = {
       page: this.state.listPage,
       limit: this.state.listLimit,
       label: this.state.searchItem
     }
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'events',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
-      let responseData = response.data;
-      let events = responseData.data.data;
-      let list = context.state.list;
-      let listIds = [];
-      for (let j=0;j<list.length; j++) {
-        listIds.push(list[j]._id);
-      }
-      for (let i=0;i<events.length; i++) {
-        let eventItem = events[i];
-        if (listIds.indexOf(eventItem._id===-1)) {
-          eventItem.key =  eventItem._id;
-          list.push(eventItem);
-        }
-      }
-      let currentPage = 1;
-      if (responseData.data.currentPage>1) {
-        currentPage = responseData.data.currentPage;
-      }
-      let loadMoreVisible = false;
-      if (currentPage<responseData.data.totalPages) {
-        loadMoreVisible = true;
-      }
-      context.setState({
-        list: list,
-        loading: false,
-        loadMoreVisible: loadMoreVisible,
-        listTotalPages: responseData.data.totalPages,
-        listPage: currentPage,
-        loadingPage: false
-      });
+      return response.data;
     })
     .catch(function (error) {
+    });
+    if (this.cancelLoad) {
+      return false;
+    }
+    let events = responseData.data.data;
+    let list = this.state.list;
+    let listIds = [];
+    for (let j=0;j<list.length; j++) {
+      listIds.push(list[j]._id);
+    }
+    for (let i=0;i<events.length; i++) {
+      let eventItem = events[i];
+      if (listIds.indexOf(eventItem._id===-1)) {
+        eventItem.key =  eventItem._id;
+        list.push(eventItem);
+      }
+    }
+    let currentPage = 1;
+    if (responseData.data.currentPage>1) {
+      currentPage = responseData.data.currentPage;
+    }
+    let loadMoreVisible = false;
+    if (currentPage<responseData.data.totalPages) {
+      loadMoreVisible = true;
+    }
+    this.setState({
+      list: list,
+      loading: false,
+      loadMoreVisible: loadMoreVisible,
+      listTotalPages: responseData.data.totalPages,
+      listPage: currentPage,
+      loadingPage: false
     });
   }
 
@@ -116,48 +121,48 @@ export default class AddEvent extends Component {
     }
   }
 
-  searchEvents() {
+  async searchEvents() {
     this.setState({
       loading: true,
       list: []
     })
-    let context = this;
     let params = {
       label: this.state.searchItem
     }
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: APIPath+'events',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
-      let responseData = response.data;
-      let events = responseData.data.data;
-      let list = [];
-      for (let i=0;i<events.length; i++) {
-        let eventItem = events[i];
-        eventItem.key =  eventItem._id;
-        list.push(eventItem);
-      }
-      let currentPage = 1;
-      if (responseData.data.currentPage>1) {
-        currentPage = responseData.data.currentPage;
-      }
-      let loadMoreVisible = false;
-      if (currentPage<responseData.data.totalPages) {
-        loadMoreVisible = true;
-      }
-      context.setState({
-        list: list,
-        loading: false,
-        loadMoreVisible: loadMoreVisible,
-        listTotalPages: responseData.data.totalPages,
-        listPage: currentPage,
-        loadingPage: false
-      });
+      return response.data;
     })
     .catch(function (error) {
+    });
+
+    let events = responseData.data.data;
+    let list = [];
+    for (let i=0;i<events.length; i++) {
+      let eventItem = events[i];
+      eventItem.key =  eventItem._id;
+      list.push(eventItem);
+    }
+    let currentPage = 1;
+    if (responseData.data.currentPage>1) {
+      currentPage = responseData.data.currentPage;
+    }
+    let loadMoreVisible = false;
+    if (currentPage<responseData.data.totalPages) {
+      loadMoreVisible = true;
+    }
+    this.setState({
+      list: list,
+      loading: false,
+      loadMoreVisible: loadMoreVisible,
+      listTotalPages: responseData.data.totalPages,
+      listPage: currentPage,
+      loadingPage: false
     });
   }
 
@@ -332,6 +337,10 @@ export default class AddEvent extends Component {
     }
   }
 
+  componentWillUnmount() {
+    this.cancelLoad=true;
+  }
+
   render() {
     let selectedItems = [];
     if (this.props.type==="Person") {
@@ -351,6 +360,14 @@ export default class AddEvent extends Component {
         }
         return <li key={item._id}>
           <span>{name}</span>
+          <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
+        </li>
+      });
+    }
+    else {
+      selectedItems = this.props.items.map(item=> {
+        return <li key={item._id}>
+          <span>{item.label}</span>
           <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
         </li>
       });

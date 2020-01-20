@@ -49,6 +49,8 @@ class Event extends Component {
         organisation: [],
         person: [],
         resource: [],
+        temporal: [],
+        spatial: [],
       },
     }
     this.load = this.load.bind(this);
@@ -271,8 +273,7 @@ class Event extends Component {
     })
   }
 
-  delete() {
-    let context = this;
+  async delete() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
@@ -280,21 +281,22 @@ class Event extends Component {
       })
     }
     else {
-      axios({
-          method: 'delete',
-          url: APIPath+'event?_id='+_id,
-          crossDomain: true,
-        })
-    	  .then(function (response) {
-          let responseData = response.data.data;
-          if (responseData.data.ok===1) {
-            context.setState({
-              redirect: true
-            });
-          }
-    	  })
-    	  .catch(function (error) {
-    	  });
+      let responseData = await axios({
+        method: 'delete',
+        url: APIPath+'event?_id='+_id,
+        crossDomain: true,
+      })
+  	  .then(function (response) {
+        return response.data;
+  	  })
+  	  .catch(function (error) {
+  	  });
+
+      if (responseData.status) {
+        this.setState({
+          redirect: true
+        });
+      }
     }
 
   }
@@ -341,13 +343,13 @@ class Event extends Component {
     if (this.state.item!==null && typeof this.state.item.label!=="undefined") {
       label = this.state.item.label;
     }
-    let heading = "Event \""+label+"\"";
+    let heading = label;
     if (this.props.match.params._id==="new") {
       heading = "Add new event";
     }
     let breadcrumbsItems = [
       {label: "Events", icon: "pe-7s-date", active: false, path: "/events"},
-      {label: heading, icon: "pe-7s-date", active: true, path: ""}
+      {label: heading, icon: "", active: true, path: ""}
     ];
 
     let redirectElem = [];
@@ -391,8 +393,8 @@ class Event extends Component {
           The item "{label}" will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button className="pull-left" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
+            <Button className="pull-left" color="secondary" size="sm" onClick={this.toggleDeleteModal}>Cancel</Button>
           </ModalFooter>
         </Modal>;
     }
@@ -402,6 +404,7 @@ class Event extends Component {
     };
     let addRelation = [];
     if (this.state.item!==null) {
+      
       addRelation = <AddRelation
         reload={this.reload}
         reference={relationReference}

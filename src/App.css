@@ -2027,8 +2027,15 @@ input.form-control.active {
   top: 18px;
   left: 0;
 }
+.table-actions-dropdown > button {
+  border-color: #ddd
+}
 .table-actions-dropdown {
   margin-right: 10px;
+}
+.table-actions-dropdown.resources-actions {
+  background-color: #fff;
+  margin: 0 0 10px 0;
 }
 .table-actions-dropdown > .dropdown-menu {
   box-shadow: 0 0 5px rgba(0,0,0,0.4);
@@ -2045,6 +2052,10 @@ input.form-control.active {
 .table-actions-dropdown > .dropdown-menu .dropdown-item:last-child {
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
+}
+.table-actions-dropdown > .dropdown-menu .dropdown-item:first-child {
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
 }
 .notification {
   position: fixed;
@@ -2117,4 +2128,152 @@ input.form-control.active {
 }
 .expand-middle-end.visible {
   opacity: 1;
+}
+
+.related-num {
+  font-size: 12px;
+}
+.resource-card .select-resource {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  position: absolute;
+  top: 0;
+  left: 4px;
+  color: #fff;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 9;
+}
+.allow-selections .resource-card .select-resource {
+  opacity: 0.7;
+}
+.resource-card:hover .select-resource {
+  opacity: 0.7;
+}
+.resource-card .select-resource > i.circle:before {
+  content: "\f10c";
+}
+.resource-card:hover .select-resource > i.circle:before {
+  content: "\f058";
+}
+.resource-card.checked .select-resource {
+  opacity: 1;
+  top: -2px;
+}
+.resource-card.checked .select-resource > i.circle {
+  color: #fff;
+  background-color:#0c6b9b;
+  border-radius: 50%;
+  font-size: 12px;
+  padding: 3px;
+}
+.resource-card.checked .select-resource > i.circle:before {
+  content: "\f00c";
+}
+.resource-card .card-img {
+  transition: all 0.2s;
+}
+.resource-card.checked .card-img {
+  transform: scale(0.85, 0.85);
+}
+
+.map-search-container {
+  z-index: 99999;
+  position: absolute;
+  top: 90px;
+  left: 12px;
+  display: block;
+}
+.map-search-icon {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+  border-radius: 50%;
+  text-align: center;
+  transition: 0.2s all;
+  cursor: pointer;
+  display: block;
+}
+.map-search-icon:hover {
+  background-color: #f0f0f0;
+}
+.map-search-icon:active {
+  background-color: #e0e0e0;
+}
+.map-search-input {
+  position: absolute;
+  left: 34px;
+  top: 0;
+  width: 340px;
+  display: block;
+}
+.map-loading-spinner {
+  position: absolute;
+  top: 10px;
+  right: 5px;
+}
+.spatial-search.map-loading-spinner {
+  top: 36px;
+}
+.map-results-block {
+  position: absolute;
+  top: 36px;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  width: 100%;
+  background-color: #fff;
+}
+.spatial-search.map-results-block {
+  top: 64px;
+  background-color: #fff;
+  z-index: 9999;
+}
+.map-results-head {
+  text-align: right;
+  font-size: 11px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+.map-results-body {
+  display: block;
+  overflow-y: auto;
+  max-height: 300px;
+}
+.map-item {
+  padding: 5px 10px;
+  border-top: 1px solid #ddd;
+  transition: 0.4s all;
+}
+.map-item:first-child {
+  border-top: 0 none;
+}
+.map-item:hover {
+  background-color: #f0f0f0;
+}
+.map-item:active {
+  background-color: #e0e0e0;
+}
+.geoname-item-code {
+  font-size: 12px;
+}
+.map-container {
+  width: 100%;
+  height: 400px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid #999;
+  margin: 15px 0;
+}
+.leaflet-container {
+  display: block;
+  width: 100%;
+  height: 400px;
+  position: relative;
+}
+.custom-marker {
+  background-repeat: no-repeat  !important;
 }

@@ -5,7 +5,6 @@ import {
 } from 'reactstrap';
 
 const DeleteMany = (props) => {
-
   const submit = () => {
     props.deleteSelected();
     props.toggle();
@@ -27,7 +26,15 @@ const DeleteMany = (props) => {
         name += item.lastName+" ";
       }
       return <li key={item._id}>
-        <span>{name}</span>
+        <span>{name} [{item._id}]</span>
+        <span className="remove-item-from-list" onClick={()=>props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
+      </li>
+    });
+  }
+  else {
+    selectedItems = props.items.map(item=> {
+      return <li key={item._id}>
+        <span>{item.label} [{item._id}]</span>
         <span className="remove-item-from-list" onClick={()=>props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
       </li>
     });

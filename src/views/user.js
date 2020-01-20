@@ -89,13 +89,15 @@ class User extends Component {
     }
     if (userData!==null && userData.status) {
       let user = userData.data;
-      let usergroupValue = usergroups.find(item=>item._id===user.usergroup._id);
-      let usergroupOption = {value: usergroupValue._id, label: usergroupValue.label};
+      if (user.usergroup!==null) {
+        let usergroupValue = usergroups.find(item=>item._id===user.usergroup._id);
+        let usergroupOption = {value: usergroupValue._id, label: usergroupValue.label};
+        stateUpdate.usergroup = usergroupOption;
+      }
       stateUpdate.user = user;
       stateUpdate.firstName = user.firstName;
       stateUpdate.lastName = user.lastName;
       stateUpdate.email = user.email;
-      stateUpdate.usergroup = usergroupOption;
       stateUpdate.reload = false;
       if (!user.hasPassword) {
         stateUpdate.errorVisible = true;
@@ -106,6 +108,9 @@ class User extends Component {
   }
 
   async loadUser(_id) {
+    if (_id==="new") {
+      return false;
+    }
     let params = {_id: _id};
     let userData = await axios({
       method: 'get',
@@ -218,6 +223,7 @@ class User extends Component {
             passwordUpdateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
             reload: true,
             editPasswordVisible: false,
+            loading: true
           };
           context.setState(newState);
           setTimeout(function() {

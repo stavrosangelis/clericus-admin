@@ -293,12 +293,16 @@ export function loadDefaultEntities() {
     let organisationEntity = await loadEntityProperties("Organisation");
     let personEntity = await loadEntityProperties("Person");
     let resourceEntity = await loadEntityProperties("Resource");
+    let temporalEntity = await loadEntityProperties("Temporal");
+    let spatialEntity = await loadEntityProperties("Spatial");
     let payload = {
       entitiesLoaded: true,
       eventEntity: eventEntity,
       organisationEntity: organisationEntity,
       personEntity: personEntity,
       resourceEntity: resourceEntity,
+      temporalEntity: temporalEntity,
+      spatialEntity: spatialEntity,
     }
     dispatch({
       type: GENERIC_UPDATE,

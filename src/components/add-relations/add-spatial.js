@@ -7,10 +7,10 @@ import {
 } from 'reactstrap';
 import axios from 'axios';
 import Select from 'react-select';
-import {refTypesList} from '../../helpers/helpers';
+import {addGenericReference,refTypesList} from '../../helpers/helpers';
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export default class AddPerson extends Component {
+export default class AddSpatial extends Component {
   constructor(props) {
     super(props);
 
@@ -23,8 +23,7 @@ export default class AddPerson extends Component {
       listPage: 1,
       listLimit: 25,
       listTotalPages: 0,
-      totalItems: 0,
-      selectedPerson: null,
+      selectedSpatial: null,
       loadMoreVisible: false,
       loadingPage: false,
       searchItem: '',
@@ -35,14 +34,14 @@ export default class AddPerson extends Component {
       addingReference: false,
       addingReferenceErrorVisible: false,
       addingReferenceErrorText: [],
-      addingReferenceBtn: <span>Submit</span>,
+      addingReferenceBtn: <span>Add</span>,
     }
 
-    this.loadPeople = this.loadPeople.bind(this);
-    this.loadMorePeople = this.loadMorePeople.bind(this);
-    this.selectedPerson = this.selectedPerson.bind(this);
-    this.search = this.search.bind(this);
-    this.clearSearch = this.clearSearch.bind(this);
+    this.loadSpatials = this.loadSpatials.bind(this);
+    this.loadMoreSpatials = this.loadMoreSpatials.bind(this);
+    this.selectedSpatial = this.selectedSpatial.bind(this);
+    this.searchSpatials = this.searchSpatials.bind(this);
+    this.clearSearchSpatials = this.clearSearchSpatials.bind(this);
     this.toggleAddNew = this.toggleAddNew.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
     this.submitReferences = this.submitReferences.bind(this);
@@ -50,8 +49,8 @@ export default class AddPerson extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.validateSpatial = this.validateSpatial.bind(this);
     this.loadDefaultRefType = this.loadDefaultRefType.bind(this);
-    this.postReferences = this.postReferences.bind(this);
 
     this.listRef = React.createRef();
 
@@ -59,7 +58,7 @@ export default class AddPerson extends Component {
     this.cancelLoad=false;
   }
 
-  async loadPeople() {
+  async loadSpatials() {
     let params = {
       page: this.state.listPage,
       limit: this.state.listLimit,
@@ -67,7 +66,7 @@ export default class AddPerson extends Component {
     }
     let responseData = await axios({
         method: 'get',
-        url: APIPath+'people',
+        url: APIPath+'spatials',
         crossDomain: true,
         params: params
       })
@@ -79,22 +78,17 @@ export default class AddPerson extends Component {
     if (this.cancelLoad) {
       return false;
     }
-    let items = responseData.data.data;
+    let spatials = responseData.data.data;
     let list = this.state.list;
     let listIds = [];
-    for (let j=0;j<listIds.length; j++) {
+    for (let j=0;j<list.length; j++) {
       listIds.push(list[j]._id);
     }
-    for (let i=0;i<items.length; i++) {
-      let item = items[i];
-      if (listIds.indexOf(item._id===-1)) {
-        let label = item.firstName;
-        if (item.lastName!=="") {
-          label += " "+item.lastName
-        }
-        item.key = item._id;
-        item.label = label;
-        list.push(item);
+    for (let i=0;i<spatials.length; i++) {
+      let spatialItem = spatials[i];
+      if (listIds.indexOf(spatialItem._id===-1)) {
+        spatialItem.key =  spatialItem._id;
+        list.push(spatialItem);
       }
     }
     let currentPage = 1;
@@ -105,23 +99,17 @@ export default class AddPerson extends Component {
     if (currentPage<responseData.data.totalPages) {
       loadMoreVisible = true;
     }
-    let showingItems = parseInt(this.state.listLimit,10)*parseInt(currentPage,10);
-    if (showingItems>parseInt(responseData.data.totalItems,10)) {
-      showingItems = responseData.data.totalItems;
-    }
     this.setState({
       list: list,
       loading: false,
       loadMoreVisible: loadMoreVisible,
       listTotalPages: responseData.data.totalPages,
       listPage: currentPage,
-      showingItems: showingItems,
-      totalItems: responseData.data.totalItems,
       loadingPage: false
     });
   }
 
-  loadMorePeople() {
+  loadMoreSpatials() {
     let currentPage = this.state.listPage;
     let lastPage = this.state.listTotalPages;
     if (currentPage<lastPage) {
@@ -133,62 +121,52 @@ export default class AddPerson extends Component {
     }
   }
 
-  async search() {
+  searchSpatials() {
     this.setState({
       loading: true,
       list: []
     })
+    let context = this;
     let params = {
       label: this.state.searchItem
     }
-    let responseData = await axios({
+    axios({
         method: 'get',
-        url: APIPath+'people',
+        url: APIPath+'spatials',
         crossDomain: true,
         params: params
       })
     .then(function (response) {
-      return response.data;
+      let responseData = response.data;
+      let spatials = responseData.data.data;
+      let list = [];
+      for (let i=0;i<spatials.length; i++) {
+        let spatialItem = spatials[i];
+        spatialItem.key =  spatialItem._id;
+        list.push(spatialItem);
+      }
+      let currentPage = 1;
+      if (responseData.data.currentPage>1) {
+        currentPage = responseData.data.currentPage;
+      }
+      let loadMoreVisible = false;
+      if (currentPage<responseData.data.totalPages) {
+        loadMoreVisible = true;
+      }
+      context.setState({
+        list: list,
+        loading: false,
+        loadMoreVisible: loadMoreVisible,
+        listTotalPages: responseData.data.totalPages,
+        listPage: currentPage,
+        loadingPage: false
+      });
     })
     .catch(function (error) {
     });
-    let items = responseData.data.data;
-    let list = [];
-    for (let i=0;i<items.length; i++) {
-      let item = items[i];
-      let label = item.firstName;
-      if (item.lastName!=="") {
-        label += " "+item.lastName
-      }
-      item.key = item._id;
-      item.label = label;
-      list.push(item);
-    }
-    let currentPage = 1;
-    if (responseData.data.currentPage>1) {
-      currentPage = responseData.data.currentPage;
-    }
-    let loadMoreVisible = false;
-    if (currentPage<responseData.data.totalPages) {
-      loadMoreVisible = true;
-    }
-    let showingItems = parseInt(this.state.listLimit,10)*parseInt(currentPage,10);
-    if (showingItems>parseInt(responseData.data.totalItems,10)) {
-      showingItems = responseData.data.totalItems;
-    }
-    this.setState({
-      list: list,
-      loading: false,
-      loadMoreVisible: loadMoreVisible,
-      listTotalPages: responseData.data.totalPages,
-      listPage: currentPage,
-      showingItems: showingItems,
-      totalItems: responseData.data.totalItems,
-      loadingPage: false
-    });
   }
 
-  clearSearch() {
+  clearSearchSpatials() {
     if (this.state.searchItem!=="") {
       this.setState({
         searchItem: '',
@@ -197,9 +175,9 @@ export default class AddPerson extends Component {
     }
   }
 
-  selectedPerson(_id) {
+  selectedSpatial(_id) {
     this.setState({
-      selectedPerson: _id
+      selectedSpatial: _id
     })
   }
 
@@ -212,10 +190,10 @@ export default class AddPerson extends Component {
 
   toggleModal(modal) {
     this.setState({
-      selectedPerson: null,
+      selectedSpatial: null,
       addingReferenceErrorVisible: false,
       addingReferenceErrorText: [],
-      addingReferenceBtn: <span>Submit</span>,
+      addingReferenceBtn: <span>Add</span>,
     });
     this.props.toggleModal(modal);
   }
@@ -233,11 +211,11 @@ export default class AddPerson extends Component {
     if (this.state.addingReference) {
       return false;
     }
-    if (this.state.selectedPerson===null) {
+    if (this.state.selectedSpatial===null) {
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>Please select an event to continue</div>,
+        addingReferenceErrorText: <div>Please select an spatial to continue</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -253,14 +231,10 @@ export default class AddPerson extends Component {
 
     let addReferenceData = addReference.data;
     if (addReferenceData.status===false) {
-      let errorOutput = [];
-      for (let errorKey in addReferenceData.error) {
-        errorOutput.push(<div key={errorKey}>{addReferenceData.error[errorKey]}</div>)
-      }
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>{errorOutput}</div>,
+        addingReferenceErrorText: <div>{addReferenceData.error}</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -269,20 +243,21 @@ export default class AddPerson extends Component {
       let context = this;
       this.setState({
         addingReference: false,
-        addingReferenceBtn: <span>Submitted successfully <i className="fa fa-check" /></span>
+        addingReferenceBtn: <span>Added successfully <i className="fa fa-check" /></span>
       });
-      this.toggleModal('addPersonModal')
+      this.props.reload();
+      this.toggleModal('addSpatialModal')
 
       setTimeout(function() {
         context.setState({
-          addingReferenceBtn: <span>Submit</span>
+          addingReferenceBtn: <span>Add</span>
         });
       },2000);
     }
   }
 
   addReference() {
-    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
+    if (typeof this.state.refType==="undefined") {
       let response = {
         data: {
           status: false,
@@ -292,34 +267,15 @@ export default class AddPerson extends Component {
       return response;
     }
     else {
-      let newReferences = this.props.items.map(item=> {
-        let newReference = {
-          items: [
-            {_id: item._id, type: this.props.type},
-            {_id: this.state.selectedPerson, type: "Person"},
-          ],
-          taxonomyTermLabel: this.state.refType.value,
-        }
-        return newReference;
-      });
-      return this.postReferences(newReferences);
+      let newReference = {
+        items: [
+          {_id: this.props.reference.ref, type: this.props.reference.type},
+          {_id: this.state.selectedSpatial, type: "Spatial"},
+        ],
+        taxonomyTermLabel: this.state.refType.label,
+      }
+      return addGenericReference(newReference);
     }
-  }
-
-  postReferences(references) {
-    return new Promise((resolve, reject) => {
-      axios({
-          method: 'put',
-          url: APIPath+'references',
-          crossDomain: true,
-          data: references
-        })
-      .then(function (response) {
-        resolve (response);
-      })
-      .catch(function (error) {
-      });
-    });
   }
 
   handleChange(e){
@@ -337,28 +293,91 @@ export default class AddPerson extends Component {
     })
   }
 
+  validateSpatial() {
+    if (this.state.spatialLabel==="") {
+      this.setState({
+        saving: false,
+        errorVisible: true,
+        errorText: <div>Please enter the spatial <b>Label</b> to continue!</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    if (this.state.spatialType==="") {
+      this.setState({
+        saving: false,
+        errorVisible: true,
+        errorText: <div>Please enter the <b>Type of spatial</b> to continue!</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    if (this.state.spatialTimeStartDate!=="" ||
+      this.state.spatialTimeEndDate!=="" ||
+      this.state.spatialTimeFormat!==""
+    ) {
+      if (this.state.spatialTimeLabel==="") {
+        this.setState({
+          saving: false,
+          errorVisible: true,
+          errorText: <div>Please enter the <b>Spatial Time Label</b> to continue!</div>,
+          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        });
+        return false;
+      }
+    }
+    if (this.state.spatialLocationStreetAddress!=="" ||
+      this.state.spatialLocationLocality!=="" ||
+      this.state.spatialLocationRegion!=="" ||
+      this.state.spatialLocationPostalCode!=="" ||
+      this.state.spatialLocationCountry!=="" ||
+      this.state.spatialLocationLatitude!=="" ||
+      this.state.spatialLocationLongitude!=="" ||
+      this.state.spatialLocationType!==""
+    ) {
+      if (this.state.spatialLocationLabel==="") {
+        this.setState({
+          saving: false,
+          errorVisible: true,
+          errorText: <div>Please enter the <b>Spatial Time Label</b> to continue!</div>,
+          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        });
+        return false;
+      }
+    }
+    this.setState({
+      saving: false,
+      errorVisible: false,
+      errorText: []
+    })
+    return true;
+  }
+
   loadDefaultRefType() {
     this.setState({
-      refType: refTypesList(this.props.refTypes.person)[0]
+      refType: refTypesList(this.props.refTypes)[0]
     })
   }
 
   componentDidMount() {
-    this.loadPeople();
+    this.loadSpatials();
   }
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.listPage<this.state.listPage) {
-      this.loadPeople();
+      this.loadSpatials();
       let context = this;
       setTimeout(function() {
         context.listRef.current.scrollTop = context.listRef.current.scrollHeight;
       },100);
     }
     if (prevState.searchItem!==this.state.searchItem) {
-      this.search();
+      this.searchSpatials();
     }
-    if (this.props.visible && !prevProps.visible && typeof this.props.refTypes.person!=="undefined") {
+    if (prevProps.refTypes!==this.props.refTypes) {
+      this.loadDefaultRefType();
+    }
+    if (prevProps.item!==this.props.item) {
       this.loadDefaultRefType();
     }
   }
@@ -368,42 +387,6 @@ export default class AddPerson extends Component {
   }
 
   render() {
-    let selectedItems = [];
-    if (this.props.type==="Person") {
-      selectedItems = this.props.items.map(item=> {
-        let name = "";
-        if (typeof item.honorificPrefix!=="undefined" && item.honorificPrefix!=="") {
-          name += item.honorificPrefix+" ";
-        }
-        if (typeof item.firstName!=="undefined" && item.firstName!=="") {
-          name += item.firstName+" ";
-        }
-        if (typeof item.middleName!=="undefined" && item.middleName!=="") {
-          name += item.middleName+" ";
-        }
-        if (typeof item.lastName!=="undefined" && item.lastName!=="") {
-          name += item.lastName+" ";
-        }
-        return <li key={item._id}>
-          <span>{name}</span>
-          <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
-        </li>
-      });
-    }
-    else {
-      selectedItems = this.props.items.map(item=> {
-        return <li key={item._id}>
-          <span>{item.label}</span>
-          <span className="remove-item-from-list" onClick={()=>this.props.removeSelected(item._id)}><i className="fa fa-times-circle" /></span>
-        </li>
-      });
-    }
-    if (selectedItems.length>0) {
-      selectedItems = <div className="form-group">
-        <label>Selected items</label>
-        <ul className="selected-items-list">{selectedItems}</ul>
-      </div>
-    }
     let list = <div className="text-center"><Spinner color="secondary" /></div>;
     let loadingMoreVisible = "hidden";
     if (this.state.loadingPage) {
@@ -417,43 +400,47 @@ export default class AddPerson extends Component {
     }
     if (!this.state.loading) {
       list = [];
-      let itemPeople = [];
+      let item = this.props.item;
+      let itemSpatials = [];
+      if (item!==null && typeof item.spatials!=="undefined" && item.spatials!==null) {
+        itemSpatials = item.spatials.map(org=> {return {ref:org.ref._id,term: org.term.label}});
+      }
       for (let i=0;i<this.state.list.length; i++) {
-        let item = this.state.list[i];
+        let spatialItem = this.state.list[i];
         let active = "";
         let exists = "";
-        if (this.state.selectedPerson===item._id) {
+        if (this.state.selectedSpatial===spatialItem._id) {
           active = " active";
         }
-        if (itemPeople.indexOf(item._id)>-1) {
+        let isRelated = itemSpatials.find(org=> {
+          if (this.state.refType!==null && org.ref===spatialItem._id && org.term===this.state.refType.value) {
+            return true;
+          }
+          return false
+        })
+        if (isRelated) {
           exists = " exists"
         }
-        let listItem = <div
+        let spatialListItem = <div
           className={"event-list-item"+active+exists}
-          key={item._id}
-          onClick={()=>this.selectedPerson(item._id)}>{item.label}</div>;
-        list.push(listItem);
+          key={spatialItem._id}
+          onClick={()=>this.selectedSpatial(spatialItem._id)}>{spatialItem.label}</div>;
+        list.push(spatialListItem);
       }
     }
+    let refTypesListItems = refTypesList(this.props.refTypes);
 
     let addingReferenceErrorVisible = "hidden";
     if (this.state.addingReferenceErrorVisible) {
       addingReferenceErrorVisible = "";
     }
 
-    let refTypesListItems = [];
-    if (typeof this.props.refTypes.person!=="undefined") {
-      refTypesListItems = refTypesList(this.props.refTypes.person);
-    }
-
     let errorContainer = <Alert className={addingReferenceErrorVisible} color="danger">{this.state.addingReferenceErrorText}</Alert>;
-
     return (
-      <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addPersonModal')} className={this.props.className}>
-        <ModalHeader toggle={()=>this.toggleModal('addPersonModal')}>Associate selected items with  Person</ModalHeader>
+      <Modal isOpen={this.props.visible} toggle={()=>this.toggleModal('addSpatialModal')} className={this.props.className}>
+        <ModalHeader toggle={()=>this.toggleModal('addSpatialModal')}>Add Spatial Relation</ModalHeader>
         <ModalBody>
           {errorContainer}
-          {selectedItems}
           <FormGroup style={{marginTop: '15px'}}>
             <Label for="refType">Reference Type</Label>
             <Select
@@ -462,25 +449,21 @@ export default class AddPerson extends Component {
               options={refTypesListItems}
             />
           </FormGroup>
-          <FormGroup>
-            <Label>Select Person</Label>
-          </FormGroup>
+          <hr/>
+          <h4>Select Spatial</h4>
           <FormGroup className="autocomplete-search">
             <Input type="text" name="searchItem" placeholder="Search..." value={this.state.searchItem} onChange={this.handleChange}/>
-            <div className="close-icon" onClick={()=>this.clearSearch()}><i className="fa fa-times" /></div>
+            <div className="close-icon" onClick={()=>this.clearSearchSpatials()}><i className="fa fa-times" /></div>
           </FormGroup>
           <div className="events-list-container" ref={this.listRef}>
             {list}
           </div>
-          <Button className={loadMoreVisibleClass} color="secondary" outline size="sm" block onClick={()=>this.loadMorePeople()}>Load more {loadingMore}</Button>
-          <div className="list-legend">
-            <span className="heading">Showing:</span>
-            <span className="text">{this.state.showingItems}/{this.state.totalItems}</span>
-          </div>
+          <Button className={loadMoreVisibleClass} color="secondary" outline size="sm" block onClick={()=>this.loadMoreSpatials()}>Load more {loadingMore}</Button>
+
         </ModalBody>
         <ModalFooter className="modal-footer">
-          <Button color="info" outline size="sm" onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
-          <Button color="secondary" outline size="sm" onClick={()=>this.toggleModal('addPersonModal')} className="pull-left">Cancel</Button>
+          <Button color="info" outline onClick={()=>this.submitReferences()}>{this.state.addingReferenceBtn}</Button>
+          <Button color="secondary" outline onClick={()=>this.toggleModal('addSpatialModal')} className="pull-left">Cancel</Button>
         </ModalFooter>
       </Modal>
     )
