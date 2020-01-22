@@ -37,6 +37,8 @@ class Spatials extends Component {
       loading: true,
       tableLoading: true,
       items: [],
+      orderField: this.props.spatialsPagination.orderField,
+      orderDesc: this.props.spatialsPagination.orderDesc,
       page: this.props.spatialsPagination.page,
       gotoPage: this.props.spatialsPagination.page,
       limit: this.props.spatialsPagination.limit,
@@ -45,6 +47,7 @@ class Spatials extends Component {
       allChecked: false,
     }
     this.load = this.load.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
@@ -55,58 +58,80 @@ class Spatials extends Component {
     this.deleteSelected = this.deleteSelected.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
     this.removeSelected = this.removeSelected.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
     })
-    let context = this;
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     let url = APIPath+'spatials';
-    axios({
+    let responseData = await axios({
       method: 'get',
       url: url,
       crossDomain: true,
       params: params
     })
 	  .then(function (response) {
-      let responseData = response.data.data;
-      let items = responseData.data;
-      let newItems = [];
-      for (let i=0;i<items.length; i++) {
-        let item = items[i];
-        item.checked = false;
-        newItems.push(item);
-      }
-      let currentPage = 1;
-      if (responseData.currentPage>0) {
-        currentPage = responseData.currentPage;
-      }
-      // normalize the page number when the selected page is empty for the selected number of items per page
-      if (currentPage>1 && responseData.data.length===0) {
-        context.setState({
-          page: currentPage-1
-        });
-        setTimeout(function() {
-          context.load();
-        },10)
-      }
-      else {
-        context.setState({
-          loading: false,
-          tableLoading: false,
-          page: responseData.currentPage,
-          totalPages: responseData.totalPages,
-          items: newItems
-        });
-      }
+      return response.data.data;
 	  })
 	  .catch(function (error) {
 	  });
+    if (this.cancelLoad) {
+      return false;
+    }
+    let items = responseData.data;
+    let newItems = [];
+    for (let i=0;i<items.length; i++) {
+      let item = items[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        items: newItems
+      });
+    }
+  }
+
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
+    }
+    this.setState({
+      orderField: orderField,
+      orderDesc: orderDesc
+    });
+    this.updateStorePagination(null,null,orderField,orderDesc);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
   }
 
   updatePage(e) {
@@ -123,7 +148,7 @@ class Spatials extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -133,6 +158,8 @@ class Spatials extends Component {
     let payload = {
       limit:limit,
       page:page,
+      orderField:orderField,
+      orderDesc:orderDesc,
     }
     this.props.setPaginationParams("spatials", payload);
   }
@@ -268,6 +295,10 @@ class Spatials extends Component {
     this.load();
   }
 
+  componentWillUnmount() {
+    this.cancelLoad=true;
+  }
+
   render() {
     let heading = "Spatials";
     let breadcrumbsItems = [
@@ -327,6 +358,17 @@ class Spatials extends Component {
         allChecked={this.state.allChecked}
       />
 
+      // ordering
+      let labelOrderIcon = [];
+      if (this.state.orderField==="label" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          labelOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+
       content = <div className="items-container">
         {pageActions}
         <div className="row">
@@ -346,7 +388,7 @@ class Spatials extends Component {
                         </div>
                       </th>
                       <th style={{width: "40px"}}>#</th>
-                      <th>Label</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th style={{width: "30px"}}></th>
                     </tr>
                   </thead>
@@ -362,7 +404,7 @@ class Spatials extends Component {
                         </div>
                       </th>
                       <th>#</th>
-                      <th>Label</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

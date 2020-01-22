@@ -37,6 +37,8 @@ class Usergroups extends Component {
       loading: true,
       tableLoading: true,
       usergroups: [],
+      orderField: this.props.usergroupsPagination.orderField,
+      orderDesc: this.props.usergroupsPagination.orderDesc,
       page: this.props.usergroupsPagination.page,
       gotoPage: this.props.usergroupsPagination.page,
       limit: this.props.usergroupsPagination.limit,
@@ -44,59 +46,81 @@ class Usergroups extends Component {
       totalItems: 0,
     }
     this.load = this.load.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.usergroupsTableRows = this.usergroupsTableRows.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
-    })
-    let context = this;
+    });
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     let url = APIPath+'user-groups';
-    axios({
-        method: 'get',
-        url: url,
-        crossDomain: true,
-        params: params
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let usergroups = responseData.data;
-        let currentPage = 1;
-        if (responseData.currentPage>0) {
-          currentPage = responseData.currentPage;
-        }
-        // normalize the page number when the selected page is empty for the selected number of items per page
-        if (currentPage>1 && responseData.data.length===0) {
-          context.setState({
-            page: currentPage-1
-          });
-          setTimeout(function() {
-            context.load();
-          },10)
-        }
-        else {
-          context.setState({
-            loading: false,
-            tableLoading: false,
-            page: responseData.currentPage,
-            totalPages: responseData.totalPages,
-            usergroups: usergroups
-          });
-        }
+    let responseData = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if (this.cancelLoad) {
+      return false;
+    }
+    let usergroups = responseData.data;
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        usergroups: usergroups
+      });
+    }
+  }
 
-  	  })
-  	  .catch(function (error) {
-  	  });
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
+    }
+    this.setState({
+      orderField: orderField,
+      orderDesc: orderDesc
+    });
+    this.updateStorePagination(null,null,orderField,orderDesc);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
   }
 
   updatePage(e) {
@@ -113,7 +137,7 @@ class Usergroups extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -123,6 +147,8 @@ class Usergroups extends Component {
     let payload = {
       limit:limit,
       page:page,
+      orderField:orderField,
+      orderDesc:orderDesc,
     }
     this.props.setPaginationParams("usergroups", payload);
   }
@@ -197,6 +223,10 @@ class Usergroups extends Component {
     this.load();
   }
 
+  componentWillUnmount() {
+    this.cancelLoad=true;
+  }
+
   render() {
     let heading = "Usergroups";
     let breadcrumbsItems = [
@@ -238,6 +268,35 @@ class Usergroups extends Component {
         usergroupsRows = this.usergroupsTableRows();
       }
 
+      // ordering
+      let labelOrderIcon = [];
+      let isDefaultOrderIcon = [];
+      let isAdminOrderIcon = [];
+      if (this.state.orderField==="label" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          labelOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="isDefault") {
+        if (this.state.orderDesc) {
+          isDefaultOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          isDefaultOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="isAdmin") {
+        if (this.state.orderDesc) {
+          isAdminOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          isAdminOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+
       content = <div className="people-container">
         {pageActions}
         <div className="row">
@@ -248,9 +307,9 @@ class Usergroups extends Component {
                   <thead>
                     <tr>
                       <th style={{width: "40px"}}>#</th>
-                      <th>Usergroup</th>
-                      <th style={{width: "80px"}}>Is default</th>
-                      <th style={{width: "80px"}}>Is admin</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Usergroup {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("isDefault")} style={{width: "80px"}}>Default {isDefaultOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("isAdmin")} style={{width: "80px"}}>Admin {isAdminOrderIcon}</th>
                       <th style={{width: "40px"}}></th>
                     </tr>
                   </thead>
@@ -260,9 +319,9 @@ class Usergroups extends Component {
                   <tfoot>
                     <tr>
                       <th>#</th>
-                      <th>Usergroup</th>
-                      <th>Is default</th>
-                      <th>Is admin</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Usergroup {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("isDefault")} style={{width: "80px"}}>Default {isDefaultOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("isAdmin")} style={{width: "80px"}}>Admin {isAdminOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

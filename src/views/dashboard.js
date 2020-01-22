@@ -9,7 +9,7 @@ import {
   Row,
   Col,
 } from "reactstrap";
-
+import Plot from '../components/month-chart';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 class Dashboard extends React.Component {
@@ -21,6 +21,8 @@ class Dashboard extends React.Component {
       countResources: 0,
       countOrganisations: 0,
       countEvents: 0,
+      countSpatial: 0,
+      countTemporal: 0,
     }
     this.loadDashboard = this.loadDashboard.bind(this);
   }
@@ -41,7 +43,9 @@ class Dashboard extends React.Component {
       countResources: data.resources,
       countOrganisations: data.organisations,
       countEvents: data.events,
-    })
+      countSpatial: data.spatial,
+      countTemporal: data.events,
+    });
   }
 
   componentDidMount() {
@@ -144,6 +148,64 @@ class Dashboard extends React.Component {
               </CardFooter>
             </Card>
           </Col>
+
+          <Col xs={12} sm={6} md={4}>
+            <Card className="card-stats">
+              <CardBody>
+                <Row>
+                  <Col xs={5} md={4}>
+                    <div className="icon-big text-center">
+                      <i className="pe-7s-clock text-danger" />
+                    </div>
+                  </Col>
+                  <Col xs={7} md={8}>
+                    <div className="numbers">
+                      <p className="card-category">Temporal count</p>
+                      <CardTitle tag="p">{this.state.countTemporal}</CardTitle>
+                    </div>
+                  </Col>
+                </Row>
+              </CardBody>
+              <CardFooter>
+                <hr />
+                <Link to="/temporals" href="/temporals">View temporal</Link>
+              </CardFooter>
+            </Card>
+          </Col>
+
+
+          <Col xs={12} sm={6} md={4}>
+            <Card className="card-stats">
+              <CardBody>
+                <Row>
+                  <Col xs={5} md={4}>
+                    <div className="icon-big text-center">
+                      <i className="pe-7s-map text-danger" />
+                    </div>
+                  </Col>
+                  <Col xs={7} md={8}>
+                    <div className="numbers">
+                      <p className="card-category">Spatial count</p>
+                      <CardTitle tag="p">{this.state.countSpatial}</CardTitle>
+                    </div>
+                  </Col>
+                </Row>
+              </CardBody>
+              <CardFooter>
+                <hr />
+                <Link to="/spatials" href="/spatials">View spatial</Link>
+              </CardFooter>
+            </Card>
+          </Col>
+
+          <Col xs={12}>
+            <Card>
+              <CardBody>
+                <Plot />
+              </CardBody>
+            </Card>
+          </Col>
+
         </Row>
       </div>
     );

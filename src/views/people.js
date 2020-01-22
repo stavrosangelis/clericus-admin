@@ -38,6 +38,8 @@ class People extends Component {
       loading: true,
       tableLoading: true,
       people: [],
+      orderField: this.props.peoplePagination.orderField,
+      orderDesc: this.props.peoplePagination.orderDesc,
       page: this.props.peoplePagination.page,
       gotoPage: this.props.peoplePagination.page,
       limit: this.props.peoplePagination.limit,
@@ -51,6 +53,7 @@ class People extends Component {
       advancedSearch: false,
     }
     this.load = this.load.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
@@ -77,7 +80,9 @@ class People extends Component {
     })
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     };
     if (this.state.searchInput!=="" && !this.state.advancedSearch) {
       params.label = this.state.searchInput;
@@ -103,9 +108,7 @@ class People extends Component {
     if (this.cancelLoad) {
       return false;
     }
-
-    let people = responseData.data;
-    let newPeople = people.map((person)=>{
+    let people = responseData.data.map((person)=>{
       person.checked = false;
       return person;
     });
@@ -127,7 +130,7 @@ class People extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
-        people: newPeople
+        people: people
       });
     }
   }
@@ -144,6 +147,8 @@ class People extends Component {
       page: this.state.page,
       limit: this.state.limit,
       label: this.state.searchInput,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     let url = APIPath+'people';
     let responseData = await axios({
@@ -196,6 +201,8 @@ class People extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     for (let i=0; i<this.state.advancedSearchInputs.length; i++) {
       let searchInput = this.state.advancedSearchInputs[i];
@@ -275,6 +282,22 @@ class People extends Component {
     })
   }
 
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
+    }
+    this.setState({
+      orderField: orderField,
+      orderDesc: orderDesc
+    });
+    this.updateStorePagination(null,null,orderField,orderDesc);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
+  }
+
   updatePage(e) {
     if (e>0 && e!==this.state.page) {
       this.setState({
@@ -289,7 +312,7 @@ class People extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -299,6 +322,8 @@ class People extends Component {
     let payload = {
       limit:limit,
       page:page,
+      orderField:orderField,
+      orderDesc:orderDesc,
     }
     this.props.setPaginationParams("people", payload);
   }
@@ -523,6 +548,25 @@ class People extends Component {
         allChecked={this.state.allChecked}
       />
 
+      // ordering
+      let firstNameOrderIcon = [];
+      let lastNameOrderIcon = [];
+      if (this.state.orderField==="firstName" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          firstNameOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          firstNameOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="lastName") {
+        if (this.state.orderDesc) {
+          lastNameOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          lastNameOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
 
       content = <div className="people-container">
         {pageActions}
@@ -544,8 +588,8 @@ class People extends Component {
                       </th>
                       <th style={{width: '40px'}}>#</th>
                       <th>Thumbnail</th>
-                      <th>First Name</th>
-                      <th>Last Name</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -562,8 +606,8 @@ class People extends Component {
                       </th>
                       <th>#</th>
                       <th>Thumbnail</th>
-                      <th>First Name</th>
-                      <th>Last Name</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

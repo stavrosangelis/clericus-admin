@@ -9,6 +9,7 @@ import './assets/fonts/roboto/css/roboto.css';
 import './assets/fonts/font-awesome/css/font-awesome.min.css';
 import "./assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css";
 import '../node_modules/leaflet/dist/leaflet.css';
+import './assets/react-vis/style.css'; 
 import './App.css';
 import {loadProgressBar} from 'axios-progress-bar';
 

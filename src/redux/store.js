@@ -24,31 +24,45 @@ export const defaultState = {
   },
   peoplePagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "firstName",
+    orderDesc: false,
   },
   organisationsPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "label",
+    orderDesc: false,
   },
   eventsPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "label",
+    orderDesc: false,
   },
   temporalsPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "label",
+    orderDesc: false,
   },
   spatialsPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "label",
+    orderDesc: false,
   },
   usersPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "firstName",
+    orderDesc: false,
   },
   usergroupsPagination: {
     limit:25,
-    page:1
+    page:1,
+    orderField: "label",
+    orderDesc: false,
   },
   userGroups: [],
 

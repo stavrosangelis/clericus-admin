@@ -206,11 +206,13 @@ export function setPaginationParams(type,params) {
         }
       };
     }
-    if (type==="people") {
+    else {
       payload = {
         peoplePagination: {
           limit:params.limit,
           page:params.page,
+          orderField:params.orderField,
+          orderDesc:params.orderDesc,
         }
       };
     }

@@ -37,6 +37,8 @@ class Users extends Component {
       loading: true,
       tableLoading: true,
       users: [],
+      orderField: this.props.usersPagination.orderField,
+      orderDesc: this.props.usersPagination.orderDesc,
       page: this.props.usersPagination.page,
       gotoPage: this.props.usersPagination.page,
       limit: this.props.usersPagination.limit,
@@ -44,59 +46,81 @@ class Users extends Component {
       totalItems: 0,
     }
     this.load = this.load.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.usersTableRows = this.usersTableRows.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+
+    // hack to kill load promise on unmount
+    this.cancelLoad=false;
   }
 
-  load() {
+  async load() {
     this.setState({
       tableLoading: true
-    })
-    let context = this;
+    });
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     let url = APIPath+'users';
-    axios({
+    let responseData = await axios({
         method: 'get',
         url: url,
         crossDomain: true,
         params: params
       })
   	  .then(function (response) {
-        let responseData = response.data.data;
-        let users = responseData.data;
-        let currentPage = 1;
-        if (responseData.currentPage>0) {
-          currentPage = responseData.currentPage;
-        }
-        // normalize the page number when the selected page is empty for the selected number of items per page
-        if (currentPage>1 && responseData.data.length===0) {
-          context.setState({
-            page: currentPage-1
-          });
-          setTimeout(function() {
-            context.load();
-          },10)
-        }
-        else {
-          context.setState({
-            loading: false,
-            tableLoading: false,
-            page: responseData.currentPage,
-            totalPages: responseData.totalPages,
-            users: users
-          });
-        }
-
+        return response.data.data;
   	  })
   	  .catch(function (error) {
   	  });
+      if (this.cancelLoad) {
+        return false;
+      }
+      let users = responseData.data;
+      let currentPage = 1;
+      if (responseData.currentPage>0) {
+        currentPage = responseData.currentPage;
+      }
+      // normalize the page number when the selected page is empty for the selected number of items per page
+      if (currentPage>1 && currentPage>responseData.totalPages) {
+        this.setState({
+          page: responseData.totalPages
+        },()=> {
+          this.load();
+        });
+      }
+      else {
+        this.setState({
+          loading: false,
+          tableLoading: false,
+          page: responseData.currentPage,
+          totalPages: responseData.totalPages,
+          users: users
+        });
+      }
+  }
+
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
+    }
+    this.setState({
+      orderField: orderField,
+      orderDesc: orderDesc
+    });
+    this.updateStorePagination(null,null,orderField,orderDesc);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
   }
 
   updatePage(e) {
@@ -113,7 +137,7 @@ class Users extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -123,6 +147,8 @@ class Users extends Component {
     let payload = {
       limit:limit,
       page:page,
+      orderField:orderField,
+      orderDesc:orderDesc,
     }
     this.props.setPaginationParams("users", payload);
   }
@@ -177,6 +203,7 @@ class Users extends Component {
       let row = <tr key={i}>
         <td>{count}</td>
         <td><Link href={"/user/"+user._id} to={"/user/"+user._id}>{label}</Link></td>
+        <td><Link href={"/user/"+user._id} to={"/user/"+user._id}>{user.email}</Link></td>
         <td><Link href={"/user/"+user._id} to={"/user/"+user._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -187,6 +214,11 @@ class Users extends Component {
   componentDidMount() {
     this.load();
   }
+
+  componentWillUnmount() {
+    this.cancelLoad=true;
+  }
+
 
   render() {
     let heading = "Users";
@@ -229,6 +261,26 @@ class Users extends Component {
         usersRows = this.usersTableRows();
       }
 
+      // ordering
+      let firstNameOrderIcon = [];
+      let emailOrderIcon = [];
+      if (this.state.orderField==="firstName" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          firstNameOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          firstNameOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="email" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          emailOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          emailOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+
       content = <div className="people-container">
         {pageActions}
         <div className="row">
@@ -239,7 +291,8 @@ class Users extends Component {
                   <thead>
                     <tr>
                       <th style={{width: "40px"}}>#</th>
-                      <th>User</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>User {firstNameOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("email")}>Email {emailOrderIcon}</th>
                       <th style={{width: "40px"}}></th>
                     </tr>
                   </thead>
@@ -249,7 +302,8 @@ class Users extends Component {
                   <tfoot>
                     <tr>
                       <th>#</th>
-                      <th>User</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>User {firstNameOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("email")}>Email {emailOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

@@ -2277,3 +2277,13 @@ input.form-control.active {
 .custom-marker {
   background-repeat: no-repeat  !important;
 }
+.ordering-label {
+  cursor: pointer;
+}
+.hint {
+  background-color: rgba(0,0,0,0.8);
+  font-size: 12px;
+  padding: 5px;
+  border-radius: 4px;
+  color: #fff;
+}

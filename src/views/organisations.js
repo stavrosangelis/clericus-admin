@@ -39,6 +39,8 @@ class Organisations extends Component {
       loading: true,
       tableLoading: true,
       organisations: [],
+      orderField: this.props.organisationsPagination.orderField,
+      orderDesc: this.props.organisationsPagination.orderDesc,
       page: this.props.organisationsPagination.page,
       gotoPage: this.props.organisationsPagination.page,
       limit: this.props.organisationsPagination.limit,
@@ -47,6 +49,7 @@ class Organisations extends Component {
       allChecked: false,
     }
     this.load = this.load.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
@@ -68,7 +71,9 @@ class Organisations extends Component {
     })
     let params = {
       page: this.state.page,
-      limit: this.state.limit
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
     }
     let url = APIPath+'organisations';
     let responseData = await axios({
@@ -85,21 +90,47 @@ class Organisations extends Component {
     if (this.cancelLoad) {
       return false;
     }
-
-    let organisations = responseData.data;
-    let newOrganisations = [];
-    for (let i=0;i<organisations.length; i++) {
-      let organisation = organisations[i];
+    let organisations = responseData.data.map(organisation=>{
       organisation.checked = false;
-      newOrganisations.push(organisation);
+      return organisation;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        organisations: organisations
+      });
+    }
+  }
+
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
     }
     this.setState({
-      loading: false,
-      tableLoading: false,
-      page: responseData.currentPage,
-      totalPages: responseData.totalPages,
-      organisations: newOrganisations
+      orderField: orderField,
+      orderDesc: orderDesc
     });
+    this.updateStorePagination(null,null,orderField,orderDesc);
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
   }
 
   updatePage(e) {
@@ -116,7 +147,7 @@ class Organisations extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -126,8 +157,10 @@ class Organisations extends Component {
     let payload = {
       limit:limit,
       page:page,
+      orderField:orderField,
+      orderDesc:orderDesc,
     }
-    this.props.setPaginationParams("people", payload);
+    this.props.setPaginationParams("organisations", payload);
   }
 
   gotoPage(e) {
@@ -329,6 +362,17 @@ class Organisations extends Component {
         allChecked={this.state.allChecked}
       />
 
+      // ordering
+      let labelOrderIcon = [];
+      if (this.state.orderField==="label" || this.state.orderField==="") {
+        if (this.state.orderDesc) {
+          labelOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+
       content = <div className="organisations-container">
         {pageActions}
         <div className="row">
@@ -349,7 +393,7 @@ class Organisations extends Component {
                       </th>
                       <th style={{width: '40px'}}>#</th>
                       <th>Thumbnail</th>
-                      <th>Label</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -366,7 +410,7 @@ class Organisations extends Component {
                       </th>
                       <th>#</th>
                       <th>Thumbnail</th>
-                      <th>Label</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>
