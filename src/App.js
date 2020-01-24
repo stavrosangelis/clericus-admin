@@ -9,7 +9,7 @@ import './assets/fonts/roboto/css/roboto.css';
 import './assets/fonts/font-awesome/css/font-awesome.min.css';
 import "./assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css";
 import '../node_modules/leaflet/dist/leaflet.css';
-import './assets/react-vis/style.css'; 
+import './assets/react-vis/style.css';
 import './App.css';
 import {loadProgressBar} from 'axios-progress-bar';
 
@@ -26,6 +26,8 @@ import {connect} from "react-redux";
 import {
   getSystemTypes,
   getPeopleRoles,
+  getOrganisationTypes,
+  getEventTypes,
   loadDefaultEntities,
   loadSettings,
   checkSession,
@@ -55,6 +57,8 @@ function mapDispatchToProps(dispatch) {
     loadSettings: () => dispatch(loadSettings()),
     getSystemTypes: () => dispatch(getSystemTypes()),
     getPeopleRoles: () => dispatch(getPeopleRoles()),
+    getOrganisationTypes: () => dispatch(getOrganisationTypes()),
+    getEventTypes: () => dispatch(getEventTypes()),
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
     checkSession: () => dispatch(checkSession()),
     resetLoginRedirect: ()=>dispatch(resetLoginRedirect()),
@@ -128,6 +132,8 @@ class App extends Component {
       this.openSidebar();
       this.props.getSystemTypes();
       this.props.getPeopleRoles();
+      this.props.getOrganisationTypes();
+      this.props.getEventTypes();
       this.props.loadDefaultEntities();
       loadProgressBar();
     }

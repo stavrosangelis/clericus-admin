@@ -42,6 +42,7 @@ class Temporals extends Component {
       page: this.props.temporalsPagination.page,
       gotoPage: this.props.temporalsPagination.page,
       limit: this.props.temporalsPagination.limit,
+      status: this.props.temporalsPagination.status,
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
@@ -52,6 +53,7 @@ class Temporals extends Component {
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.setStatus = this.setStatus.bind(this);
     this.itemsTableRows = this.itemsTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
@@ -72,6 +74,7 @@ class Temporals extends Component {
       limit: this.state.limit,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+      status: this.state.status,
     }
     let url = APIPath+'temporals';
     let responseData = await axios({
@@ -124,7 +127,7 @@ class Temporals extends Component {
       orderField: orderField,
       orderDesc: orderDesc
     });
-    this.updateStorePagination(null,null,orderField,orderDesc);
+    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -137,7 +140,7 @@ class Temporals extends Component {
         page: e,
         gotoPage: e,
       });
-      this.updateStorePagination(null,e);
+      this.updateStorePagination({page:e});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -145,7 +148,7 @@ class Temporals extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -157,19 +160,20 @@ class Temporals extends Component {
       page:page,
       orderField:orderField,
       orderDesc:orderDesc,
+      status: status
     }
     this.props.setPaginationParams("temporals", payload);
   }
 
   gotoPage(e) {
-    e.prtemporalDefault();
-    let gotoPage = this.state.gotoPage;
+    e.preventDefault();
+    let gotoPage = parseInt(this.state.gotoPage,10);
     let page = this.state.page;
     if (gotoPage>0 && gotoPage!==page) {
       this.setState({
         page: gotoPage
       })
-      this.updateStorePagination(null,gotoPage);
+      this.updateStorePagination({page:gotoPage});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -181,7 +185,7 @@ class Temporals extends Component {
     this.setState({
       limit: limit
     })
-    this.updateStorePagination(limit,null);
+    this.updateStorePagination({limit:limit});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -195,6 +199,17 @@ class Temporals extends Component {
     this.setState({
       [name]: value
     });
+  }
+
+  setStatus(status=null) {
+    this.setState({
+      status: status
+    })
+    this.updateStorePagination({status:status});
+    let context = this;
+    setTimeout(function() {
+      context.load();
+    },100)
   }
 
   itemsTableRows() {
@@ -303,14 +318,18 @@ class Temporals extends Component {
     ];
 
     let pageActions = <PageActions
-      limit={this.state.limit}
       current_page={this.state.page}
-      gotoPageValue={this.state.gotoPage}
-      total_pages={this.state.totalPages}
-      updatePage={this.updatePage}
       gotoPage={this.gotoPage}
+      gotoPageValue={this.state.gotoPage}
       handleChange={this.handleChange}
+      limit={this.state.limit}
+      pageType="temporals"
+      setStatus={this.setStatus}
+      status={this.state.status}
+      total_pages={this.state.totalPages}
+      types={[]}
       updateLimit={this.updateLimit}
+      updatePage={this.updatePage}
     />
     let content = <div>
       {pageActions}

@@ -13,7 +13,7 @@ const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
     resourceEntity: state.resourceEntity,
-    systemTypes: state.systemTypes
+    resourcesTypes: state.resourcesTypes
    };
 };
 
@@ -55,8 +55,7 @@ class Resource extends Component {
     this.reload = this.reload.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
@@ -66,23 +65,23 @@ class Resource extends Component {
     }
     else {
       let params = {_id:_id}
-      axios({
+      let responseData = await axios({
         method: 'get',
         url: APIPath+'resource',
         crossDomain: true,
         params: params
       })
   	  .then(function (response) {
-        let responseData = response.data.data;
-        context.setState({
-          loading: false,
-          resource: responseData,
-          systemType: responseData.systemType,
-          reload: false,
-        });
+        return response.data.data;
   	  })
   	  .catch(function (error) {
   	  });
+      this.setState({
+        loading: false,
+        resource: responseData,
+        systemType: responseData.systemType,
+        reload: false,
+      });
     }
   }
 
@@ -242,8 +241,8 @@ class Resource extends Component {
     if (this.props.entitiesLoaded && !this.state.referencesLoaded) {
       this.loadReferenceLabelsNTypes();
     }
-    if (this.props.match.params._id==="new" && this.state.systemType===null && this.props.systemTypes.length>0) {
-      let defaultSystemType = this.props.systemTypes.find(item=>item.labelId==="Thumbnail");
+    if (this.props.match.params._id==="new" && this.state.systemType===null && this.props.resourcesTypes.length>0) {
+      let defaultSystemType = this.props.resourcesTypes.find(item=>item.labelId==="Thumbnail");
       this.setState({
         systemType: {ref:defaultSystemType._id},
       })
@@ -277,17 +276,16 @@ class Resource extends Component {
     </div>
     if (!this.state.loading) {
       let viewComponent = <ViewResource
-        resource={this.state.resource}
-        file={label}
+        closeUploadModal={this.state.closeUploadModal}
         delete={this.toggleDeleteModal}
-        uploadResponse={this.uploadResponse}
+        errorText={this.state.errorText}
+        errorVisible={this.state.errorVisible}
+        reload={this.reload}
+        resource={this.state.resource}
+        systemType={this.state.systemType}
         update={this.update}
         updateBtn={this.state.updateBtn}
-        errorVisible={this.state.errorVisible}
-        errorText={this.state.errorText}
-        closeUploadModal={this.state.closeUploadModal}
-        reload={this.reload}
-        systemType={this.state.systemType}
+        uploadResponse={this.uploadResponse}
         />;
       content = <div className="resources-container">
           {viewComponent}

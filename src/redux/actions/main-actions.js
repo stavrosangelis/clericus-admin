@@ -240,9 +240,9 @@ export function getSystemTypes() {
     .then(function (response) {
       let responseData = response.data;
       if (responseData.status) {
-        let systemTypes = responseData.data.taxonomyterms;
+        let resourcesTypes = responseData.data.taxonomyterms;
         let payload ={
-          systemTypes: systemTypes,
+          resourcesTypes: resourcesTypes,
         };
         dispatch({
           type: GENERIC_UPDATE,
@@ -286,6 +286,74 @@ export function getPeopleRoles() {
 	  .catch(function (error) {
       console.log(error)
 	  });
+  }
+}
+
+export function getOrganisationTypes() {
+  return async (dispatch,getState) => {
+    let params = {
+      systemType: "organisationTypes"
+    }
+    let responseData = await axios({
+      method: 'get',
+      url: APIPath+'taxonomy',
+      crossDomain: true,
+      params: params,
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+    if (responseData.status) {
+      let organisationTypes = responseData.data.taxonomyterms;
+      let payload ={
+        organisationTypes: organisationTypes,
+      };
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload: payload
+      });
+    }
+    else {
+      return false;
+    }
+
+  }
+}
+
+export function getEventTypes() {
+  return async (dispatch,getState) => {
+    let params = {
+      systemType: "eventTypes"
+    }
+    let responseData = await axios({
+      method: 'get',
+      url: APIPath+'taxonomy',
+      crossDomain: true,
+      params: params,
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+    if (responseData.status) {
+      let eventTypes = responseData.data.taxonomyterms;
+      let payload ={
+        eventTypes: eventTypes,
+      };
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload: payload
+      });
+    }
+    else {
+      return false;
+    }
+
   }
 }
 

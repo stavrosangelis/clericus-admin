@@ -19,54 +19,67 @@ export const defaultState = {
 
   resourcesPagination: {
     limit:25,
-    activeSystemType:null,
+    activeType:null,
     page:1,
+    status: null,
   },
   peoplePagination: {
     limit:25,
     page:1,
     orderField: "firstName",
     orderDesc: false,
+    status: null,
   },
   organisationsPagination: {
     limit:25,
     page:1,
     orderField: "label",
     orderDesc: false,
+    activeType: null,
+    status: null,
   },
   eventsPagination: {
     limit:25,
     page:1,
     orderField: "label",
     orderDesc: false,
+    activeType: null,
+    status: null,
   },
   temporalsPagination: {
     limit:25,
     page:1,
     orderField: "label",
     orderDesc: false,
+    status: null,
   },
   spatialsPagination: {
     limit:25,
     page:1,
     orderField: "label",
     orderDesc: false,
+    status: null,
   },
   usersPagination: {
     limit:25,
     page:1,
     orderField: "firstName",
     orderDesc: false,
+    status: null,
   },
   usergroupsPagination: {
     limit:25,
     page:1,
     orderField: "label",
     orderDesc: false,
+    status: null,
   },
   userGroups: [],
 
-  systemTypes: [],
+  resourcesTypes: [],
+  organisationTypes: [],
+  eventTypes: [],
+
   lightBoxOpen: false,
   lightBoxSrc: null,
 
@@ -80,8 +93,6 @@ export const defaultState = {
   resourceEntity: null,
   temporalEntity: null,
   spatialEntity: null,
-
-
 }
 
 function configureStore(state = defaultState) {

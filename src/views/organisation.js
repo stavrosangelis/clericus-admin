@@ -23,6 +23,7 @@ const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
     organisationEntity: state.organisationEntity,
+    organisationTypes: state.organisationTypes,
    };
 };
 
@@ -34,7 +35,6 @@ class Organisation extends Component {
       reload: false,
       loading: true,
       organisation:null,
-      organisationTypes: [],
       redirect: false,
       redirectReload: false,
       deleteModal: false,
@@ -56,7 +56,7 @@ class Organisation extends Component {
     }
     this.load = this.load.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
-    this.loadOrganisationTypes = this.loadOrganisationTypes.bind(this);
+    //this.loadOrganisationTypes = this.loadOrganisationTypes.bind(this);
     this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
     this.validateOrganisation = this.validateOrganisation.bind(this);
@@ -106,23 +106,6 @@ class Organisation extends Component {
       referencesLabels: referencesLabels,
       referencesTypes: referencesTypes,
       referencesLoaded: true,
-    })
-  }
-
-  loadOrganisationTypes = async() => {
-    let organisationTypes = await axios({
-      method: 'get',
-      url: APIPath+"taxonomy",
-      crossDomain: true,
-      params: {systemType: "organisationTypes"}
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    this.setState({
-      organisationTypes: organisationTypes.taxonomyterms,
     })
   }
 
@@ -259,7 +242,7 @@ class Organisation extends Component {
   }
 
   componentDidMount() {
-    this.loadOrganisationTypes();
+    //this.loadOrganisationTypes();
     this.load();
   }
 
@@ -299,13 +282,13 @@ class Organisation extends Component {
       label = this.state.organisation.label;
     }
 
-    let heading = "Organisation \""+label+"\"";
+    let heading = label;
     if (this.props.match.params._id==="new") {
       heading = "Add new organisation";
     }
     let breadcrumbsItems = [
       {label: "Organisations", icon: "pe-7s-culture", active: false, path: "/organisations"},
-      {label: heading, icon: "pe-7s-culture", active: true, path: ""}
+      {label: heading, icon: "", active: true, path: ""}
     ];
 
     let redirectElem = [];
@@ -323,17 +306,16 @@ class Organisation extends Component {
     if (!this.state.loading) {
       content = <div className="items-container">
           <ViewOrganisation
-            organisation={this.state.organisation}
-            organisationTypes={this.state.organisationTypes}
-            reload={this.reload}
-            label={label}
+            closeUploadModal={this.state.closeUploadModal}
             delete={this.toggleDeleteModal}
-            uploadResponse={this.uploadResponse}
+            errorText={this.state.errorText}
+            errorVisible={this.state.errorVisible}
+            organisation={this.state.organisation}
+            organisationTypes={this.props.organisationTypes}
+            reload={this.reload}
             update={this.update}
             updateBtn={this.state.updateBtn}
-            errorVisible={this.state.errorVisible}
-            errorText={this.state.errorText}
-            closeUploadModal={this.state.closeUploadModal}
+            uploadResponse={this.uploadResponse}
             />
       </div>
 

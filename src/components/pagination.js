@@ -24,9 +24,9 @@ export default class MainPagination extends Component {
       }
       let paginationItems = [];
       let paginationFirstItem = <li key="first">
-        <PaginationLink className='href-btn' onClick={this.props.pagination_function.bind(this,1)}><i className="fa-step-backward fa"/></PaginationLink>
+        <PaginationLink className='href-btn' onClick={()=>this.props.pagination_function(1)}><i className="fa-step-backward fa"/></PaginationLink>
         </li>;
-      let paginationPrevItem = <li key="prev"><PaginationLink className='href-btn' onClick={this.props.pagination_function.bind(this,prevPage)}><i className="fa-backward fa"/></PaginationLink></li>;
+      let paginationPrevItem = <li key="prev"><PaginationLink className='href-btn' onClick={()=>this.props.pagination_function(prevPage)}><i className="fa-backward fa"/></PaginationLink></li>;
       paginationItems.push(paginationFirstItem);
       paginationItems.push(paginationPrevItem);
 
@@ -38,7 +38,7 @@ export default class MainPagination extends Component {
           pageActive = "active";
         }
 
-        let paginationItem =  <PaginationItem key={pageNum} className={pageActive}><PaginationLink className='href-btn' onClick={this.props.pagination_function.bind(this,pageNum)}>{pageNum}</PaginationLink></PaginationItem>;
+        let paginationItem =  <PaginationItem key={pageNum} className={pageActive}><PaginationLink className='href-btn' onClick={()=>this.props.pagination_function(pageNum)}>{pageNum}</PaginationLink></PaginationItem>;
         if (pageActive === "active") {
           paginationItem = <PaginationItem key={pageNum} className={pageActive}><PaginationLink>{pageNum}</PaginationLink></PaginationItem>;
         }
@@ -57,8 +57,8 @@ export default class MainPagination extends Component {
         }
       }
 
-      let paginationNextItem = <PaginationItem key="next"><PaginationLink className='href-btn' onClick={this.props.pagination_function.bind(this,nextPage)}><i className="fa-forward fa"/></PaginationLink></PaginationItem>;
-      let paginationLastItem = <PaginationItem key="last"><PaginationLink className='href-btn' onClick={this.props.pagination_function.bind(this,lastPage)}><i className="fa-step-forward fa"/></PaginationLink></PaginationItem>;
+      let paginationNextItem = <PaginationItem key="next"><PaginationLink className='href-btn' onClick={()=>this.props.pagination_function(nextPage)}><i className="fa-forward fa"/></PaginationLink></PaginationItem>;
+      let paginationLastItem = <PaginationItem key="last"><PaginationLink className='href-btn' onClick={()=>this.props.pagination_function(lastPage)}><i className="fa-step-forward fa"/></PaginationLink></PaginationItem>;
       paginationItems.push(paginationNextItem);
       paginationItems.push(paginationLastItem);
 

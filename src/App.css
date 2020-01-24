@@ -2287,3 +2287,6 @@ input.form-control.active {
   border-radius: 4px;
   color: #fff;
 }
+.btn:focus, .btn.focus, .btn-secondary:focus, .btn-secondary.focus {
+  box-shadow: none;
+}

@@ -3,7 +3,7 @@ import { Card, CardImg, CardText, CardBody} from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
-import PageActions from '../components/resources-page-actions';
+import PageActions from '../components/page-actions';
 import BatchActions from '../components/add-batch-relations'
 
 import axios from 'axios';
@@ -18,7 +18,7 @@ const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     resourcesPagination: state.resourcesPagination,
-    systemTypes: state.systemTypes
+    resourcesTypes: state.resourcesTypes
    };
 };
 
@@ -35,27 +35,27 @@ class Resources extends Component {
     this.state = {
       loading: true,
       tableLoading: true,
-      systemTypes: this.props.systemTypes,
-      activeSystemType: this.props.resourcesPagination.activeSystemType,
+      activeType: this.props.resourcesPagination.activeType,
       page: this.props.resourcesPagination.page,
       gotoPage: this.props.resourcesPagination.page,
       limit: this.props.resourcesPagination.limit,
+      status: this.props.resourcesPagination.status,
       totalPages: 0,
       totalItems: 0,
       insertModalVisible: false,
       searchInput: '',
       allowSelections: false,
     }
-    this.getSystemTypes = this.getSystemTypes.bind(this);
     this.load = this.load.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.setActiveSystemType = this.setActiveSystemType.bind(this);
+    this.setActiveType = this.setActiveType.bind(this);
+    this.setStatus = this.setStatus.bind(this);
     this.toggleInsertModal = this.toggleInsertModal.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
-    this.search = this.search.bind(this);
+    this.simpleSearch = this.simpleSearch.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
@@ -66,24 +66,6 @@ class Resources extends Component {
     this.cancelLoad=false;
   }
 
-  async getSystemTypes() {
-    let responseData = await axios({
-      method: 'get',
-      url: APIPath+'resource-system-types',
-      crossDomain: true,
-    })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-	  });
-    if (responseData.status && !this.cancelLoad) {
-      this.setState({
-        systemTypes: responseData.data,
-      });
-    }
-  }
-
   async load() {
     this.setState({
       tableLoading: true
@@ -91,11 +73,15 @@ class Resources extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit,
-      label: this.state.searchInput
+      label: this.state.searchInput,
+      status: this.state.status,
     }
     let url = APIPath+'resources';
-    if (this.state.activeSystemType!==null) {
-      params.systemType = this.state.activeSystemType;
+    if (this.state.activeType!==null) {
+      let systemType = this.props.resourcesTypes.find(t=>t.label===this.state.activeType);
+      if (typeof systemType!=="undefined") {
+        params.systemType = systemType._id;
+      }
     }
     let responseData = await axios({
       method: 'get',
@@ -136,23 +122,26 @@ class Resources extends Component {
     }
   }
 
-  async search(e) {
+  async simpleSearch(e) {
     e.preventDefault();
     if (this.state.searchInput<2) {
       return false;
     }
-
     this.setState({
       tableLoading: true
     })
     let params = {
       page: this.state.page,
       limit: this.state.limit,
-      label: this.state.searchInput
+      label: this.state.searchInput,
+      status: this.state.status,
     }
     let url = APIPath+'resources';
-    if (this.state.activeSystemType!==null) {
-      params.systemType = this.state.activeSystemType;
+    if (this.state.activeType!==null) {
+      let systemType = this.props.resourcesTypes.find(t=>t.label===this.state.activeType);
+      if (typeof systemType!=="undefined") {
+        params.systemType = systemType._id;
+      }
     }
     let responseData = await axios({
       method: 'get',
@@ -207,7 +196,7 @@ class Resources extends Component {
         page: e,
         gotoPage: e,
       });
-      this.updateStorePagination(null,null,e);
+      this.updateStorePagination({page:e});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -215,33 +204,34 @@ class Resources extends Component {
     }
   }
 
-  updateStorePagination(limit=null, activeSystemType=null, page=null) {
+  updateStorePagination({limit=null, activeType=null, page=null, status=null}) {
     if (limit===null) {
       limit = this.state.limit;
     }
-    if (activeSystemType===null) {
-      activeSystemType = this.state.activeSystemType;
+    if (activeType===null) {
+      activeType = this.state.activeType;
     }
     if (page===null) {
       page = this.state.page;
     }
     let payload = {
       limit:limit,
-      activeSystemType:activeSystemType,
+      activeType:activeType,
       page:page,
+      status:status,
     }
     this.props.setPaginationParams("resources", payload);
   }
 
   gotoPage(e) {
     e.preventDefault();
-    let gotoPage = this.state.gotoPage;
+    let gotoPage = parseInt(this.state.gotoPage,10);
     let page = this.state.page;
     if (gotoPage>0 && gotoPage!==page) {
       this.setState({
         page: gotoPage
       })
-      this.updateStorePagination(null,null,gotoPage);
+      this.updateStorePagination({page:gotoPage});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -253,7 +243,7 @@ class Resources extends Component {
     this.setState({
       limit: limit
     });
-    this.updateStorePagination(limit,null,null);
+    this.updateStorePagination({limit:limit});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -269,11 +259,22 @@ class Resources extends Component {
     });
   }
 
-  setActiveSystemType(systemType) {
+  setActiveType(type) {
     this.setState({
-      activeSystemType: systemType
+      activeType: type
     })
-    this.updateStorePagination(null,systemType,null);
+    this.updateStorePagination({activeType:type});
+    let context = this;
+    setTimeout(function() {
+      context.load();
+    },100)
+  }
+
+  setStatus(status=null) {
+    this.setState({
+      status: status
+    })
+    this.updateStorePagination({status:status});
     let context = this;
     setTimeout(function() {
       context.load();
@@ -379,14 +380,6 @@ class Resources extends Component {
     this.load();
   }
 
-  componentDidUpdate(prevProps) {
-    if(prevProps.systemTypes!==this.props.systemTypes) {
-      this.setState({
-        systemTypes: this.props.systemTypes
-      })
-    }
-  }
-
   componentWillUnmount() {
     this.cancelLoad=true;
   }
@@ -447,20 +440,23 @@ class Resources extends Component {
       });
 
       let pageActions = <PageActions
-        limit={this.state.limit}
+        activeType={this.state.activeType}
+        clearSearch={this.clearSearch}
         current_page={this.state.page}
         gotoPageValue={this.state.gotoPage}
-        total_pages={this.state.totalPages}
-        systemTypes={this.state.systemTypes}
-        activeSystemType={this.state.activeSystemType}
-        updatePage={this.updatePage}
         gotoPage={this.gotoPage}
         handleChange={this.handleChange}
-        updateLimit={this.updateLimit}
-        setActiveSystemType={this.setActiveSystemType}
-        search={this.search}
-        clearSearch={this.clearSearch}
+        limit={this.state.limit}
+        pageType="resources"
         searchInput={this.state.searchInput}
+        setActiveType={this.setActiveType}
+        setStatus={this.setStatus}
+        status={this.state.status}
+        simpleSearch={this.simpleSearch}
+        total_pages={this.state.totalPages}
+        types={this.props.resourcesTypes}
+        updateLimit={this.updateLimit}
+        updatePage={this.updatePage}
       />
       let selectionsClass="";
       if (this.state.allowSelections) {
@@ -508,7 +504,7 @@ class Resources extends Component {
       <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <h2>{heading} <small>({this.state.totalItems})</small></h2>
           </div>
         </div>
         {content}

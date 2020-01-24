@@ -16,6 +16,7 @@ const mapStateToProps = state => {
   return {
     entitiesLoaded: state.entitiesLoaded,
     eventEntity: state.eventEntity,
+    eventTypes: state.eventTypes,
    };
 };
 
@@ -38,8 +39,6 @@ class Event extends Component {
       updateBtn: <span><i className="fa fa-save" /> Update</span>,
       errorVisible: false,
       errorText: [],
-      deleteBtn: <span><i className="fa fa-trash-o" /> Delete</span>,
-      closeUploadModal: false,
 
       addReferencesVisible: true,
       referencesLoaded: false,
@@ -55,42 +54,39 @@ class Event extends Component {
     }
     this.load = this.load.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
-    this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
     this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
     this.delete = this.delete.bind(this);
     this.reload = this.reload.bind(this);
   }
 
-  load() {
-    let context = this;
+  async load() {
     let _id = this.props.match.params._id;
     if (_id==="new") {
       this.setState({
         loading: false,
-        systemType: 'thumbnail',
         addReferencesVisible: false
       })
     }
     else {
       let params = {_id:_id}
-      axios({
+      let responseData = await axios({
         method: 'get',
         url: APIPath+'event',
         crossDomain: true,
         params: params
       })
   	  .then(function (response) {
-        let responseData = response.data.data;
-        context.setState({
-          loading: false,
-          item: responseData,
-          reload: false,
-        });
+        return response.data.data;
   	  })
   	  .catch(function (error) {
         console.log(error);
   	  });
+      this.setState({
+        loading: false,
+        item: responseData,
+        reload: false,
+      });
     }
   }
 
@@ -105,39 +101,6 @@ class Event extends Component {
     })
   }
 
-  uploadResponse(data) {
-    if (data.status) {
-      if (this.state.newId===null) {
-        this.setState({
-          newId: data.data._id,
-          redirectReload: true,
-          errorVisible: false,
-          errorText: []
-        })
-      }
-      if (typeof this.state.item._id!=="undefined") {
-        this.setState({
-          closeUploadModal: true
-        })
-      }
-    }
-    else {
-      let errorText = [];
-      if (typeof data.error!=="undefined" && data.error.length>0) {
-        let i=0;
-        for (let key in data.error) {
-          errorText.push(<div key={i}>{data.error[key]}</div>);
-          i++;
-        }
-      }
-
-      this.setState({
-        errorVisible: true,
-        errorText: errorText
-      })
-    }
-  }
-
   update(newData) {
     if (this.state.updating) {
       return false;
@@ -145,41 +108,12 @@ class Event extends Component {
     this.setState({
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>,
       updating: true
-    })
-    let temporalData = null;
-    if (newData.eventTimeLabel!=="") {
-      temporalData = {
-        label: newData.eventTimeLabel,
-        startDate: newData.eventTimeStartDate,
-        endDate: newData.eventTimeEndDate,
-        format: newData.eventTimeFormat,
-      };
-      if (newData.eventTimeId!=="") {
-        temporalData._id = newData.eventTimeId;
-      }
-    }
-    let spatialData = null;
-    if (newData.eventLocationLabel!=="") {
-      spatialData = {
-        label: newData.eventLocationLabel,
-        streetAddress: newData.eventLocationStreetAddress,
-        locality: newData.eventLocationLocality,
-        region: newData.eventLocationRegion,
-        postalCode: newData.eventLocationPostalCode,
-        country: newData.eventLocationCountry,
-        coordinates: {
-          latitude: newData.eventLocationLatitude,
-          longitude: newData.eventLocationLongitude,
-        },
-        locationType: newData.eventLocationType,
-      };
-    }
+    });
     let postData = {
-      label: newData.eventLabel,
-      description: newData.eventDescription,
+      label: newData.label,
+      description: newData.description,
       eventType: newData.eventType.value,
-      temporal: temporalData,
-      spatial: spatialData,
+      status: newData.status,
     }
     let _id = this.props.match.params._id;
     if (_id!=="new") {
@@ -236,28 +170,6 @@ class Event extends Component {
         updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
       });
       return false;
-    }
-    if (postData.temporal!==null) {
-      if (postData.temporal.label==="") {
-        this.setState({
-          updating: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
-    }
-    if (postData.spatial!==null) {
-      if (this.state.label==="") {
-        this.setState({
-          updating: false,
-          errorVisible: true,
-          errorText: <div>Please enter the <b>Event Time Label</b> to continue!</div>,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-        });
-        return false;
-      }
     }
     this.setState({
       updating: false,
@@ -365,17 +277,14 @@ class Event extends Component {
     </div>
     if (!this.state.loading) {
       let viewComponent = <ViewEvent
-        item={this.state.item}
-        file={label}
         delete={this.toggleDeleteModal}
-        uploadResponse={this.uploadResponse}
+        errorText={this.state.errorText}
+        errorVisible={this.state.errorVisible}
+        eventTypes={this.props.eventTypes}
+        item={this.state.item}
+        reload={this.reload}
         update={this.update}
         updateBtn={this.state.updateBtn}
-        deleteBtn={this.state.deleteBtn}
-        errorVisible={this.state.errorVisible}
-        errorText={this.state.errorText}
-        closeUploadModal={this.state.closeUploadModal}
-        reload={this.reload}
         />;
       content = <div className="items-container">
           {viewComponent}
@@ -404,7 +313,7 @@ class Event extends Component {
     };
     let addRelation = [];
     if (this.state.item!==null) {
-      
+
       addRelation = <AddRelation
         reload={this.reload}
         reference={relationReference}

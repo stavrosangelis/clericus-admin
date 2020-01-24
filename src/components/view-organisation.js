@@ -22,10 +22,10 @@ export default class ViewOrganisation extends Component {
 
     let organisation = this.props.organisation;
     let status = 'private', label = '', description = '', organisationType = '', alternateAppelations = [];
-    if (typeof this.props.label!=="undefined" && this.props.label!==null) {
-      label = this.props.label;
-    }
     if (organisation!==null) {
+      if (typeof organisation.label!=="undefined" && organisation.label!==null) {
+        label = organisation.label;
+      }
       if (typeof organisation.description!=="undefined" && organisation.description!==null) {
         description = organisation.description;
       }
@@ -41,7 +41,6 @@ export default class ViewOrganisation extends Component {
     }
     this.state = {
       detailsOpen: true,
-      metadataOpen: false,
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,

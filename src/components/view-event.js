@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import {
   Card, CardTitle, CardBody,
-  Button,
+  Button, ButtonGroup,
   Form, FormGroup, Label, Input,
   Collapse,
 } from 'reactstrap';
@@ -23,9 +23,7 @@ export default class ViewEvent extends Component {
     super(props);
 
     let item = this.props.item;
-    let label = '';
-    let description = '';
-    let eventType = '';
+    let status = 'private', label = '', description = '', eventType = '';
     if (item!==null) {
       if (typeof item.label!=="undefined" && item.label!==null) {
         label = item.label;
@@ -33,144 +31,35 @@ export default class ViewEvent extends Component {
       if (typeof item.description!=="undefined" && item.description!==null) {
         description = item.description;
       }
-      if (typeof item.eventType!=="undefined" && item.eventType!==null) {
-        eventType = item.eventType;
+      if (typeof item.eventType!=="undefined" && item.eventType!==null && this.props.eventTypes.length>0) {
+        let eventTypeFind = this.props.eventTypes.find(type=>type._id===item.eventType);
+        eventType = {value: item.eventType, label:eventTypeFind.label};
+      }
+      if (typeof item.status!=="undefined" && item.status!==null) {
+        status = item.status;
       }
     }
 
     this.state = {
-      zoom: 100,
       detailsOpen: true,
-      metadataOpen: false,
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,
-      itemsOpen: false,
       temporalOpen: false,
       spatialOpen: false,
-      systemTypes: [],
-      eventTypes: [],
 
-      form: {
-        label: label,
-        description: description,
-        eventType: eventType,
-      }
+      label: label,
+      description: description,
+      eventType: eventType,
+      status: status,
     }
-    this.loadEventTypes = this.loadEventTypes.bind(this);
+    this.deleteRef = this.deleteRef.bind(this);
     this.eventTypesList = this.eventTypesList.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
-  }
-
-  setFormValues() {
-    let item = this.props.item;
-    let label = '';
-    let description = '';
-    let eventType = '';
-    if (item!==null) {
-      if (typeof item.label!=="undefined" && item.label!==null) {
-        label = item.label;
-      }
-      if (typeof item.description!=="undefined" && item.description!==null) {
-        description = item.description;
-      }
-      if (typeof item.eventType!=="undefined" && item.eventType!==null) {
-        eventType = item.eventType;
-      }
-    }
-
-    this.setState({
-      form: {
-        label: label,
-        description: description,
-        eventType: eventType,
-      }
-    });
-  }
-
-  async loadEventTypes() {
-    let params = {systemType: "eventTypes"};
-    let eventTypes = await axios({
-        method: 'get',
-        url: APIPath+'taxonomy',
-        crossDomain: true,
-        params: params
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      let taxonomyterms = responseData.taxonomyterms;
-      return taxonomyterms;
-    });
-    let stateUpdate = {
-      eventTypes: eventTypes,
-    }
-
-    if (this.props.item!==null) {
-      let eventType = '';
-      if (typeof this.props.item.eventType!=="undefined" && this.props.item.eventType!==null) {
-        let selectedEventType = this.props.item.eventType;
-        let selectedEventItem = eventTypes.find(value => value._id===selectedEventType);
-        eventType = {value: selectedEventItem._id, label: selectedEventItem.label};
-      }
-      let form = this.state.form;
-      form.eventType = eventType;
-      stateUpdate.form = form;
-    }
-
-    this.setState(stateUpdate);
-  }
-
-  eventTypesList(eventTypes) {
-    let options = [];
-    let defaultValue = {value: '', label: '--'};
-    options.push(defaultValue);
-    for (let i=0; i<eventTypes.length; i++) {
-      let eventType = eventTypes[i];
-      let option = {value: eventType._id, label: eventType.label};
-      options.push(option);
-    }
-    return options;
-  }
-
-  formSubmit(e) {
-    e.preventDefault();
-    this.props.update(this.state.form);
-  }
-
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let form = this.state.form;
-    form[name] = value;
-    this.setState({
-      form:form
-    });
-  }
-
-  select2Change(selectedOption, element=null) {
-    if (element===null) {
-      return false;
-    }
-    let form = this.state.form;
-    form[element] = selectedOption;
-    this.setState({
-      form: form
-    });
-  }
-
-  toggleCollapse(name) {
-    let value = true;
-    if (this.state[name]==="undefined" || this.state[name]) {
-      value = false
-    }
-    this.setState({
-      [name]: value
-    });
+    this.updateStatus = this.updateStatus.bind(this);
   }
 
   deleteRef(ref, refTerm, model) {
@@ -195,18 +84,64 @@ export default class ViewEvent extends Component {
 	  });
   }
 
-  componentDidMount() {
-    this.loadEventTypes();
+  eventTypesList(eventTypes) {
+    let options = [];
+    let defaultValue = {value: '', label: '--'};
+    options.push(defaultValue);
+    for (let i=0; i<eventTypes.length; i++) {
+      let eventType = eventTypes[i];
+      let option = {value: eventType._id, label: eventType.label};
+      options.push(option);
+    }
+    return options;
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevProps.item!==this.props.item) {
-      this.setFormValues();
+  formSubmit(e) {
+    e.preventDefault();
+    let data = {
+      label: this.state.label,
+      description: this.state.description,
+      eventType: this.state.eventType,
+      status: this.state.status,
     }
+    this.props.update(data);
+  }
+
+  handleChange(e){
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let name = target.name;
+
+    this.setState({
+      [name]: value
+    });
+  }
+
+  select2Change(selectedOption, element=null) {
+    if (element===null) {
+      return false;
+    }
+    this.setState({
+      [element]: selectedOption
+    });
+  }
+
+  toggleCollapse(name) {
+    let value = true;
+    if (this.state[name]==="undefined" || this.state[name]) {
+      value = false
+    }
+    this.setState({
+      [name]: value
+    });
+  }
+
+  updateStatus(value) {
+    this.setState({status:value});
   }
 
   render() {
-    let eventTypesList = this.eventTypesList(this.state.eventTypes);
+    let eventTypesList = this.eventTypesList(this.props.eventTypes);
 
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
@@ -227,6 +162,16 @@ export default class ViewEvent extends Component {
     let itemsOpenActive = " active";
     if (!this.state.itemsOpen) {
       itemsOpenActive = "";
+    }
+
+    let statusPublic = "secondary";
+    let statusPrivate = "secondary";
+    let publicOutline = true;
+    let privateOutline = false;
+    if (this.state.status==="public") {
+      statusPublic = "success";
+      publicOutline = false;
+      privateOutline = true;
     }
 
     let relatedEvents = loadRelatedEvents(this.props.item, this.deleteRef);
@@ -266,6 +211,7 @@ export default class ViewEvent extends Component {
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
 
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -276,25 +222,31 @@ export default class ViewEvent extends Component {
                 {errorContainer}
                 <Collapse isOpen={this.state.detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
+                    <div className="text-right">
+                      <ButtonGroup>
+                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
+                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                      </ButtonGroup>
+                    </div>
                     <FormGroup>
                       <Label>Label</Label>
-                      <Input type="text" name="label" placeholder="Label..." value={this.state.form.label} onChange={this.handleChange}/>
+                      <Input type="text" name="label" placeholder="Label..." value={this.state.label} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
                       <Label for="description">Description</Label>
-                      <Input type="textarea" name="description" placeholder="Description..." value={this.state.form.eventDescription} onChange={this.handleChange}/>
+                      <Input type="textarea" name="description" placeholder="Description..." value={this.state.description} onChange={this.handleChange}/>
                     </FormGroup>
                     <FormGroup>
                       <Label>Type of Event</Label>
                       <Select
-                        value={this.state.form.eventType}
+                        value={this.state.eventType}
                         onChange={(selectedOption)=>this.select2Change(selectedOption, "eventType")}
                         options={eventTypesList}
                       />
                     </FormGroup>
                     <div className="text-right" style={{marginTop: "15px"}}>
                       <Button color="info" outline size="sm" onClick={(e)=>this.formSubmit(e)}>{this.props.updateBtn}</Button>
-                      <Button color="danger" outline  size="sm" onClick={()=>this.props.delete()} className="pull-left">{this.props.deleteBtn}</Button>
+                      <Button color="danger" outline  size="sm" onClick={()=>this.props.delete()} className="pull-left"><span><i className="fa fa-trash-o" /> Delete</span></Button>
                     </div>
                   </Form>
                 </Collapse>

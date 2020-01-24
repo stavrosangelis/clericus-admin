@@ -234,14 +234,15 @@ class Usergroups extends Component {
     ];
 
     let pageActions = <PageActions
-      limit={this.state.limit}
       current_page={this.state.page}
-      gotoPageValue={this.state.gotoPage}
-      total_pages={this.state.totalPages}
-      updatePage={this.updatePage}
       gotoPage={this.gotoPage}
+      gotoPageValue={this.state.gotoPage}
       handleChange={this.handleChange}
+      limit={this.state.limit}
+      pageType="usergroups"
+      total_pages={this.state.totalPages}
       updateLimit={this.updateLimit}
+      updatePage={this.updatePage}
     />
     let content = <div>
       {pageActions}

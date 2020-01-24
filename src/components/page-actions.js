@@ -7,6 +7,7 @@ import {
 } from 'reactstrap';
 import MainPagination from './pagination';
 import AdvancedSearchFormRow from './advanced-search-row.js';
+import PropTypes from "prop-types";
 
 export default class PageActions extends Component {
   constructor(props) {
@@ -134,6 +135,7 @@ export default class PageActions extends Component {
       limitActive3 = "active";
     }
     let searchDropdown = [];
+
     if (this.props.pageType==="people") {
 
       let availableElements = [];
@@ -210,6 +212,92 @@ export default class PageActions extends Component {
         </UncontrolledDropdown>
       </div>
     }
+
+    if (this.props.pageType==="resources") {
+      searchDropdown = <div className="filter-item search">
+        <UncontrolledDropdown>
+          <DropdownToggle caret size="sm" outline>
+            Search
+          </DropdownToggle>
+          <DropdownMenu className="dropdown-center">
+            <DropdownItem tag="li" toggle={false} className="search-dropdown">
+
+              <form onSubmit={this.props.simpleSearch}>
+                <InputGroup size="sm" className="search-dropdown-inputgroup">
+                    <Input name="searchInput" onChange={this.props.handleChange} placeholder="Search..." value={this.props.searchInput}/>
+                    <InputGroupAddon addonType="append">
+                      <Button size="sm" outline type="button" onClick={this.props.clearSearch} className="clear-search">
+                        <i className="fa fa-times-circle" />
+                      </Button>
+                      <Button size="sm" type="submit">
+                        <i className="fa fa-search" />
+                      </Button>
+                  </InputGroupAddon>
+                </InputGroup>
+              </form>
+            </DropdownItem>
+          </DropdownMenu>
+        </UncontrolledDropdown>
+      </div>
+    }
+
+    let typesDropdownFilter = [];
+    if (typeof this.props.types!=="undefined" && this.props.types.length>0) {
+      let typesDropdownItems = this.props.types.map((item,i)=> {
+        let active = false;
+        if (this.props.activeType===item.label) {
+          active = true;
+        }
+        let returnItem = <DropdownItem active={active} onClick={()=>this.props.setActiveType(item.label)} key={i}><span className="first-cap">{item.label}</span></DropdownItem>
+        return returnItem;
+      });
+      let typesDropdown = <UncontrolledDropdown>
+        <DropdownToggle color="secondary" outline caret size="sm">
+          Select type
+        </DropdownToggle>
+        <DropdownMenu right>
+          <DropdownItem onClick={()=>this.props.setActiveType(null)} key="default"><span className="first-cap">All</span></DropdownItem>
+          {typesDropdownItems}
+        </DropdownMenu>
+      </UncontrolledDropdown>;
+
+      typesDropdownFilter = <div className="filter-item">
+        {typesDropdown}
+      </div>
+    }
+
+    let statusDropdown = [];
+    if (typeof this.props.status!=="undefined") {
+      let statusDropdownActive0 = true;
+      let statusDropdownActive1 = false;
+      let statusDropdownActive2 = false;
+      if (this.props.status==="private") {
+        statusDropdownActive0 = false;
+        statusDropdownActive1 = true;
+      }
+      if (this.props.status==="public") {
+        statusDropdownActive0 = false;
+        statusDropdownActive2 = true;
+      }
+      let statusDropdownFilter = [
+        <DropdownItem active={statusDropdownActive0} onClick={()=>this.props.setStatus(null)} key={0}>All</DropdownItem>,
+        <DropdownItem active={statusDropdownActive1} onClick={()=>this.props.setStatus('private')} key={1}>Private</DropdownItem>,
+        <DropdownItem active={statusDropdownActive2} onClick={()=>this.props.setStatus('public')} key={2}>Public</DropdownItem>
+      ];
+      statusDropdown = <div className="filter-item">
+        <UncontrolledDropdown>
+          <DropdownToggle color="secondary" outline caret size="sm">
+            Select status
+          </DropdownToggle>
+          <DropdownMenu right>
+            {statusDropdownFilter}
+          </DropdownMenu>
+        </UncontrolledDropdown>
+      </div>;
+    }
+
+
+
     return (
       <div className="row">
       <div className="col-12">
@@ -218,7 +306,7 @@ export default class PageActions extends Component {
           <div className="go-to-page">
             <form onSubmit={this.props.gotoPage}>
             <InputGroup size="sm">
-              <Input name="gotoPage" onChange={this.props.handleChange} value={this.props.gotoPageValue} placeholder="0" />
+              <Input name="gotoPage" type="text" onChange={this.props.handleChange} value={this.props.gotoPageValue} placeholder="0" />
               <InputGroupAddon addonType="append"><div className="total-pages">/ {this.props.total_pages}</div></InputGroupAddon>
               <InputGroupAddon addonType="append"><Button type="submit" outline color="secondary" className="go-to-page-btn"><i className="fa fa-angle-right"></i></Button></InputGroupAddon>
             </InputGroup>
@@ -231,7 +319,6 @@ export default class PageActions extends Component {
             total_pages={this.props.total_pages}
             pagination_function={this.props.updatePage}
             />
-
           <div className="filter-item">
             <UncontrolledDropdown>
               <DropdownToggle caret size="sm" outline>
@@ -246,6 +333,8 @@ export default class PageActions extends Component {
             </UncontrolledDropdown>
           </div>
 
+          {typesDropdownFilter}
+          {statusDropdown}
           {searchDropdown}
 
         </div>
@@ -256,3 +345,28 @@ export default class PageActions extends Component {
   }
 
 }
+
+PageActions.propTypes = {
+  advancedSearch: PropTypes.func,
+  clearAdvancedSearch: PropTypes.func,
+  clearSearch: PropTypes.func,
+  current_page: PropTypes.number.isRequired,
+  gotoPage: PropTypes.func.isRequired,
+  gotoPageValue: PropTypes.oneOfType([
+    PropTypes.number,
+    PropTypes.string,
+  ]).isRequired,
+  handleChange: PropTypes.func.isRequired,
+  limit: PropTypes.number.isRequired,
+  pageType: PropTypes.string.isRequired,
+  searchElements: PropTypes.array,
+  searchInput: PropTypes.string,
+  setStatus: PropTypes.func,
+  status: PropTypes.string,
+  simpleSearch: PropTypes.func,
+  total_pages: PropTypes.number.isRequired,
+  types: PropTypes.array,
+  updateLimit: PropTypes.func.isRequired,
+  updatePage: PropTypes.func.isRequired,
+  updateAdvancedSearchInputs: PropTypes.func,
+};

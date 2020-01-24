@@ -20,6 +20,7 @@ const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     eventsPagination: state.eventsPagination,
+    eventTypes: state.eventTypes,
    };
 };
 
@@ -37,11 +38,13 @@ class Events extends Component {
       loading: true,
       tableLoading: true,
       items: [],
+      activeType: this.props.eventsPagination.activeType,
       orderField: this.props.eventsPagination.orderField,
       orderDesc: this.props.eventsPagination.orderDesc,
       page: this.props.eventsPagination.page,
       gotoPage: this.props.eventsPagination.page,
       limit: this.props.eventsPagination.limit,
+      status: this.props.eventsPagination.status,
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
@@ -51,6 +54,8 @@ class Events extends Component {
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
+    this.setStatus = this.setStatus.bind(this);
+    this.setActiveType = this.setActiveType.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.itemsTableRows = this.itemsTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
@@ -72,8 +77,15 @@ class Events extends Component {
       limit: this.state.limit,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+      status: this.state.status,
     }
     let url = APIPath+'events';
+    if (this.state.activeType!==null) {
+      let eventType = this.props.eventTypes.find(t=>t.label===this.state.activeType);
+      if (typeof eventType!=="undefined") {
+        params.eventType = eventType._id;
+      }
+    }
     let responseData = await axios({
       method: 'get',
       url: url,
@@ -110,6 +122,7 @@ class Events extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
         items: items
       });
     }
@@ -124,7 +137,7 @@ class Events extends Component {
       orderField: orderField,
       orderDesc: orderDesc
     });
-    this.updateStorePagination(null,null,orderField,orderDesc);
+    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -137,7 +150,7 @@ class Events extends Component {
         page: e,
         gotoPage: e,
       });
-      this.updateStorePagination(null,e);
+      this.updateStorePagination({page:e});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -145,7 +158,7 @@ class Events extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
+  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -155,21 +168,23 @@ class Events extends Component {
     let payload = {
       limit:limit,
       page:page,
+      activeType:activeType,
       orderField:orderField,
       orderDesc:orderDesc,
+      status:status,
     }
     this.props.setPaginationParams("events", payload);
   }
 
   gotoPage(e) {
     e.preventDefault();
-    let gotoPage = this.state.gotoPage;
+    let gotoPage = parseInt(this.state.gotoPage,10);
     let page = this.state.page;
     if (gotoPage>0 && gotoPage!==page) {
       this.setState({
         page: gotoPage
       })
-      this.updateStorePagination(null,gotoPage);
+      this.updateStorePagination({page:gotoPage});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -181,9 +196,31 @@ class Events extends Component {
     this.setState({
       limit: limit
     })
-    this.updateStorePagination(limit,null);
+    this.updateStorePagination({limit:limit});
     let context = this;
     setTimeout(function(){
+      context.load();
+    },100)
+  }
+
+  setStatus(status=null) {
+    this.setState({
+      status: status
+    })
+    this.updateStorePagination({status:status});
+    let context = this;
+    setTimeout(function() {
+      context.load();
+    },100)
+  }
+
+  setActiveType(type) {
+    this.setState({
+      activeType: type
+    })
+    this.updateStorePagination({activeType:type});
+    let context = this;
+    setTimeout(function() {
       context.load();
     },100)
   }
@@ -205,6 +242,11 @@ class Events extends Component {
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
       let label = item.label;
+      let findEventType = this.props.eventTypes.find(t=>t._id===item.eventType);
+      let eventType = "";
+      if (typeof findEventType!=="undefined") {
+        eventType = findEventType.label;
+      }
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -215,6 +257,9 @@ class Events extends Component {
         <td>{count}</td>
         <td>
           <Link href={"/event/"+item._id} to={"/event/"+item._id}>{label}</Link>
+        </td>
+        <td>
+          <Link href={"/event/"+item._id} to={"/event/"+item._id}>{eventType}</Link>
         </td>
         <td><Link href={"/event/"+item._id} to={"/event/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
@@ -301,16 +346,20 @@ class Events extends Component {
     let breadcrumbsItems = [
       {label: heading, icon: "pe-7s-date", active: true, path: ""}
     ];
-
     let pageActions = <PageActions
-      limit={this.state.limit}
       current_page={this.state.page}
-      gotoPageValue={this.state.gotoPage}
-      total_pages={this.state.totalPages}
-      updatePage={this.updatePage}
       gotoPage={this.gotoPage}
+      gotoPageValue={this.state.gotoPage}
       handleChange={this.handleChange}
+      limit={this.state.limit}
+      pageType="events"
+      setActiveType={this.setActiveType}
+      setStatus={this.setStatus}
+      status={this.state.status}
+      total_pages={this.state.totalPages}
+      types={this.props.eventTypes}
       updateLimit={this.updateLimit}
+      updatePage={this.updatePage}
     />
     let content = <div>
       {pageActions}
@@ -356,12 +405,21 @@ class Events extends Component {
       />
       // ordering
       let labelOrderIcon = [];
+      let typeOrderIcon = [];
       if (this.state.orderField==="label" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           labelOrderIcon = <i className="fa fa-caret-down" />
         }
         else {
           labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="eventType") {
+        if (this.state.orderDesc) {
+          typeOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          typeOrderIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -385,6 +443,7 @@ class Events extends Component {
                       </th>
                       <th style={{width: "40px"}}>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
                       <th style={{width: "30px"}}></th>
                     </tr>
                   </thead>
@@ -401,6 +460,7 @@ class Events extends Component {
                       </th>
                       <th>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>
@@ -422,7 +482,7 @@ class Events extends Component {
       <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <h2>{heading} <small>({this.state.totalItems})</small></h2>
           </div>
         </div>
         {content}

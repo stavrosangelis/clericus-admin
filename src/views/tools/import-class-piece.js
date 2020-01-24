@@ -115,8 +115,6 @@ export default class ImportClassPieceToDB extends Component {
       })
     .then(function (response) {
       return response.data.data;
-
-
     })
     .catch(function (error) {
     });

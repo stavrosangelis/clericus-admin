@@ -43,6 +43,7 @@ class People extends Component {
       page: this.props.peoplePagination.page,
       gotoPage: this.props.peoplePagination.page,
       limit: this.props.peoplePagination.limit,
+      status: this.props.peoplePagination.status,
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
@@ -58,6 +59,7 @@ class People extends Component {
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.setStatus = this.setStatus.bind(this);
     this.peopleTableRows = this.peopleTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
@@ -83,6 +85,7 @@ class People extends Component {
       limit: this.state.limit,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+      status: this.state.status,
     };
     if (this.state.searchInput!=="" && !this.state.advancedSearch) {
       params.label = this.state.searchInput;
@@ -130,6 +133,7 @@ class People extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
         people: people
       });
     }
@@ -149,6 +153,7 @@ class People extends Component {
       label: this.state.searchInput,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+      status: this.state.status,
     }
     let url = APIPath+'people';
     let responseData = await axios({
@@ -186,6 +191,7 @@ class People extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
         people: newPeople,
         simpleSearch: true,
         advancedSearch: false,
@@ -203,6 +209,7 @@ class People extends Component {
       limit: this.state.limit,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+      status: this.state.status,
     }
     for (let i=0; i<this.state.advancedSearchInputs.length; i++) {
       let searchInput = this.state.advancedSearchInputs[i];
@@ -243,6 +250,7 @@ class People extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
         people: newPeople,
         simpleSearch: false,
         advancedSearch: true,
@@ -291,7 +299,7 @@ class People extends Component {
       orderField: orderField,
       orderDesc: orderDesc
     });
-    this.updateStorePagination(null,null,orderField,orderDesc);
+    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -304,7 +312,7 @@ class People extends Component {
         page: e,
         gotoPage: e,
       })
-      this.updateStorePagination(null,e);
+      this.updateStorePagination({page:e});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -312,7 +320,7 @@ class People extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -324,19 +332,20 @@ class People extends Component {
       page:page,
       orderField:orderField,
       orderDesc:orderDesc,
+      status:status,
     }
     this.props.setPaginationParams("people", payload);
   }
 
   gotoPage(e) {
     e.preventDefault();
-    let gotoPage = this.state.gotoPage;
+    let gotoPage = parseInt(this.state.gotoPage,10);
     let page = this.state.page;
     if (gotoPage>0 && gotoPage!==page) {
       this.setState({
         page: gotoPage
       })
-      this.updateStorePagination(null,gotoPage);
+      this.updateStorePagination({page:gotoPage});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -348,9 +357,20 @@ class People extends Component {
     this.setState({
       limit: limit
     })
-    this.updateStorePagination(limit,null);
+    this.updateStorePagination({limit:limit});
     let context = this;
     setTimeout(function(){
+      context.load();
+    },100)
+  }
+
+  setStatus(status=null) {
+    this.setState({
+      status: status
+    })
+    this.updateStorePagination({status:status});
+    let context = this;
+    setTimeout(function() {
       context.load();
     },100)
   }
@@ -487,21 +507,24 @@ class People extends Component {
     ];
 
     let pageActions = <PageActions
-      limit={this.state.limit}
+      advancedSearch={this.advancedSearch}
+      clearAdvancedSearch={this.clearAdvancedSearch}
+      clearSearch={this.clearSearch}
       current_page={this.state.page}
-      gotoPageValue={this.state.gotoPage}
-      total_pages={this.state.totalPages}
-      updatePage={this.updatePage}
       gotoPage={this.gotoPage}
+      gotoPageValue={this.state.gotoPage}
       handleChange={this.handleChange}
-      updateLimit={this.updateLimit}
+      limit={this.state.limit}
       pageType="people"
       searchElements={searchElements}
       searchInput={this.state.searchInput}
+      setStatus={this.setStatus}
+      status={this.state.status}
       simpleSearch={this.simpleSearch}
-      advancedSearch={this.advancedSearch}
-      clearSearch={this.clearSearch}
-      clearAdvancedSearch={this.clearAdvancedSearch}
+      total_pages={this.state.totalPages}
+      types={[]}
+      updateLimit={this.updateLimit}
+      updatePage={this.updatePage}
       updateAdvancedSearchInputs={this.updateAdvancedSearchInputs}
     />
 
@@ -629,7 +652,7 @@ class People extends Component {
       <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <h2>{heading} <small>({this.state.totalItems})</small></h2>
           </div>
         </div>
         {content}

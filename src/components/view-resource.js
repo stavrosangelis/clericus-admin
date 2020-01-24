@@ -25,7 +25,7 @@ import {connect} from "react-redux";
 const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = (state) => {
   return {
-    systemTypes: state.systemTypes
+    resourcesTypes: state.resourcesTypes
    };
 };
 class ViewResource extends Component {
@@ -200,7 +200,7 @@ class ViewResource extends Component {
         updateFileModal: false
       })
     }
-    if (this.props.resource===null && this.state.systemType==="undefined" && this.props.systemType!==null && this.props.systemTypes.length>0) {
+    if (this.props.resource===null && this.state.systemType==="undefined" && this.props.systemType!==null && this.props.resourcesTypes.length>0) {
       this.setState({
         systemType: this.props.systemType
       });
@@ -269,15 +269,12 @@ class ViewResource extends Component {
     }
 
     // system types
-    let systemTypesOptions = [];
-    for (let st=0;st<this.props.systemTypes.length; st++) {
-      let systemType = this.props.systemTypes[st];
+    let resourcesTypesOptions = [];
+    for (let st=0;st<this.props.resourcesTypes.length; st++) {
+      let systemType = this.props.resourcesTypes[st];
       let systemTypeOption = <option value={systemType._id} key={st}>{systemType.label}</option>;
-      systemTypesOptions.push(systemTypeOption);
+      resourcesTypesOptions.push(systemTypeOption);
     }
-    let systemTypesSelect = <Input type="select" name="systemType" className="system-type-select" onChange={this.handleChange} value={this.state.systemType}>
-      {systemTypesOptions}
-    </Input>
 
     // metadata
     let metadataOutput = [];
@@ -379,7 +376,9 @@ class ViewResource extends Component {
                     </FormGroup>
                     <FormGroup>
                      <Label>Type</Label>
-                      {systemTypesSelect}
+                     <Input type="select" name="systemType" onChange={this.handleChange} value={this.state.systemType}>
+                       {resourcesTypesOptions}
+                     </Input>
                     </FormGroup>
                     <FormGroup>
                       <Label>Description</Label>
