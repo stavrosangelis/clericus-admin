@@ -1,18 +1,22 @@
+import Articles from "../views/articles";
+import Article from "../views/article";
+import ArticleCategories from "../views/article-categories";
 import Dashboard from "../views/dashboard";
-import Resources from "../views/resources";
-import Resource from "../views/resource";
-import People from "../views/people";
-import Person from "../views/person";
-import Organisations from "../views/organisations";
-import Organisation from "../views/organisation";
+import Entities from "../views/entities";
 import Events from "../views/events";
 import Event from "../views/event";
-import Entities from "../views/entities";
-import Taxonomies from "../views/taxonomies";
 import Login from "../views/login";
+import Menu from "../views/menu";
+import Organisations from "../views/organisations";
+import Organisation from "../views/organisation";
+import People from "../views/people";
+import Person from "../views/person";
 import Register from "../views/register";
-import Spatials from "../views/spatials";
+import Resources from "../views/resources";
+import Resource from "../views/resource";
 import Spatial from "../views/spatial";
+import Spatials from "../views/spatials";
+import Taxonomies from "../views/taxonomies";
 import Temporals from "../views/temporals";
 import Temporal from "../views/temporal";
 import Users from "../views/users";
@@ -164,6 +168,47 @@ var indexRoutes = [
         component: Taxonomies,
         showMenu: true,
       }
+    ]
+  },
+
+  {
+    path: "#",
+    name: "Content",
+    icon: "pe-7s-file",
+    component: null,
+    showMenu: true,
+    children: [
+      {
+        path: "/menu",
+        name: "Menu",
+        icon: "fa fa-circle-o",
+        component: Menu,
+        showMenu: true,
+      },
+      {
+        path: "/articles",
+        name: "Articles",
+        icon: "fa fa-circle-o",
+        component: Articles,
+        showMenu: true,
+        children: [
+          {
+            path: "/article/:_id",
+            name: "Article",
+            icon: "",
+            component: Article,
+            showMenu: false
+          }
+        ]
+      },
+      {
+        path: "/article-categories",
+        name: "Article Categories",
+        icon: "fa fa-circle-o",
+        component: ArticleCategories,
+        showMenu: true,
+      },
+
     ]
   },
   {

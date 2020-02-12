@@ -74,6 +74,13 @@ export const defaultState = {
     orderDesc: false,
     status: null,
   },
+  articlesPagination: {
+    limit:25,
+    page:1,
+    orderField: "label",
+    orderDesc: false,
+    status: null,
+  },
   userGroups: [],
 
   resourcesTypes: [],

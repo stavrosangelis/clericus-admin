@@ -311,13 +311,13 @@ class Person extends Component {
       }
     }
 
-    let heading = "Person \""+label+"\"";
+    let heading = label;
     if (this.props.match.params._id==="new") {
       heading = "Add new person";
     }
     let breadcrumbsItems = [
       {label: "People", icon: "pe-7s-users", active: false, path: "/people"},
-      {label: heading, icon: "pe-7s-users", active: true, path: ""}
+      {label: heading, icon: "", active: true, path: ""}
     ];
 
     let redirectElem = [];
