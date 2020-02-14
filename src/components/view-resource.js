@@ -211,7 +211,27 @@ class ViewResource extends Component {
          ||
         (prevProps.resource._id!==this.props.resource._id)
       ) {
+        let status = 'private';
+        let newLabel = '';
+        let newDescription = '';
+        let newSystemType = 'undefined';
+        if (typeof this.props.resource.label!=="undefined" && this.props.resource.label!==null) {
+          newLabel = this.props.resource.label;
+        }
+        if (typeof this.props.resource.systemType!=="undefined" && this.props.resource.systemType!==null) {
+          newSystemType = this.props.resource.systemType;
+        }
+        if (typeof this.props.resource.description!=="undefined" && this.props.resource.description!==null) {
+          newDescription = this.props.resource.description;
+        }
+        if (typeof this.props.resource.status!=="undefined" && this.props.resource.status!==null) {
+          status = this.props.resource.status;
+        }
         this.setState({
+          status: status,
+          label: newLabel,
+          systemType: newSystemType,
+          description: newDescription,
           detailsOpen: true,
           metadataOpen: false,
           eventsOpen: false,

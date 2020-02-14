@@ -974,7 +974,11 @@ header {
   width: calc(100% - 20px);
 }
 .pagination-container {
-  float: right;
+  float: left;
+  padding-left: 5px;
+  padding-bottom: 0;
+  margin: 0;
+  height: 40px;
 }
 .pagination-container .page-link {
   color: #666;
@@ -999,7 +1003,7 @@ header {
   max-height: 60px;
 }
 .go-to-page {
-  float: right;
+  float: left;
   padding: 0 0 0 10px;
 }
 .go-to-page input {
@@ -1026,8 +1030,8 @@ header {
   width: 30px;
 }
 .filter-item {
-  padding-right: 10px;
-  float: right;
+  padding: 0 5px 5px 5px;
+  float: left;
 }
 .filter-item .dropdown-toggle.btn-outline-secondary {
   background-color: #fff;
@@ -1039,6 +1043,12 @@ header {
 }
 .filter-item .btn-outline-secondary:not(:disabled):not(.disabled):active, .btn-outline-secondary:not(:disabled):not(.disabled).active, .show > .btn-outline-secondary.dropdown-toggle {
   color: #212529;
+}
+.filter-item .dropdown-menu {
+  display: none;
+}
+.filter-item .dropdown-menu.show {
+  display: block;
 }
 .delete-people-list-container {
   max-height: 300px;

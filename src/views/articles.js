@@ -389,9 +389,9 @@ class People extends Component {
         allChecked = "checked";
       }
 
-      let selectedItems = this.state.items.filter(item=>{
+      /*let selectedItems = this.state.items.filter(item=>{
           return item.checked;
-      });
+      });*/
 
       // ordering
       let labelOrderIcon = [];

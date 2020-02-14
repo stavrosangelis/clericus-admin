@@ -50,6 +50,7 @@ class Organisations extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
+      searchInput: ''
     }
     this.load = this.load.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
@@ -65,6 +66,8 @@ class Organisations extends Component {
     this.deleteSelected = this.deleteSelected.bind(this);
     this.removeSelected = this.removeSelected.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
+    this.simpleSearch = this.simpleSearch.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
 
     // hack to kill load promise on unmount
     this.cancelLoad=false;
@@ -125,6 +128,80 @@ class Organisations extends Component {
         organisations: organisations
       });
     }
+  }
+
+  async simpleSearch(e) {
+    e.preventDefault();
+    if (this.state.searchInput<2) {
+      return false;
+    }
+    this.setState({
+      tableLoading: true
+    })
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
+      status: this.state.status,
+      label: this.state.searchInput
+    }
+    let url = APIPath+'organisations';
+    if (this.state.activeType!==null) {
+      params.organisationType = this.state.activeType;
+    }
+    let responseData = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+    .then(function (response) {
+      return response.data.data;
+    })
+    .catch(function (error) {
+    });
+    if (this.cancelLoad) {
+      return false;
+    }
+    let organisations = responseData.data.map(organisation=>{
+      organisation.checked = false;
+      return organisation;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
+        organisations: organisations
+      });
+    }
+  }
+
+  clearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        searchInput: ''
+      })
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
   }
 
   updateOrdering(orderField="") {
@@ -349,15 +426,18 @@ class Organisations extends Component {
 
     let pageActions = <PageActions
       activeType={this.state.activeType}
+      clearSearch={this.clearSearch}
       current_page={this.state.page}
       gotoPageValue={this.state.gotoPage}
       gotoPage={this.gotoPage}
       handleChange={this.handleChange}
       limit={this.state.limit}
       pageType="organisations"
+      searchInput={this.state.searchInput}
       setActiveType={this.setActiveType}
       setStatus={this.setStatus}
       status={this.state.status}
+      simpleSearch={this.simpleSearch}
       total_pages={this.state.totalPages}
       types={this.props.organisationTypes}
       updateLimit={this.updateLimit}

@@ -597,7 +597,7 @@ export default class ImportClassPieceToDB extends Component {
     let diocese = '';
     let dioceseType = '';
     let type = '';
-    if (typeof person.honorificPrefix!=="undefined") {
+    if (typeof person.honorificPrefix!=="undefined" && person.honorificPrefix!=="") {
       honorificPrefix = person.honorificPrefix;
     }
     if (typeof person.firstName!=="undefined") {

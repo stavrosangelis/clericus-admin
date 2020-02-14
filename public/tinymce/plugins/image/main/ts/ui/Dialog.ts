@@ -22,6 +22,7 @@ import { collect } from './DialogInfo';
 import { API, ImageDialogData, ImageDialogInfo, ListValue } from './DialogTypes';
 import { MainTab } from './MainTab';
 import { UploadTab } from './UploadTab';
+import { BrowseTab } from './BrowseTab';
 
 interface ChangeEvent {
   name: string;
@@ -336,7 +337,7 @@ const makeDialogBody = (info: ImageDialogInfo) => {
       tabs: Arr.flatten([
         [ MainTab.makeTab(info) ],
         info.hasAdvTab ? [ AdvTab.makeTab(info) ] : [],
-        info.hasUploadTab && (info.hasUploadUrl || info.hasUploadHandler) ? [ UploadTab.makeTab(info) ] : []
+        info.hasUploadTab && (info.hasUploadUrl || info.hasUploadHandler) ? [ UploadTab.makeTab(info), BrowseTab.makeTab(info) ] : []
       ])
     };
     return tabPanel;

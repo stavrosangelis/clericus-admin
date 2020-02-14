@@ -161,7 +161,7 @@ export default class PageActions extends Component {
       }
 
       searchDropdown = <div className="filter-item search">
-        <UncontrolledDropdown>
+        <UncontrolledDropdown direction="down">
           <DropdownToggle caret size="sm" outline>
             Search
           </DropdownToggle>
@@ -213,9 +213,9 @@ export default class PageActions extends Component {
       </div>
     }
 
-    if (this.props.pageType==="resources") {
+    else {
       searchDropdown = <div className="filter-item search">
-        <UncontrolledDropdown>
+        <UncontrolledDropdown direction="down">
           <DropdownToggle caret size="sm" outline>
             Search
           </DropdownToggle>
@@ -251,8 +251,8 @@ export default class PageActions extends Component {
         let returnItem = <DropdownItem active={active} onClick={()=>this.props.setActiveType(item.label)} key={i}><span className="first-cap">{item.label}</span></DropdownItem>
         return returnItem;
       });
-      let typesDropdown = <UncontrolledDropdown>
-        <DropdownToggle color="secondary" outline caret size="sm">
+      let typesDropdown = <UncontrolledDropdown direction="down">
+        <DropdownToggle outline caret size="sm">
           Select type
         </DropdownToggle>
         <DropdownMenu right>
@@ -285,7 +285,7 @@ export default class PageActions extends Component {
         <DropdownItem active={statusDropdownActive2} onClick={()=>this.props.setStatus('public')} key={2}>Public</DropdownItem>
       ];
       statusDropdown = <div className="filter-item">
-        <UncontrolledDropdown>
+        <UncontrolledDropdown direction="down">
           <DropdownToggle color="secondary" outline caret size="sm">
             Select status
           </DropdownToggle>
@@ -301,26 +301,15 @@ export default class PageActions extends Component {
     return (
       <div className="row">
       <div className="col-12">
-        <div className="page-actions text-right">
+        <div className="page-actions">
+          {searchDropdown}
 
-          <div className="go-to-page">
-            <form onSubmit={this.props.gotoPage}>
-            <InputGroup size="sm">
-              <Input name="gotoPage" type="text" onChange={this.props.handleChange} value={this.props.gotoPageValue} placeholder="0" />
-              <InputGroupAddon addonType="append"><div className="total-pages">/ {this.props.total_pages}</div></InputGroupAddon>
-              <InputGroupAddon addonType="append"><Button type="submit" outline color="secondary" className="go-to-page-btn"><i className="fa fa-angle-right"></i></Button></InputGroupAddon>
-            </InputGroup>
-            </form>
-          </div>
+          {typesDropdownFilter}
 
-          <MainPagination
-            limit={this.props.limit}
-            current_page={this.props.current_page}
-            total_pages={this.props.total_pages}
-            pagination_function={this.props.updatePage}
-            />
+          {statusDropdown}
+
           <div className="filter-item">
-            <UncontrolledDropdown>
+            <UncontrolledDropdown direction="down">
               <DropdownToggle caret size="sm" outline>
                 Limit
               </DropdownToggle>
@@ -333,9 +322,25 @@ export default class PageActions extends Component {
             </UncontrolledDropdown>
           </div>
 
-          {typesDropdownFilter}
-          {statusDropdown}
-          {searchDropdown}
+        </div>
+        <div className="page-actions">
+
+          <MainPagination
+            limit={this.props.limit}
+            current_page={this.props.current_page}
+            total_pages={this.props.total_pages}
+            pagination_function={this.props.updatePage}
+            />
+
+          <div className="go-to-page">
+            <form onSubmit={this.props.gotoPage}>
+              <InputGroup size="sm">
+                <Input name="gotoPage" type="text" onChange={this.props.handleChange} value={this.props.gotoPageValue} placeholder="0" />
+                <InputGroupAddon addonType="append"><div className="total-pages">/ {this.props.total_pages}</div></InputGroupAddon>
+                <InputGroupAddon addonType="append"><Button type="submit" outline color="secondary" className="go-to-page-btn"><i className="fa fa-angle-right"></i></Button></InputGroupAddon>
+              </InputGroup>
+            </form>
+          </div>
 
         </div>
       </div>

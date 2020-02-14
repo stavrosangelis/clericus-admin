@@ -129,7 +129,7 @@ class Resource extends Component {
     }
   }
 
-  update(newData) {
+  async update(newData) {
     if (this.state.updating) {
       return false;
     }
@@ -137,7 +137,7 @@ class Resource extends Component {
       updating: true,
       updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
     })
-    let resource = this.state.resource;
+    let resource = Object.assign({}, this.state.resource);
     if (resource===null) {
       resource = {};
     }
@@ -153,8 +153,7 @@ class Resource extends Component {
     let postData = {
       resource: resource
     }
-    let context = this;
-    axios({
+    let responseData = await axios({
       method: 'put',
       url: APIPath+'resource',
       crossDomain: true,
@@ -164,19 +163,23 @@ class Resource extends Component {
       }
     })
     .then(function (response) {
-      context.setState({
+      return response.data;
+    })
+    .catch(function (error) {
+    });
+    if (responseData.status) {
+      this.setState({
         updating: false,
         updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
       });
-
+      this.load();
+      let context = this;
       setTimeout(function() {
         context.setState({
           updateBtn: <span><i className="fa fa-save" /> Update success</span>
         });
       },2000);
-    })
-    .catch(function (error) {
-    });
+    }
   }
 
   toggleDeleteModal() {
