@@ -14,6 +14,7 @@ import Person from "../views/person";
 import Register from "../views/register";
 import Resources from "../views/resources";
 import Resource from "../views/resource";
+import Slideshow from "../views/slideshow";
 import Spatial from "../views/spatial";
 import Spatials from "../views/spatials";
 import Taxonomies from "../views/taxonomies";
@@ -208,7 +209,13 @@ var indexRoutes = [
         component: ArticleCategories,
         showMenu: true,
       },
-
+      {
+        path: "/slideshow",
+        name: "Slideshow",
+        icon: "fa fa-circle-o",
+        component: Slideshow,
+        showMenu: true,
+      },
     ]
   },
   {

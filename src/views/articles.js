@@ -28,7 +28,7 @@ function mapDispatchToProps(dispatch) {
   }
 }
 
-class People extends Component {
+class Articles extends Component {
   constructor(props) {
     super(props);
 
@@ -463,4 +463,4 @@ class People extends Component {
     );
   }
 }
-export default People = connect(mapStateToProps, mapDispatchToProps)(People);
+export default Articles = connect(mapStateToProps, mapDispatchToProps)(Articles);

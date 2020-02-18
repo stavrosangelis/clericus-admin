@@ -122,7 +122,6 @@ const ArticleImageBrowser = props => {
       })
       .catch(function (error) {
       });
-      console.log(responseData)
       setItems(responseData.data);
     }
     if (loading) {

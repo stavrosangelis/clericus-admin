@@ -81,6 +81,13 @@ export const defaultState = {
     orderDesc: false,
     status: null,
   },
+  slideshowPagination: {
+    limit:25,
+    page:1,
+    orderField: "order",
+    orderDesc: false,
+    status: null,
+  },
   userGroups: [],
 
   resourcesTypes: [],

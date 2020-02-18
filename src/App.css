@@ -2535,3 +2535,19 @@ input.form-control.active {
 .dropzone-box:focus {
   outline: 0 none;
 }
+.link-imitation {
+  color: #51cbce;
+  outline: none;
+  cursor: pointer;
+}
+.link-imitation:hover {
+  text-decoration: underline;
+}
+.img-preview-container {
+  margin: 10px 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.slideshow-preview {
+  max-width: 100%;
+}
