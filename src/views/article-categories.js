@@ -108,6 +108,13 @@ const ArticleCategories = props => {
     setItemForm(form);
   }
 
+  const updateStatus = (value) => {
+    let form = Object.assign({},itemForm);
+    form.status = value;
+    setStatus(value);
+    setItemForm(form);
+  }
+
   const loadItem = async(_id) => {
     if (_id===null) {
       let newForm = {
@@ -140,6 +147,7 @@ const ArticleCategories = props => {
       }
       setItemForm(newForm);
       setItem(responseData);
+      setStatus(responseData.status);
     }
     setItemModalVisible(true);
   }
@@ -265,8 +273,8 @@ const ArticleCategories = props => {
         <Form onSubmit={formSubmit}>
           <div className="text-right">
             <ButtonGroup>
-              <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>setStatus("public")}>Public</Button>
-              <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>setStatus("private")}>Private</Button>
+              <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>updateStatus("public")}>Public</Button>
+              <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>updateStatus("private")}>Private</Button>
             </ButtonGroup>
           </div>
           <div className="row">

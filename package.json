@@ -1,6 +1,6 @@
 {
   "name": "clericus-admin",
-  "version": "0.35.60",
+  "version": "0.35.71",
   "private": true,
   "dependencies": {
     "@tinymce/tinymce-react": "^3.3.2",

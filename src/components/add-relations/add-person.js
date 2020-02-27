@@ -237,7 +237,7 @@ export default class AddPerson extends Component {
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>Please select an event to continue</div>,
+        addingReferenceErrorText: <div>Please select a person to continue</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -253,14 +253,10 @@ export default class AddPerson extends Component {
 
     let addReferenceData = addReference.data;
     if (addReferenceData.status===false) {
-      let errorOutput = [];
-      for (let errorKey in addReferenceData.error) {
-        errorOutput.push(<div key={errorKey}>{addReferenceData.error[errorKey]}</div>)
-      }
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>{errorOutput}</div>,
+        addingReferenceErrorText: <div>{addReferenceData.error}</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -283,7 +279,7 @@ export default class AddPerson extends Component {
   }
 
   addReference() {
-    if (typeof this.state.refType==="undefined") {
+    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
       let response = {
         data: {
           status: false,

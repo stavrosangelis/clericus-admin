@@ -290,6 +290,10 @@ class Articles extends Component {
     let rows = items.map ((item,i)=>{
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
+      let icon = <i className="pe-7s-close-circle" />;
+      if (item.status==="public") {
+        icon = <i className="pe-7s-check" />;
+      }
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -299,6 +303,7 @@ class Articles extends Component {
         </td>
         <td>{count}</td>
         <td><Link href={"/article/"+item._id} to={"/article/"+item._id}>{item.label}</Link></td>
+        <td className="text-center">{icon}</td>
         <td><Link href={"/article/"+item._id} to={"/article/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>;
       return row;
@@ -395,12 +400,21 @@ class Articles extends Component {
 
       // ordering
       let labelOrderIcon = [];
+      let labelPublishedIcon = [];
       if (this.state.orderField==="label" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           labelOrderIcon = <i className="fa fa-caret-down" />
         }
         else {
           labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="status") {
+        if (this.state.orderDesc) {
+          labelPublishedIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          labelPublishedIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -421,6 +435,7 @@ class Articles extends Component {
                       </th>
                       <th style={{width: '40px'}}>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th style={{width: '100px'}} className="ordering-label" onClick={()=>this.updateOrdering("status")}>Published {labelPublishedIcon}</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -437,6 +452,7 @@ class Articles extends Component {
                       </th>
                       <th>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("published")}>Published {labelPublishedIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

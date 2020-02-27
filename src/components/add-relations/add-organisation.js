@@ -214,7 +214,7 @@ export default class AddOrganisation extends Component {
       this.setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
-        addingReferenceErrorText: <div>Please select an event to continue</div>,
+        addingReferenceErrorText: <div>Please select an organisation to continue</div>,
         addingReferenceBtn: <span>Error... <i className="fa fa-times" /></span>,
       });
       return false;
@@ -256,7 +256,7 @@ export default class AddOrganisation extends Component {
   }
 
   addReference() {
-    if (typeof this.state.refType==="undefined") {
+    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
       let response = {
         data: {
           status: false,
@@ -319,7 +319,7 @@ export default class AddOrganisation extends Component {
     if (prevProps.item!==this.props.item) {
       this.loadDefaultRefType();
     }
-  }  
+  }
 
   componentWillUnmount() {
     this.cancelLoad=true;

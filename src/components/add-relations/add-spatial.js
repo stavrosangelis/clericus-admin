@@ -257,7 +257,7 @@ export default class AddSpatial extends Component {
   }
 
   addReference() {
-    if (typeof this.state.refType==="undefined") {
+    if (typeof this.state.refType==="undefined" || this.state.refType===null) {
       let response = {
         data: {
           status: false,

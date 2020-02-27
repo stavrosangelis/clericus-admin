@@ -87,7 +87,7 @@ class NetworkGraph extends Component {
 
 
     // control ticks aka performance trick
-    const iterations = 500;
+    const iterations = 100;
     var threshold = 0.001;
     simulation.restart();
     for (var i = iterations; i > 0; --i) {
@@ -244,37 +244,6 @@ class NetworkGraph extends Component {
           return  y
         })
         .text(d => d);
-
-    /*simulation.on("tick", () => {
-      console.log("tick")
-      node
-        .attr("transform", d=>"translate(" + d.x  + "," + d.y + ")");
-    });
-
-    simulation.on("end", ()=> {
-      console.log("end")
-      if (this.state.edgesType==="simple") {
-        g.selectAll(".network-line")
-          .attr("x1", d=>d.source.x)
-          .attr("y1", d=>d.source.y)
-          .attr("x2", d=>d.target.x)
-          .attr("y2", d=>d.target.y);
-
-          if (this.state.edgesLabels==="visible" && linkPaths!==null) {
-            linkPaths.attr('d', d => 'M ' + d.source.x + ' ' + d.source.y + ' L ' + d.target.x + ' ' + d.target.y);
-          }
-      }
-
-      if (this.state.edgesType==="double") {
-        link.selectAll("path")
-          .attr("d", (d)=> {
-            let dx = d.target.x - d.source.x,
-            dy = d.target.y - d.source.y,
-            dr = Math.sqrt(dx * dx + dy * dy);
-            return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
-          });
-      }
-    });*/
 
     const zoom_handler = d3.zoom()
       .scaleExtent([0.1, 8])

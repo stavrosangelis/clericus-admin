@@ -1398,8 +1398,9 @@ input.form-control.active {
 .delete-ref:active {
   color: #b51717;
 }
-.table > thead > tr > th {
+.table > thead > tr > th, .table > tfoot > tr > th {
   text-transform: none;
+  font-size: 14px;
 }
 .list-legend {
   text-align: right;

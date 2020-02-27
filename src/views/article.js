@@ -98,6 +98,7 @@ const Article = props => {
         setFormdata(data);
         setFeaturedImage(responseData.featuredImage);
         setFeaturedImageDetails(responseData.featuredImageDetails);
+        setStatus(data.status);
       }
     }
     if (loading) {
@@ -183,6 +184,13 @@ const Article = props => {
     let name = target.name;
     let form = Object.assign({},formData);
     form[name] = value;
+    setFormdata(form);
+  }
+
+  const updateStatus = (value) => {
+    let form = Object.assign({},formData);
+    form.status = value;
+    setStatus(value);
     setFormdata(form);
   }
 
@@ -428,8 +436,8 @@ const Article = props => {
           <Form onSubmit={formSubmit}>
             <div className="text-right">
               <ButtonGroup>
-                <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>setStatus("public")}>Public</Button>
-                <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>setStatus("private")}>Private</Button>
+                <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>updateStatus("public")}>Public</Button>
+                <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>updateStatus("private")}>Private</Button>
               </ButtonGroup>
             </div>
             <div className="row">

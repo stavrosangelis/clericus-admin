@@ -564,7 +564,7 @@ class Slideshow extends Component {
       privateOutline = true;
     }
     let imagePreview = [];
-    if (this.state.imageDetails!=="") {
+    if (this.state.imageDetails!==null && this.state.imageDetails!=="") {
       let image = this.state.imageDetails;
       let imagePath = image.paths.find(p=>p.pathType==="source").path;
       imagePreview = <img className="slideshow-preview" alt="" src={imagePath} />
