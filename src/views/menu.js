@@ -20,7 +20,7 @@ const Menu = (props) => {
   const defaultMenuForm = {
     _id: null,
     label: "",
-    templatePosition: "Top",
+    templatePosition: "top",
   }
   const [menuForm, setMenuForm] = useState(defaultMenuForm);
   const [menuId, setMenuId] = useState(null);
@@ -227,8 +227,7 @@ const Menu = (props) => {
     order: 0,
     parentId: 0,
     type: "link",
-    articleId: 0,
-    categoryId: 0,
+    objectId: 0,
     link: "",
     target: "",
     status: "private",
@@ -257,12 +256,6 @@ const Menu = (props) => {
     // normalize type
     if (menuItemForm.type==="link") {
       menuItemForm.objectId = 0;
-    }
-    if (menuItemForm.type==="article") {
-      menuItemForm.objectId = menuItemForm.articleId;
-    }
-    if (menuItemForm.type==="category") {
-      menuItemForm.objectId = menuItemForm.categoryId;
     }
     delete menuItemForm.articleId;
     delete menuItemForm.categoryId;
@@ -307,6 +300,28 @@ const Menu = (props) => {
       setMenuItemError([]);
     }
     return true;
+  }
+
+  const handleMenuItemTypeChange = (e, type) => {
+    let target = e.target;
+    let value = target.type === 'checkbox' ? target.checked : target.value;
+    let link = "";
+    if (type==="article") {
+      let article = articles.find(a=>a._id===value);
+      if (typeof article!=="undefined") {
+        link = article.permalink;
+      }
+    }
+    if (type==="article-category") {
+      let articleCategory = articleCategories.find(a=>a._id===value);
+      if (typeof articleCategory!=="undefined") {
+        link = articleCategory.permalink;
+      }
+    }
+    let form = Object.assign({},menuItemForm);
+    form.objectId = value;
+    form.link = link;
+    setMenuItemForm(form);
   }
 
   const handleMenuItemChange = (e) => {
@@ -445,7 +460,7 @@ const Menu = (props) => {
 
   // articles options list
   let articlesOptionsHTML = articles.map((article,i)=>{
-    return <option value={article._id} key={i}>{article.label}</option>;
+    return <option value={article._id} link={article.permalink} key={i}>{article.label}</option>;
   })
 
   // article categories options list
@@ -460,7 +475,7 @@ const Menu = (props) => {
   }
 
   function articleCategoriesOptions(item, sep="") {
-    let options = [<option value={item._id} key={item._id}>{sep} {item.label}</option>];
+    let options = [<option value={item._id} link={item.permalink} key={item._id}>{sep} {item.label}</option>];
     if (item.children.length>0) {
       for (let j=0;j<item.children.length; j++) {
         sep +="-";
@@ -507,13 +522,13 @@ const Menu = (props) => {
         </FormGroup>
         <FormGroup className={articleVisible}>
           <Label>Article</Label>
-          <Input type="select" name="articleId" value={menuItemForm.articleId} onChange={handleMenuItemChange}>
+          <Input type="select" name="articleId" value={menuItemForm.articleId} onChange={(e)=>handleMenuItemTypeChange(e,"article")}>
             {articlesOptionsHTML}
           </Input>
         </FormGroup>
         <FormGroup className={categoryVisible}>
           <Label>Article Category</Label>
-          <Input type="select" name="categoryId" value={menuItemForm.categoryId} onChange={handleMenuItemChange}>
+          <Input type="select" name="categoryId" value={menuItemForm.categoryId} onChange={(e)=>handleMenuItemTypeChange(e,"article-category")}>
             {articleCategoriesOptionsHTML}
           </Input>
         </FormGroup>

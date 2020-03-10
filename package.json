@@ -1,6 +1,6 @@
 {
   "name": "clericus-admin",
-  "version": "0.35.71",
+  "version": "0.35.74",
   "private": true,
   "dependencies": {
     "@tinymce/tinymce-react": "^3.3.2",
@@ -41,7 +41,7 @@
   "eslintConfig": {
     "extends": "react-app"
   },
-  "homepage": "http://localhost",
+  "homepage": "http://clericus.maynoothuniversity.ie/admin",
   "browserslist": [
     ">0.2%",
     "not dead",

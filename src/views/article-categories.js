@@ -254,8 +254,8 @@ const ArticleCategories = props => {
       options.push(<option value={item._id} key={item._id}>{sep} {item.label}</option>);
     }
     if (item.children.length>0) {
+      sep +="-";
       for (let j=0;j<item.children.length; j++) {
-        sep +="-";
         let child = item.children[j];
         options.push(parentOptions(child, sep));
       }
