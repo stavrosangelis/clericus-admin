@@ -213,7 +213,7 @@ const Menu = (props) => {
       let menuForm = {
         _id: null,
         label: "",
-        templatePosition: "Top",
+        templatePosition: "top",
       };
       setMenuForm(menuForm);
     }
