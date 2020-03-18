@@ -356,8 +356,8 @@ class ViewResource extends Component {
             Continue?
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button className="pull-left" color="secondary" onClick={this.deleteClasspieceModalToggle}>Cancel</Button>
-            <Button color="info" onClick={()=>this.deleteClasspiece()}><i className="fa fa-trash" /> Delete</Button>
+            <Button className="pull-left" size="sm" color="secondary" onClick={this.deleteClasspieceModalToggle}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={()=>this.deleteClasspiece()}><i className="fa fa-trash" /> Delete</Button>
           </ModalFooter>
         </Modal>;
     }

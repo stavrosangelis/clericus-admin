@@ -133,8 +133,8 @@ export default class Wrapper extends Component {
       }
     }
     if (this.state.rotating) {
-      if (this.props.onRotateStop!==null) {
-        this.props.onRotateStop(obj, this.props.index);
+      if (this.props.onResizeStop!==null) {
+        this.props.onResizeStop(obj, this.props.index);
       }
     }
   }
