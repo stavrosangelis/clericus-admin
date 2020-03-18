@@ -61,6 +61,8 @@ class ViewResource extends Component {
       updateFileModal: false,
       imageViewerVisible: false,
       status: status,
+      deleteClasspieceModal: false,
+      deletingClasspiece: false
     }
     this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
@@ -71,12 +73,13 @@ class ViewResource extends Component {
     this.deleteRef = this.deleteRef.bind(this);
     this.toggleUpdateFileModal = this.toggleUpdateFileModal.bind(this);
     this.toggleImageViewer = this.toggleImageViewer.bind(this);
+    this.deleteClasspieceModalToggle = this.deleteClasspieceModalToggle.bind(this);
+    this.deleteClasspiece = this.deleteClasspiece.bind(this);
   }
 
   updateStatus(value) {
     this.setState({status:value});
   }
-
 
   formSubmit(e) {
     e.preventDefault();
@@ -194,6 +197,41 @@ class ViewResource extends Component {
     })
   }
 
+  deleteClasspieceModalToggle() {
+    this.setState({
+      deleteClasspieceModal: !this.state.deleteClasspieceModal
+    });
+  }
+
+  async deleteClasspiece() {
+    if (this.state.deletingClasspiece) {
+      return false;
+    }
+    this.setState({
+      deletingClasspiece: true
+    });
+    let params = {_id: this.props.resource._id};
+    let responseData = await axios({
+      method: 'delete',
+      url: APIPath+'delete-classpiece',
+      crossDomain: true,
+      params: params
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+    });
+    console.log(responseData)
+    if (responseData.status) {
+      this.setState({
+        deletingClasspiece: false,
+        deleteClasspieceModal: false
+      });
+      this.props.setRedirect();
+    }
+  }
+
   componentDidUpdate(prevProps, prevState) {
     if (this.props.closeUploadModal) {
       this.setState({
@@ -290,10 +328,38 @@ class ViewResource extends Component {
 
     // system types
     let resourcesTypesOptions = [];
-    for (let st=0;st<this.props.resourcesTypes.length; st++) {
-      let systemType = this.props.resourcesTypes[st];
-      let systemTypeOption = <option value={systemType._id} key={st}>{systemType.label}</option>;
-      resourcesTypesOptions.push(systemTypeOption);
+    let resourcesTypes = this.props.resourcesTypes;
+    let isClasspiece = false;
+    if (resourcesTypes.length>0) {
+      let classpieceSystemType = resourcesTypes.find(i=>i.labelId==="Classpiece");
+      if (resource!==null && resource.systemType===classpieceSystemType._id) {
+        isClasspiece = true;
+      }
+      for (let st=0;st<resourcesTypes.length; st++) {
+        let systemType = resourcesTypes[st];
+        let systemTypeOption = <option value={systemType._id} key={st}>{systemType.label}</option>;
+        resourcesTypesOptions.push(systemTypeOption);
+      }
+    }
+
+    let deleteClasspieceBtn = [];
+    let deleteClasspieceModal = [];
+    if (isClasspiece) {
+      deleteClasspieceBtn = <Button style={{marginBottom: "15px"}} color="danger" type="button" block={true} onClick={()=>this.deleteClasspieceModalToggle()}><i className="fa fa-trash" /> Delete Classpiece</Button>
+
+      deleteClasspieceModal = <Modal isOpen={this.state.deleteClasspieceModal} toggle={this.deleteClasspieceModalToggle}>
+          <ModalHeader toggle={this.deleteClasspieceModalToggle}>Delete Classpiece</ModalHeader>
+          <ModalBody>
+            The classpiece "{resource.label}" will be deleted.<br/>
+            All related <b>Resources</b> and <b>People</b> will also be deleted.<br/>
+            Related <b>Events</b> and <b>Organisations</b> will not be deleted.<br/>
+            Continue?
+          </ModalBody>
+          <ModalFooter className="text-right">
+            <Button className="pull-left" color="secondary" onClick={this.deleteClasspieceModalToggle}>Cancel</Button>
+            <Button color="info" onClick={()=>this.deleteClasspiece()}><i className="fa fa-trash" /> Delete</Button>
+          </ModalFooter>
+        </Modal>;
     }
 
     // metadata
@@ -412,7 +478,8 @@ class ViewResource extends Component {
                 </Collapse>
               </CardBody>
             </Card>
-
+            {deleteClasspieceBtn}
+            {deleteClasspieceModal}
             <Card className={metadataCard}>
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'metadataOpen')}>Metadata<Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+metadataOpenActive} /></Button></CardTitle>

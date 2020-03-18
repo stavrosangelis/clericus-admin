@@ -142,7 +142,7 @@ export default class ParseClassPieceThumbnails extends Component {
 	  .catch(function (error) {
 	  });
     let fileOutput = <img src={file.compressed} alt={file.name}
-      draggable="false" />;
+      draggable="false" onDragStart={(e) => { e.preventDefault() }} />;
     this.setState({
       fileInfo: file,
       file: fileOutput,

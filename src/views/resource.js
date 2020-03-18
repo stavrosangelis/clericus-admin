@@ -50,6 +50,7 @@ class Resource extends Component {
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
     this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
+    this.setRedirect = this.setRedirect.bind(this);
     this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
     this.delete = this.delete.bind(this);
     this.reload = this.reload.bind(this);
@@ -182,6 +183,12 @@ class Resource extends Component {
     }
   }
 
+  setRedirect() {
+    this.setState({
+      redirect: true
+    })
+  }
+
   toggleDeleteModal() {
     this.setState({
       deleteModal: !this.state.deleteModal
@@ -289,6 +296,7 @@ class Resource extends Component {
         update={this.update}
         updateBtn={this.state.updateBtn}
         uploadResponse={this.uploadResponse}
+        setRedirect={this.setRedirect}
         />;
       content = <div className="resources-container">
           {viewComponent}
