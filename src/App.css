@@ -1310,6 +1310,7 @@ input.form-control.active {
   padding: 5px;
   text-align: center;
   border-radius: 2px;
+  z-index: 0;
 }
 .event-list-resource-body {
   width: 80px;

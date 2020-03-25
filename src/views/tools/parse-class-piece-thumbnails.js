@@ -429,12 +429,12 @@ export default class ParseClassPieceThumbnails extends Component {
       };
     }
     this.setState(updateState);
-    this.loadFaces();
     let context = this;
     setTimeout(()=>{
       context.setState({
         saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
-      })
+      });
+      context.loadFaces();
     },2000);
   }
 
@@ -992,7 +992,7 @@ export default class ParseClassPieceThumbnails extends Component {
       setTimeout(function() {
         context.setState({
           storeLinkingBtn: <span><i className="fa fa-save"></i> Store updates</span>
-        })
+        });
       },2000)
     }
   }

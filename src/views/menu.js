@@ -28,11 +28,16 @@ const Menu = (props) => {
   const [menuErrorVisible, setMenuErrorVisible] = useState(false);
   const [menuUpdating, setMenuUpdating] = useState(false);
   const [menuUpdateBtn, setMenuUpdateBtn] = useState(<span><i className="fa fa-save" /> Update</span>);
+  const [deleteMenuModalVisible, setDeleteMenuModalVisible] = useState(false);
 
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [articles, setArticles] = useState([]);
   const [loadingArticleCategories, setLoadingArticleCategories] = useState(true);
   const [articleCategories, setArticleCategories] = useState([]);
+
+  const toggleMenuDeleteModal = () => {
+    setDeleteMenuModalVisible(!deleteMenuModalVisible);
+  }
 
   const menuFormSubmit = async (e)=> {
     e.preventDefault();
@@ -109,7 +114,9 @@ const Menu = (props) => {
   	  });
 
       setMenus(responseData);
-      setMenuId(responseData[0]._id);
+      if (responseData.length>0) {
+        setMenuId(responseData[0]._id);
+      }
     }
     if (loading) {
       load();
@@ -162,6 +169,8 @@ const Menu = (props) => {
 
   // load menu on menu id change
   const loadMenu = useCallback(async()=> {
+    setMenuError([]);
+    setMenuErrorVisible(false);
     const menuData = async()=> {
       let url = APIPath+'menu';
       setLoading(false);
@@ -219,6 +228,36 @@ const Menu = (props) => {
     }
   },[menuId,loadMenu]);
 
+  // delete menu
+  const deleteMenu = async() => {
+    if (menuId===null || menuId<=0) {
+      return false;
+    }
+    let data = {_id: menuId};
+    let responseData = await axios({
+      method: 'delete',
+      url: APIPath+'menu',
+      crossDomain: true,
+      data: data
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+    });
+    if (responseData.status) {
+      setMenuError([]);
+      setMenuErrorVisible(false);
+      setLoading(true);
+    }
+    else {
+      let errorMsg = responseData.msg;
+      let errorText = errorMsg.map((e,i)=><div key={i}>{e}</div>);
+      setMenuErrorVisible(true);
+      setMenuError(errorText);
+    }
+  }
+
   // menu items
   const defaultMenuItemForm = {
     _id: null,
@@ -240,6 +279,11 @@ const Menu = (props) => {
   const [menuItemErrorVisible, setMenuItemErrorVisible] = useState(false);
   const [menuItemUpdating, setMenuItemUpdating] = useState(false);
   const [menuItemUpdateBtn, setMenuItemUpdateBtn] = useState(<span><i className="fa fa-save" /> Update</span>);
+  const [deleteMenuItemModalVisible, setDeleteMenuItemModalVisible] = useState(false);
+
+  const toggleMenuItemDeleteModal = () => {
+    setDeleteMenuItemModalVisible(!deleteMenuItemModalVisible);
+  }
 
   const toggleMenuItemModal = (_id=null) => {
     setMenuItemId(_id);
@@ -278,12 +322,15 @@ const Menu = (props) => {
     if (updateData.status) {
       setMenuItemUpdating(false);
       setMenuItemUpdateBtn(<span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>);
-      let curMenuId = menuId;
       setMenuId(null);
-      setMenuId(curMenuId);
+      setMenuId(menuId);
+      if(menuItemId===null) {
+        toggleMenuItemModal(null);
+      }
       setTimeout(function() {
         setMenuItemUpdateBtn(<span><i className="fa fa-save" /> Update</span>);
       },2000);
+
     }
   }
 
@@ -306,6 +353,9 @@ const Menu = (props) => {
     let target = e.target;
     let value = target.type === 'checkbox' ? target.checked : target.value;
     let link = "";
+    if (type==="home") {
+      link = "/";
+    }
     if (type==="article") {
       let article = articles.find(a=>a._id===value);
       if (typeof article!=="undefined") {
@@ -317,6 +367,12 @@ const Menu = (props) => {
       if (typeof articleCategory!=="undefined") {
         link = articleCategory.permalink;
       }
+    }
+    if (type==="classpieces") {
+      link = "/classpieces";
+    }
+    if (type==="people") {
+      link = "/people";
     }
     let form = Object.assign({},menuItemForm);
     form.objectId = value;
@@ -335,6 +391,8 @@ const Menu = (props) => {
 
   // load menu on menu id change
   const loadMenuItem = useCallback(async()=> {
+    setMenuItemError([]);
+    setMenuItemErrorVisible(false);
     const menuItemData = async()=> {
       let url = APIPath+'menu-item';
       let responseData = await axios({
@@ -372,9 +430,13 @@ const Menu = (props) => {
       loadMenuItem(menuItemId);
     }
     else {
+      let newMenuId = "";
+      if (menuId!==null) {
+        newMenuId = menuId;
+      }
       let menuItemForm = {
         _id: null,
-        menuId: menuId,
+        menuId: newMenuId,
         label: "",
         order: 0,
         parentId: 0,
@@ -387,6 +449,39 @@ const Menu = (props) => {
       setMenuItemForm(menuItemForm);
     }
   },[menuItemId,loadMenuItem,menuId]);
+
+  // delete menu
+  const deleteMenuItem = async() => {
+    if (menuItemId===null || menuItemId<=0) {
+      return false;
+    }
+    let data = {_id: menuItemId};
+    let responseData = await axios({
+      method: 'delete',
+      url: APIPath+'menu-item',
+      crossDomain: true,
+      data: data
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+    });
+    if (responseData.status) {
+      setMenuItemError([]);
+      setMenuItemErrorVisible(false);
+      toggleMenuItemModal(null);
+      setMenuId(null);
+      setMenuId(menuId);
+    }
+    else {
+      let errorMsg = responseData.msg;
+      let errorText = errorMsg.map((e,i)=><div key={i}>{e}</div>);
+      setMenuItemErrorVisible(true);
+      setMenuItemError(errorText);
+    }
+    toggleMenuItemDeleteModal();
+  }
 
   // render
   let heading = "Menu";
@@ -461,7 +556,8 @@ const Menu = (props) => {
   // articles options list
   let articlesOptionsHTML = articles.map((article,i)=>{
     return <option value={article._id} link={article.permalink} key={i}>{article.label}</option>;
-  })
+  });
+  articlesOptionsHTML = [...[<option value="" key="0a">-- Select article --</option>], ...articlesOptionsHTML];
 
   // article categories options list
   let articleCategoriesOptionsHTML = [
@@ -484,6 +580,29 @@ const Menu = (props) => {
       }
     }
     return options;
+  }
+
+  let deleteMenuModal = <Modal isOpen={deleteMenuModalVisible} toggle={toggleMenuDeleteModal}>
+    <ModalHeader toggle={toggleMenuDeleteModal}>Delete "{menuForm.label}"</ModalHeader>
+    <ModalBody>{menuErrorHTML} The menu "<b>{menuForm.label}</b>" will be deleted. Continue?</ModalBody>
+    <ModalFooter className="text-left">
+      <Button className="pull-right" color="danger" size="sm" outline onClick={deleteMenu}><i className="fa fa-trash-o" /> Delete</Button>
+      <Button color="secondary" size="sm" onClick={toggleMenuDeleteModal}>Cancel</Button>
+    </ModalFooter>
+  </Modal>;
+
+  let deleteMenuItemModal = <Modal isOpen={deleteMenuItemModalVisible} toggle={toggleMenuItemDeleteModal}>
+    <ModalHeader toggle={toggleMenuItemDeleteModal}>Delete "{menuItemForm.label}"</ModalHeader>
+    <ModalBody>{menuErrorHTML} The menu item "<b>{menuItemForm.label}</b>" will be deleted. Continue?</ModalBody>
+    <ModalFooter className="text-left">
+      <Button className="pull-right" color="danger" size="sm" outline onClick={deleteMenuItem}><i className="fa fa-trash-o" /> Delete</Button>
+      <Button color="secondary" size="sm" onClick={toggleMenuItemDeleteModal}>Cancel</Button>
+    </ModalFooter>
+  </Modal>;
+
+  let deleteMenuButton = [];
+  if (menuId!==null) {
+    deleteMenuButton = <Button className="pull-left" color="danger" outline size="sm" onClick={()=>toggleMenuDeleteModal()}><i className="fa fa-trash" /> Delete</Button>
   }
 
   let menuItemModalHTML = <Modal isOpen={menuItemModal} toggle={()=>toggleMenuItemModal(null)}>
@@ -515,9 +634,12 @@ const Menu = (props) => {
         <FormGroup>
           <Label>Type</Label>
           <Input type="select" name="type" value={menuItemForm.type} onChange={handleMenuItemChange}>
+            <option value="home">Home</option>
             <option value="link">Link</option>
             <option value="article">Article</option>
-            <option value="category">Article Category</option>
+            <option value="article-category">Article Category</option>
+            <option value="classpieces">Classpieces</option>
+            <option value="people">People</option>
           </Input>
         </FormGroup>
         <FormGroup className={articleVisible}>
@@ -554,7 +676,7 @@ const Menu = (props) => {
     </ModalBody>
     <ModalFooter>
       <Button color="primary" outline size="sm" onClick={menuItemFormSubmit}>{menuItemUpdateBtn}</Button>
-      <Button className="pull-left" color="danger" outline size="sm"><i className="fa fa-trash" /> Delete</Button>
+      <Button className="pull-left" color="danger" outline size="sm" onClick={()=>toggleMenuItemDeleteModal()}><i className="fa fa-trash" /> Delete</Button>
     </ModalFooter>
   </Modal>
 
@@ -583,7 +705,7 @@ const Menu = (props) => {
               </Form>
               <div className="footer-box">
                 <Button color="primary" outline size="sm" onClick={menuFormSubmit}>{menuUpdateBtn}</Button>
-                <Button className="pull-left" color="danger" outline size="sm"><i className="fa fa-trash" /> Delete</Button>
+                {deleteMenuButton}
               </div>
             </div>
             <div className="col-xs-12 col-sm-6">
@@ -599,6 +721,8 @@ const Menu = (props) => {
         </CardBody>
       </Card>
     </div>
+    {deleteMenuModal}
+    {deleteMenuItemModal}
     {menuItemModalHTML}
   </div>
 

@@ -123,7 +123,7 @@ class Seed extends Component {
       <CardBody>
         <p>Your admin use account has been setup successfully and the database has been seeded. To start using your new system account please click the login button below or refresh this page.</p>
         <div className="text-center">
-          <a href="/login" className="btn btn-secondary">Login</a>
+          <a href="/admin/login" className="btn btn-secondary">Login</a>
         </div>
       </CardBody>;
     }

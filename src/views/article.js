@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Card, CardBody, CardFooter,
   Button, ButtonGroup,
@@ -40,6 +40,7 @@ const Article = props => {
   const [featuredModal, setFeaturedModal] = useState(false);
   const [featuredImage, setFeaturedImage] = useState(null);
   const [featuredImageDetails, setFeaturedImageDetails] = useState(null);
+  const prevFeaturedImage = useRef(null);
   const toggleFeatured = () => setFeaturedModal(!featuredModal);
 
   const toggleDeleteModal = () => {
@@ -96,6 +97,7 @@ const Article = props => {
           status: responseData.status,
         }
         setFormdata(data);
+        prevFeaturedImage.current = responseData.featuredImage;
         setFeaturedImage(responseData.featuredImage);
         setFeaturedImageDetails(responseData.featuredImageDetails);
         setStatus(data.status);
@@ -261,6 +263,12 @@ const Article = props => {
       },2000);
     }
   }
+
+  useEffect(()=>{
+    if (featuredImage!==null && prevFeaturedImage.current!==featuredImage) {
+      formSubmit();
+    }
+  },[featuredImage, formSubmit]);
 
   const validateForm = (postData) => {
     if (postData.label.length<2) {
@@ -430,6 +438,14 @@ const Article = props => {
       return options;
     }
 
+    let featuredImgBlock = [];
+    if (props.match.params._id!=="new") {
+      featuredImgBlock = <FormGroup>
+        <Label>Featured Image</Label>
+        {featuredImageHMTL}
+        <Button type="button" onClick={toggleFeatured} size="sm" style={{display: "block"}}>Select new image</Button>
+      </FormGroup>
+    }
     content = <div className="items-container">
       <Card>
         <CardBody>
@@ -455,11 +471,7 @@ const Article = props => {
                 </FormGroup>
               </div>
               <div className="col-xs-12 col-sm-6">
-                <FormGroup>
-                  <Label>Featured Image</Label>
-                  {featuredImageHMTL}
-                  <Button type="button" onClick={toggleFeatured} size="sm" style={{display: "block"}}>Select new image</Button>
-                </FormGroup>
+                {featuredImgBlock}
               </div>
             </div>
             <FormGroup>
@@ -490,7 +502,11 @@ const Article = props => {
         </CardFooter>
       </Card>
       {deleteModal}
-      <ArticleImageBrowser modal={featuredModal} toggle={toggleFeatured} featuredImgFn={featuredImageFn} reload={imagesReload}/>
+      <ArticleImageBrowser
+        modal={featuredModal}
+        toggle={toggleFeatured}
+        featuredImgFn={featuredImageFn}
+        reload={imagesReload}/>
     </div>
   }
 

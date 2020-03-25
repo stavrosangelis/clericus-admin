@@ -137,7 +137,7 @@ export class ParseClassPiece extends Component {
       this.setState({
         confirmModal: true,
         confirmModalTitle: 'Confirm image re-analysis',
-        confirmModalContent: <p>This image will be submitted to google vision to be analyzed again.<br/> Continue?</p>,
+        confirmModalContent: <p>This classpiece will be submitted to microsoft's computer vision api to be analyzed again.<br/> Continue?</p>,
         confirmModalAction: this.analyzeFile,
         confirmModalBtn: <span>Re-analyze image</span>
       });

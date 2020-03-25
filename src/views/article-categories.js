@@ -97,6 +97,12 @@ const ArticleCategories = props => {
       setItemModalVisible(false);
       setLoading(true);
     }
+    else {
+      setDeleteModalVisible(false);
+      let errorMsg = responseData.msg;
+      let errorText = errorMsg.map((e,i)=><div key={i}>{e}</div>);
+      setError({visible:true, text: errorText});
+    }
   }
 
   const handleChange = (e) => {
@@ -116,6 +122,7 @@ const ArticleCategories = props => {
   }
 
   const loadItem = async(_id) => {
+    setError({visible:false, text: []});
     if (_id===null) {
       let newForm = {
         _id: null,
@@ -124,6 +131,7 @@ const ArticleCategories = props => {
         status: "private"
       }
       setItemForm(newForm);
+      setStatus("private");
       setItem(null);
     }
     else {

@@ -341,10 +341,10 @@ export default class Taxonomies extends React.Component {
         },1000);
       }
       else {
-        let error = responseData.error;
+        let errorMsg = responseData.msg;
         let errorText = [];
-        for (let i=0; i<error.length; i++) {
-          errorText.push(<div key={i}>{error[i]}</div>);
+        for (let i=0; i<errorMsg.length; i++) {
+          errorText.push(<div key={i}>{errorMsg[i]}</div>);
         }
         context.setState({
           taxonomySaving: false,
@@ -644,10 +644,10 @@ export default class Taxonomies extends React.Component {
       this.load();
     }
     else {
-      let error = deleteTax.error;
+      let errorMsg = deleteTax.msg;
       let errorText = [];
-      for (let i=0; i<error.length; i++) {
-        errorText.push(<div key={i}>{error[i]}</div>);
+      for (let i=0; i<errorMsg.length; i++) {
+        errorText.push(<div key={i}>{errorMsg[i]}</div>);
       }
       this.setState({
         taxonomyErrorVisible: true,
