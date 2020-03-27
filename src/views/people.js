@@ -10,7 +10,8 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 import axios from 'axios';
 import PageActions from '../components/page-actions';
 import {getThumbnailURL} from '../helpers/helpers';
-import BatchActions from '../components/add-batch-relations'
+import BatchActions from '../components/add-batch-relations';
+import {getResourceThumbnailURL} from '../helpers/helpers';
 
 import {connect} from "react-redux";
 import {
@@ -21,6 +22,7 @@ const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     peoplePagination: state.peoplePagination,
+    resourcesTypes: state.resourcesTypes
    };
 };
 
@@ -52,6 +54,9 @@ class People extends Component {
       advancedSearchInputs: [],
       simpleSearch: false,
       advancedSearch: false,
+      classpieceSearchInput: '',
+      classpieceItems: [],
+      classpieceId: null,
     }
     this.load = this.load.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
@@ -68,6 +73,9 @@ class People extends Component {
     this.simpleSearch = this.simpleSearch.bind(this);
     this.advancedSearch = this.advancedSearch.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
+    this.classpieceClearSearch = this.classpieceClearSearch.bind(this);
+    this.classpieceSearch = this.classpieceSearch.bind(this);
+    this.selectClasspiece = this.selectClasspiece.bind(this);
     this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
     this.updateAdvancedSearchInputs = this.updateAdvancedSearchInputs.bind(this);
     this.removeSelected = this.removeSelected.bind(this);
@@ -87,6 +95,9 @@ class People extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     };
+    if (this.state.classpieceId!==null) {
+      params.classpieceId = this.state.classpieceId;
+    }
     if (this.state.searchInput!=="" && !this.state.advancedSearch) {
       params.label = this.state.searchInput;
     }
@@ -264,6 +275,76 @@ class People extends Component {
         searchInput: '',
         simpleSearch: false,
       })
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+
+  async classpieceSearch(e) {
+    let classpieceType = "";
+    if (this.props.resourcesTypes.length>0) {
+      classpieceType = this.props.resourcesTypes.find(t=>t.labelId==="Classpiece")._id;
+    }
+    e.preventDefault();
+    if (this.state.classpieceSearchInput<2) {
+      return false;
+    }
+    let params = {
+      page: 1,
+      limit: 25,
+      label: this.state.classpieceSearchInput,
+      systemType: classpieceType
+    }
+    let url = APIPath+'resources';
+    let responseData = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data;
+	  })
+	  .catch(function (error) {
+	  });
+    if(responseData.status) {
+      let items = responseData.data.data.map(item=>{
+        let thumbnailImage = [];
+        let thumbnailPath = getResourceThumbnailURL(item);
+        if (thumbnailPath!==null) {
+          thumbnailImage = <img src={thumbnailPath} alt={item.label} />
+        }
+        return <div className="classpiece-result" key={item._id} onClick={()=>this.selectClasspiece(item._id)}>
+          {thumbnailImage} <label>{item.label}</label>
+        </div>;
+      });
+      this.setState({
+        classpieceItems: items
+      });
+    }
+  }
+
+  selectClasspiece(classpieceId) {
+    return new Promise((resolve)=> {
+      this.setState({
+        classpieceId: classpieceId
+      });
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+
+  classpieceClearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        classpieceSearchInput: '',
+        classpieceItems: [],
+        classpieceId: null
+      });
       resolve(true)
     })
     .then(()=> {
@@ -508,6 +589,10 @@ class People extends Component {
 
     let pageActions = <PageActions
       advancedSearch={this.advancedSearch}
+      classpieceClearSearch={this.classpieceClearSearch}
+      classpieceItems={this.state.classpieceItems}
+      classpieceSearch={this.classpieceSearch}
+      classpieceSearchInput={this.state.classpieceSearchInput}
       clearAdvancedSearch={this.clearAdvancedSearch}
       clearSearch={this.clearSearch}
       current_page={this.state.page}

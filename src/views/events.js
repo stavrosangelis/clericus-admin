@@ -327,6 +327,16 @@ class Events extends Component {
       if (typeof findEventType!=="undefined") {
         eventType = findEventType.label;
       }
+      let temporal = [];
+      if (item.temporal.length>0) {
+        let temporalData = item.temporal[0].ref;
+        temporal = temporalData.label;
+      }
+      let spatial = [];
+      if (item.spatial.length>0) {
+        let spatialData = item.spatial[0].ref;
+        spatial = spatialData.label;
+      }
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -341,6 +351,8 @@ class Events extends Component {
         <td>
           <Link href={"/event/"+item._id} to={"/event/"+item._id}>{eventType}</Link>
         </td>
+        <td>{temporal}</td>
+        <td>{spatial}</td>
         <td><Link href={"/event/"+item._id} to={"/event/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -527,6 +539,8 @@ class Events extends Component {
                       <th style={{width: "40px"}}>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
+                      <th>Temporal</th>
+                      <th>Spatial</th>
                       <th style={{width: "30px"}}></th>
                     </tr>
                   </thead>
@@ -544,6 +558,8 @@ class Events extends Component {
                       <th>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
+                      <th>Temporal</th>
+                      <th>Spatial</th>
                       <th></th>
                     </tr>
                   </tfoot>

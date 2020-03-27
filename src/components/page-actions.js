@@ -135,7 +135,7 @@ export default class PageActions extends Component {
       limitActive3 = "active";
     }
     let searchDropdown = [];
-
+    let classpieces = [];
     if (this.props.pageType==="people") {
 
       let availableElements = [];
@@ -210,6 +210,32 @@ export default class PageActions extends Component {
             </DropdownItem>
           </DropdownMenu>
         </UncontrolledDropdown>
+      </div>
+
+      classpieces = <div className="filter-item search">
+      <UncontrolledDropdown direction="down">
+        <DropdownToggle caret size="sm" outline>
+          Classpiece
+        </DropdownToggle>
+        <DropdownMenu className="dropdown-center">
+          <DropdownItem tag="li" toggle={false} className="search-dropdown">
+            <form onSubmit={this.props.classpieceSearch}>
+              <InputGroup size="sm" className="search-dropdown-inputgroup">
+                  <Input name="classpieceSearchInput" onChange={this.props.handleChange} placeholder="Search classpiece..." value={this.props.classpieceSearchInput}/>
+                  <InputGroupAddon addonType="append">
+                    <Button size="sm" outline type="button" onClick={this.props.classpieceClearSearch} className="clear-search">
+                      <i className="fa fa-times-circle" />
+                    </Button>
+                    <Button size="sm" type="submit">
+                      <i className="fa fa-search" />
+                    </Button>
+                </InputGroupAddon>
+              </InputGroup>
+            </form>
+            {this.props.classpieceItems}
+          </DropdownItem>
+        </DropdownMenu>
+      </UncontrolledDropdown>
       </div>
     }
 
@@ -321,6 +347,8 @@ export default class PageActions extends Component {
               </DropdownMenu>
             </UncontrolledDropdown>
           </div>
+
+          {classpieces}
 
         </div>
         <div className="page-actions">
