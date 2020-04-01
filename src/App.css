@@ -2475,6 +2475,7 @@ input.form-control.active {
   padding: 0;
   line-height: 22px;
   text-align: center;
+  background-color: rgba(255,255,255,0.9);
 }
 .show-featured-image {
   top: 2px;
@@ -2552,6 +2553,10 @@ input.form-control.active {
 }
 .slideshow-preview {
   max-width: 100%;
+}
+.classpiece-results-container {
+  max-height: 300px;
+  overflow-y: auto;
 }
 .classpiece-result {
   cursor: pointer;

@@ -313,7 +313,7 @@ export default class AddSpatial extends Component {
 
   loadDefaultRefType() {
     this.setState({
-      refType: refTypesList(this.props.refTypes)[0]
+      refType: refTypesList(this.props.refTypes.spatial)[0]
     })
   }
 
@@ -332,10 +332,7 @@ export default class AddSpatial extends Component {
     if (prevState.searchItem!==this.state.searchItem) {
       this.searchSpatials();
     }
-    if (prevProps.refTypes!==this.props.refTypes) {
-      this.loadDefaultRefType();
-    }
-    if (prevProps.item!==this.props.item) {
+    if (this.props.visible && !prevProps.visible && typeof this.props.refTypes.spatial!=="undefined") {
       this.loadDefaultRefType();
     }
   }

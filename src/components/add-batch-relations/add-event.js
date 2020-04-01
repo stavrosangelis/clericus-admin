@@ -399,10 +399,23 @@ export default class AddEvent extends Component {
         if (this.state.selectedEvent===eventItem._id) {
           active = " active";
         }
+        let temporal = [];
+        if (eventItem.temporal.length>0) {
+          let temporalData = eventItem.temporal[0].ref;
+          temporal = temporalData.label;
+        }
+        let spatial = [];
+        if (eventItem.spatial.length>0) {
+          let spatialData = eventItem.spatial[0].ref;
+          spatial = spatialData.label;
+          if (temporal.length>0) {
+            spatial = `| ${spatial}`
+          }
+        }
         let eventListItem = <div
           className={"event-list-item"+active+exists}
           key={eventItem._id}
-          onClick={()=>this.selectedEvent(eventItem._id)}>{eventItem.label}</div>;
+          onClick={()=>this.selectedEvent(eventItem._id)}>{eventItem.label} <small>({temporal} {spatial})</small></div>;
         list.push(eventListItem);
       }
     }

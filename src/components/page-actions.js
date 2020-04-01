@@ -232,7 +232,7 @@ export default class PageActions extends Component {
                 </InputGroupAddon>
               </InputGroup>
             </form>
-            {this.props.classpieceItems}
+            <div className="classpiece-results-container">{this.props.classpieceItems}</div>
           </DropdownItem>
         </DropdownMenu>
       </UncontrolledDropdown>

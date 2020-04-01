@@ -202,7 +202,7 @@ const Article = props => {
     setFormdata(form);
   }
 
-  const formSubmit = async(e) => {
+  const formSubmit = useCallback( async(e) => {
     if (typeof e!=="undefined") {
       e.preventDefault();
     }
@@ -243,7 +243,7 @@ const Article = props => {
           setReload(true);
         }
         else {
-          setLoading(true)
+          setLoading(true);
         }
       }
       else {
@@ -262,7 +262,7 @@ const Article = props => {
         setUpdateBtn(<span><i className="fa fa-save" /> Update</span>);
       },2000);
     }
-  }
+  },[featuredImage, formData, props.match.params._id, updating]);
 
   useEffect(()=>{
     if (featuredImage!==null && prevFeaturedImage.current!==featuredImage) {

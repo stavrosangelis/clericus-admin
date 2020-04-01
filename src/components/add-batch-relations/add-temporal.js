@@ -313,7 +313,7 @@ export default class AddTemporal extends Component {
 
   loadDefaultRefType() {
     this.setState({
-      refType: refTypesList(this.props.refTypes)[0]
+      refType: refTypesList(this.props.refTypes.temporal)[0]
     })
   }
 
@@ -332,10 +332,7 @@ export default class AddTemporal extends Component {
     if (prevState.searchItem!==this.state.searchItem) {
       this.searchTemporals();
     }
-    if (prevProps.refTypes!==this.props.refTypes) {
-      this.loadDefaultRefType();
-    }
-    if (prevProps.item!==this.props.item) {
+    if (this.props.visible && !prevProps.visible && typeof this.props.refTypes.temporal!=="undefined") {
       this.loadDefaultRefType();
     }
   }
