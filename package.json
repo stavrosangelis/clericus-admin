@@ -1,6 +1,6 @@
 {
   "name": "clericus-admin",
-  "version": "0.37.93",
+  "version": "0.37.96",
   "private": true,
   "dependencies": {
     "@tinymce/tinymce-react": "^3.3.2",
@@ -17,6 +17,7 @@
     "react-dom": "^16.10.2",
     "react-dropzone": "^10.2.1",
     "react-image-lightbox": "^5.1.0",
+    "react-input-mask": "^2.0.4",
     "react-leaflet": "^2.6.1",
     "react-redux": "^7.1.1",
     "react-rnd": "^10.1.1",

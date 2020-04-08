@@ -2578,3 +2578,28 @@ input.form-control.active {
 .classpiece-result:active {
   background-color: #dfdfdf;
 }
+.input-mask {
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid #DDDDDD;
+  border-radius: 4px;
+}
+.autocomplete-search .submit-icon {
+  width: 25px;
+  height: 25px;
+  border-radius: 50px;
+  background-color: #f0f0f0;
+  text-align: center;
+  line-height: 24px;
+  position: absolute;
+  right: 35px;
+  top: 6px;
+  display: block;
+  cursor: pointer;
+}
+.autocomplete-search .submit-icon:hover {
+  color: #d11f1f;
+}
+.autocomplete-search .submit-icon:active {
+  background-color: #ccc;
+}

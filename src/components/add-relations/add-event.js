@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import Select from 'react-select';
 import {addGenericReference,refTypesList} from '../../helpers/helpers';
+import InputMask from 'react-input-mask';
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class AddEvent extends Component {
@@ -27,6 +28,8 @@ export default class AddEvent extends Component {
       loadMoreVisible: false,
       loadingPage: false,
       searchItem: '',
+      searchTemporal: '',
+      searchSpatial: '',
 
       saving: false,
       savingSuccess: false,
@@ -42,6 +45,9 @@ export default class AddEvent extends Component {
     this.selectedEvent = this.selectedEvent.bind(this);
     this.searchEvents = this.searchEvents.bind(this);
     this.clearSearchEvents = this.clearSearchEvents.bind(this);
+    this.clearSearchEventsTemporal = this.clearSearchEventsTemporal.bind(this);
+    this.clearSearchEventsSpatial = this.clearSearchEventsSpatial.bind(this);
+    this.keypress = this.keypress.bind(this);
     this.toggleAddNew = this.toggleAddNew.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
     this.submitReferences = this.submitReferences.bind(this);
@@ -59,10 +65,13 @@ export default class AddEvent extends Component {
   }
 
   async loadEvents() {
+    let temporal = this.state.searchTemporal.replace(/_/g,".");
     let params = {
       page: this.state.listPage,
       limit: this.state.listLimit,
-      label: this.state.searchItem
+      label: this.state.searchItem,
+      temporal: temporal,
+      spatial: this.state.searchSpatial,
     }
     let responseData = await axios({
         method: 'get',
@@ -122,13 +131,16 @@ export default class AddEvent extends Component {
   }
 
   searchEvents() {
+    let temporal = this.state.searchTemporal.replace(/_/g,".");
     this.setState({
       loading: true,
       list: []
     })
     let context = this;
     let params = {
-      label: this.state.searchItem
+      label: this.state.searchItem,
+      temporal: temporal,
+      spatial: this.state.searchSpatial,
     }
     axios({
         method: 'get',
@@ -166,12 +178,36 @@ export default class AddEvent extends Component {
     });
   }
 
+  keypress(e) {
+    if(e.which===13){
+      this.searchEvents();
+    }
+  }
+
   clearSearchEvents() {
     if (this.state.searchItem!=="") {
       this.setState({
         searchItem: '',
         list: []
       });
+    }
+  }
+  clearSearchEventsTemporal() {
+    if (this.state.searchTemporal!=="") {
+      this.setState({
+        searchTemporal: '',
+        list: []
+      });
+      this.loadEvents();
+    }
+  }
+  clearSearchEventsSpatial() {
+    if (this.state.searchSpatial!=="") {
+      this.setState({
+        searchSpatial: '',
+        list: []
+      });
+      this.loadEvents();
     }
   }
 
@@ -467,6 +503,16 @@ export default class AddEvent extends Component {
           <FormGroup className="autocomplete-search">
             <Input type="text" name="searchItem" placeholder="Search..." value={this.state.searchItem} onChange={this.handleChange}/>
             <div className="close-icon" onClick={()=>this.clearSearchEvents()}><i className="fa fa-times" /></div>
+          </FormGroup>
+          <FormGroup className="autocomplete-search">
+            <InputMask className="input-mask" placeholder="dd-mm-yyyy" mask="99-99-9999" name="searchTemporal" value={this.state.searchTemporal} onChange={this.handleChange} onKeyPress={this.keypress}/>
+            <div className="close-icon" onClick={()=>this.clearSearchEventsTemporal()}><i className="fa fa-times" /></div>
+            <div className="submit-icon" onClick={()=>this.searchEvents()}><i className="fa fa-search" /></div>
+          </FormGroup>
+          <FormGroup className="autocomplete-search">
+            <Input type="text" name="searchSpatial" placeholder="Search spatial..." value={this.state.searchSpatial} onChange={this.handleChange} onKeyPress={this.keypress}/>
+            <div className="close-icon" onClick={()=>this.clearSearchEventsSpatial()}><i className="fa fa-times" /></div>
+            <div className="submit-icon" onClick={()=>this.searchEvents()}><i className="fa fa-search" /></div>
           </FormGroup>
           <div className="events-list-container" ref={this.listRef}>
             {list}
