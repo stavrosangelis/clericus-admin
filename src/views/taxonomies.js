@@ -5,6 +5,7 @@ import {
   Button, Badge,
   Form, FormGroup, Label, Input,
   Modal, ModalHeader, ModalBody, ModalFooter,
+  Collapse,
   Spinner
 } from "reactstrap";
 import Select from 'react-select';
@@ -26,6 +27,8 @@ export default class Taxonomies extends React.Component {
       taxonomyLabel: '',
       taxonomyDescription: '',
       termModalVisible: false,
+      termRelations: [],
+      termRelationsCollapse: false,
       termId: '',
       termLabel: '',
       termInverseLabel: '',
@@ -59,6 +62,7 @@ export default class Taxonomies extends React.Component {
     this.select2Change = this.select2Change.bind(this);
     this.termModalToggle = this.termModalToggle.bind(this);
     this.deleteTerm = this.deleteTerm.bind(this);
+    this.toggleTermCollapse = this.toggleTermCollapse.bind(this);
     this.linkNewTermToTaxonomy = this.linkNewTermToTaxonomy.bind(this);
     this.deleteTaxonomy = this.deleteTaxonomy.bind(this);
     this.deleteModalToggle = this.deleteModalToggle.bind(this);
@@ -529,6 +533,7 @@ export default class Taxonomies extends React.Component {
       updateState.termScopeNote = '';
       updateState.termParentRef = '';
       updateState.termCount = 0;
+      updateState.termRelations = [];
     }
     updateState.taxonomyErrorVisible = false;
     updateState.taxonomyErrorText = [];
@@ -581,6 +586,7 @@ export default class Taxonomies extends React.Component {
       termScopeNote: scopeNote,
       termParentRef: parentRef,
       termCount: count,
+      termRelations: responseTerm.relations
     });
   }
 
@@ -603,7 +609,7 @@ export default class Taxonomies extends React.Component {
         context.loadItem(context.state.taxonomy._id);
       }
       else {
-        let error = responseData.error;
+        let error = responseData.msg;
         let errorText = [];
         for (let i=0; i<error.length; i++) {
           errorText.push(<div key={i}>{error[i]}</div>);
@@ -662,6 +668,12 @@ export default class Taxonomies extends React.Component {
     })
   }
 
+  toggleTermCollapse() {
+    this.setState({
+      termRelationsCollapse: !this.state.termRelationsCollapse
+    })
+  }
+
   componentDidMount() {
     this.load();
   }
@@ -711,7 +723,33 @@ export default class Taxonomies extends React.Component {
 
       let termCount = [];
       if (this.state.termCount>0) {
-        termCount = <div className="text-right"><b>Relations count</b>: {this.state.termCount}</div>
+        let term = this.state.taxonomyTerms.find(t=>t._id===this.state.termId);
+        let termRelationsCollapseActive = " active";
+        if (!this.state.termRelationsCollapse) {
+          termRelationsCollapseActive = "";
+        }
+        let domain = window.location.origin;
+        let termRelationsOutput = this.state.termRelations.map((t,i)=>{
+          let source = t.source;
+          let target = t.target;
+          let sourceLabel = source.labels[0];
+          let targetLabel = target.labels[0];
+          let sourceLink = domain+"/"+sourceLabel.toLowerCase()+"/"+source.identity;
+          let targetLink = domain+"/"+targetLabel.toLowerCase()+"/"+target.identity;
+          let item = <li key={i}>
+            <a href={sourceLink} target="_blank" rel="noopener noreferrer">{source.properties.label}</a>{' '}
+            <i>{this.state.termLabel}</i>{' '}
+            <a href={targetLink} target="_blank" rel="noopener noreferrer">{target.properties.label}</a>
+          </li>
+          return item;
+        });
+        termCount = [
+          <div className="text-right" onClick={()=>this.toggleTermCollapse()} key={0}><b>Relations count</b>: {this.state.termCount} &nbsp;&nbsp; <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+termRelationsCollapseActive} /></Button></div>,
+          <Collapse isOpen={this.state.termRelationsCollapse} key={1} className="term-relations-collapse-container">
+            <div className="text-right refresh-btn" onClick={()=>this.loadTerm(term)}>Refresh <i className="fa fa-refresh" /></div>
+            <ol>{termRelationsOutput}</ol>
+          </Collapse>
+      ]
       }
       let addTermModal = <Modal isOpen={this.state.termModalVisible} toggle={this.termModalToggle} className={this.props.className}>
           <ModalHeader toggle={this.termModalToggle}>{modalTitle}</ModalHeader>

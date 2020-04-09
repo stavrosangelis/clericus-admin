@@ -2603,3 +2603,23 @@ input.form-control.active {
 .autocomplete-search .submit-icon:active {
   background-color: #ccc;
 }
+.term-relations-collapse-container {
+  border: 1px solid #ddd;
+  padding: 5px;
+  margin: 2px 0;
+}
+.term-relations-collapse-container i {
+  color: #777;
+  font-size: 13px;
+}
+.term-relations-collapse-container ol {
+  margin: 0 0 0 0;
+  padding: 0 15px 0 30px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.refresh-btn {
+  font-size: 13px;
+  font-style: italic;
+  cursor: pointer;
+}
