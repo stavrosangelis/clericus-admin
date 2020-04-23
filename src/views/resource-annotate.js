@@ -87,7 +87,8 @@ const AnnotateTool = props => {
       .catch(function (error) {
       });
       setItem(responseData);
-      setResources(responseData.resources);
+      let itemResources = responseData.resources.filter(r=>r.term.label==="hasPart");
+      setResources(itemResources); 
     }
     return loadData();
   },[props.match.params._id]);
