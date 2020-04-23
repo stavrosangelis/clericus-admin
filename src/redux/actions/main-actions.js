@@ -229,7 +229,8 @@ export function setPaginationParams(type,params) {
 export function getSystemTypes() {
   return (dispatch,getState) => {
     let params = {
-      systemType: "resourceSystemTypes"
+      systemType: "resourceSystemTypes",
+      flat: true
     }
     axios({
       method: 'get',

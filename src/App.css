@@ -542,6 +542,19 @@ header {
   padding: 0;
   margin: 0;
 }
+.context-menu ul li a {
+  color: #333;
+  text-decoration: none;
+  cursor: default;
+  display: block;
+  width: calc(100% + 40px);
+  left: -20px;
+  height: 100%;
+  top: -4px;
+  position: relative;
+  padding: 4px 20px;
+  margin-bottom: -8px;
+}
 .context-menu ul li i {
   position: absolute;
   right: 3px;
@@ -2622,4 +2635,49 @@ input.form-control.active {
   font-size: 13px;
   font-style: italic;
   cursor: pointer;
+}
+.pdf-thumbnail {
+  text-align: center;
+  display: block;
+  min-width: 100px;
+  max-width: 200px;
+  cursor: pointer;
+}
+.pdf-thumbnail i {
+  font-size: 50px;
+}
+.pdf-thumbnail > label {
+  cursor: pointer;
+}
+.annotation-tool-container {
+  overflow: hidden;
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.annotation-item {
+  border: 2pt solid #13dbca;
+  background-color: rgba(52,219,58,0.2);
+  position: absolute;
+  cursor: move;
+}
+.annotation-tool-img-container {
+  -webkit-transform-origin: 0 0;
+  transform-origin: 0 0;
+}
+.annotation-tool-img {
+  cursor: grab;
+  user-select: none;
+  -moz-user-select: none;
+}
+.annotation-tool-img:active {
+  cursor: grabbing;
+}
+.annotation-tool.pan-container, .annotation-tool.zoom-container {
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  position: fixed;
+}
+.annotation-tool.zoom-container {
+  border-radius: 4px;
 }

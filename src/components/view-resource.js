@@ -14,6 +14,7 @@ import {
   loadRelatedPeople,
   loadRelatedResources
 } from '../helpers/helpers';
+import {Link} from 'react-router-dom';
 import UploadFile from './upload-file';
 
 
@@ -75,6 +76,16 @@ class ViewResource extends Component {
     this.toggleImageViewer = this.toggleImageViewer.bind(this);
     this.deleteClasspieceModalToggle = this.deleteClasspieceModalToggle.bind(this);
     this.deleteClasspiece = this.deleteClasspiece.bind(this);
+    this.updateSystemType = this.updateSystemType.bind(this);
+  }
+
+  updateSystemType(value) {
+    let systemType = this.props.resourcesTypes.find(i=>i.labelId===value);
+    if (typeof systemType!=="undefined") {
+      this.setState({
+        systemType: parseInt(systemType._id,10)
+      });
+    }
   }
 
   updateStatus(value) {
@@ -284,10 +295,16 @@ class ViewResource extends Component {
     let imgViewer = [];
     let thumbnailPath = getResourceThumbnailURL(resource);
     let thumbnailImage = [];
+    let annotateBtn = [];
     if (thumbnailPath!==null && resource.resourceType==="image") {
+      annotateBtn = <Link to={"/resource-annotate/"+this.props.resource._id} href={"/resource-annotate/"+this.props.resource._id} className="resource-upload-btn btn btn-info"><i className="fa fa-pencil" /> Annotate</Link>
       let fullsizePath = getResourceFullsizeURL(resource);
       thumbnailImage = [<div onClick={()=>this.toggleImageViewer(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>];
       imgViewer = <Viewer visible={this.state.imageViewerVisible} path={fullsizePath} label={this.state.label} toggle={this.toggleImageViewer}/>
+    }
+    if (resource.resourceType==="document") {
+      let fullsizePath = getResourceFullsizeURL(resource);
+      thumbnailImage = [<a key="link" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><i className="fa fa-file-pdf-o"/></a>, <a key="link-label" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><label>Preview file</label> </a>];
     }
     let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
     let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>
@@ -300,6 +317,7 @@ class ViewResource extends Component {
         uploadResponse={this.props.uploadResponse}
         label={this.state.label}
         description={this.state.description}
+        updateSystemType={this.updateSystemType}
         />;
       deleteBtn = [];
       updateBtn = [];
@@ -317,6 +335,7 @@ class ViewResource extends Component {
                 uploadResponse={this.props.uploadResponse}
                 label={this.state.label}
                 description={this.state.description}
+                updateSystemType={this.updateSystemType}
                 />
             </div>
           </ModalBody>
@@ -440,6 +459,7 @@ class ViewResource extends Component {
       <div className="row">
         <div className="col-xs-12 col-sm-6">
           {thumbnailImage}
+          {annotateBtn}
           {imgViewer}
         </div>
         <div className="col-xs-12 col-sm-6">

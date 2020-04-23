@@ -177,7 +177,7 @@ class Resource extends Component {
       let context = this;
       setTimeout(function() {
         context.setState({
-          updateBtn: <span><i className="fa fa-save" /> Update success</span>
+          updateBtn: <span><i className="fa fa-save" /> Update</span>
         });
       },2000);
     }

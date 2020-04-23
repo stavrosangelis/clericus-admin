@@ -472,15 +472,18 @@ class Entities extends React.Component {
     if (entity!==null) {
       for (let i=0; i<entity.properties.length; i++) {
         let property = entity.properties[i];
-        let label = property.term.label;
-        let taxonomyTerm = this.state.taxonomyTerms.find(item=>item.label===label);
+        let labelId = property.term.label;
+        let taxonomyTerm = this.state.taxonomyTerms.find(item=>item.labelId===labelId);
+        let label = "";
         property.term.direction = "from";
         if (typeof taxonomyTerm==="undefined") {
-          taxonomyTerm = this.state.taxonomyTerms.find(item=>item.inverseLabel===label);
+          taxonomyTerm = this.state.taxonomyTerms.find(item=>item.inverseLabelId===labelId);
           property.term.direction = "to";
+          label = taxonomyTerm.inverseLabel;
         }
         if (typeof taxonomyTerm!=="undefined") {
           property.term._id = taxonomyTerm._id;
+          label = taxonomyTerm.label;
         }
         let item = <li key={i} onClick={()=>this.togglePropertyModal(property)}><span className="property-term">{label}</span> <span className="property-entity">{property.entityRef.label}</span></li>;
         output.push(item);

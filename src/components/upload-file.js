@@ -15,7 +15,9 @@ export default class UploadFile extends Component {
       progressVisible: false,
       progress: 0,
       uploading: false,
-      uploadingBtn: <span><i className="fa fa-upload" /> Upload</span>
+      uploadingBtn: <span><i className="fa fa-upload" /> Upload</span>,
+      errorVisible: false,
+      errorText: [],
     }
 
     this.onDragOver = this.onDragOver.bind(this);
@@ -62,7 +64,10 @@ export default class UploadFile extends Component {
     this.setState({
       dragging: false,
       file: file
-    })
+    });
+    if (file.type==="application/pdf") {
+      this.props.updateSystemType("Document");
+    }
   }
 
   addFileUpload() {
@@ -76,10 +81,13 @@ export default class UploadFile extends Component {
     let file = target.files[0];
     this.setState({
       file: file
-    })
+    });    
+    if (file.type==="application/pdf") {
+      this.props.updateSystemType("Document");
+    }
   }
 
-  uploadFile() {
+  async uploadFile() {
     if (this.state.uploading || this.state.file===null) {
       return false;
     }
@@ -110,7 +118,7 @@ export default class UploadFile extends Component {
     postData.append("systemType", JSON.stringify(this.props.systemType));
     var contentLength = postData.length;
     let context = this;
-    axios({
+    let responseData = await axios({
       method: "post",
       url: url,
       data: postData,
@@ -130,8 +138,13 @@ export default class UploadFile extends Component {
       }
     })
     .then(function (response) {
-      let responseData = response.data;
-      context.setState({
+      return response.data;
+    })
+    .catch(function (response) {
+        console.log(response);
+    });
+    if (responseData.status) {
+      this.setState({
         uploading: false,
         uploadingBtn: <span><i className="fa fa-upload" /> Upload success <i className="fa fa-check" /></span>
       });
@@ -143,11 +156,28 @@ export default class UploadFile extends Component {
 
         context.props.uploadResponse(responseData);
       },1000);
+    }
+    else {
+      let errorText = [];
+      if (responseData.error && responseData.msg.length>0) {
+        errorText = responseData.msg.map((m,i)=>{
+          return <div key={i}>{m}</div>
+        });
+      }
+      this.setState({
+        errorVisible: true,
+        errorText: errorText,
+        uploading: false,
+        uploadingBtn: <span><i className="fa fa-upload" /> Upload error <i className="fa fa-times" /></span>
+      });
 
-    })
-    .catch(function (response) {
-        console.log(response);
-    });
+      setTimeout(function() {
+        context.setState({
+          progressVisible: false,
+          uploadingBtn: <span><i className="fa fa-upload" /> Upload</span>
+        });
+      },1000);
+    }
   }
 
   clearFile() {
@@ -199,9 +229,16 @@ export default class UploadFile extends Component {
       </div>
 
     }
+
+    let errorContainerClass = " hidden";
+    if (this.state.errorVisible) {
+      errorContainerClass = "";
+    }
+    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
     return (
       <div>
         {this.state.inputForm}
+        {errorContainer}
         <UncontrolledTooltip placement="right" target="dropzoneBox">
           Click the plus icon or drop a file in the box to upload a file
         </UncontrolledTooltip>

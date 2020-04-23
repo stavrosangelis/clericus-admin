@@ -14,6 +14,7 @@ import Person from "../views/person";
 import Register from "../views/register";
 import Resources from "../views/resources";
 import Resource from "../views/resource";
+import AnnotateTool from "../views/resource-annotate";
 import Slideshow from "../views/slideshow";
 import Spatial from "../views/spatial";
 import Spatials from "../views/spatials";
@@ -64,13 +65,22 @@ var indexRoutes = [
     icon: "pe-7s-photo",
     component: Resources,
     showMenu: true,
-    children: [{
-      path: "/resource/:_id",
-      name: "Resource",
-      icon: "fa fa-circle-o",
-      component: Resource,
-      showMenu: false,
-    }]
+    children: [
+      {
+        path: "/resource/:_id",
+        name: "Resource",
+        icon: "fa fa-circle-o",
+        component: Resource,
+        showMenu: false,
+      },
+      {
+        path: "/resource-annotate/:_id",
+        name: "Resource Annotate",
+        icon: "fa fa-circle-o",
+        component: AnnotateTool,
+        showMenu: false,
+      }
+    ]
   },
   {
     path: "/people",

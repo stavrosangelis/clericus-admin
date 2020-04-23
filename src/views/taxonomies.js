@@ -9,6 +9,7 @@ import {
   Spinner
 } from "reactstrap";
 import Select from 'react-select';
+import { Link } from 'react-router-dom';
 import {addGenericReference} from '../helpers/helpers';
 
 import {Breadcrumbs} from '../components/breadcrumbs';
@@ -45,11 +46,11 @@ export default class Taxonomies extends React.Component {
       taxonomySaveBtn: <span><i className="fa fa-save"/> Save</span>,
 
       deleteModalVisible: false,
+      termsListOptions: [],
     }
 
     this.load = this.load.bind(this);
     this.loadItem = this.loadItem.bind(this);
-    this.loadTermsTree = this.loadTermsTree.bind(this);
     this.processTerms = this.processTerms.bind(this);
     this.list = this.list.bind(this);
     this.showItem = this.showItem.bind(this);
@@ -125,28 +126,6 @@ export default class Taxonomies extends React.Component {
       taxonomyLabel: newLabel,
       taxonomyDescription: newDescription,
       taxonomyTerms: taxonomy.taxonomyterms
-    });
-  }
-
-  loadTermsTree(_id) {
-    let context = this;
-    let params = {
-      taxonomyRef: _id
-    }
-    axios({
-        method: 'get',
-        url: APIPath+'taxonomy-terms-tree',
-        crossDomain: true,
-        params: params,
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      let newTerms = context.processTerms(responseData);
-      context.setState({
-        taxonomyTerms: newTerms
-      });
-    })
-    .catch(function (error) {
     });
   }
 
@@ -280,19 +259,27 @@ export default class Taxonomies extends React.Component {
     })
   }
 
-  termsList(terms) {
+  termsList(terms, termId=null, sep="") {
     let options = [];
-    let defaultValue = {value: '', label: '--'};
-    options.push(defaultValue);
     for (let i=0; i<terms.length; i++) {
       let term = terms[i];
-      let option = {value: term._id, label: term.label};
-      options.push(option);
+      if (termId!==term._id) {
+        let option = {value: term._id, label: sep+" "+term.label};
+        options.push(option);
+        if (term.children.length>0) {
+          let childSep = "-"+sep;
+          let termChildren = this.termsList(term.children, termId, childSep);
+          for (let c=0; c<termChildren.length; c++) {
+            options.push(termChildren[c]);
+          }
+        }
+      }
     }
+
     return options;
   }
 
-  formSubmit(e) {
+  async formSubmit(e) {
     e.preventDefault();
     let context = this;
     if (this.state.taxonomySaving) {
@@ -323,49 +310,49 @@ export default class Taxonomies extends React.Component {
     if (typeof this.state.taxonomy._id!=="undefined" && this.state.taxonomy._id!=="") {
       postData._id = this.state.taxonomy._id;
     }
-    axios({
+    let responseData = await axios({
       method: 'put',
       url: APIPath+'taxonomy',
       crossDomain: true,
       data: postData,
     })
     .then(function (response) {
-      let responseData = response.data;
-      if (responseData.status) {
-        context.setState({
-          taxonomySaving: false,
-          taxonomySaveBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
-        });
-        context.load();
-        context.loadItem(responseData.data._id);
-        setTimeout(function() {
-          context.setState({
-            taxonomySaveBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },1000);
-      }
-      else {
-        let errorMsg = responseData.msg;
-        let errorText = [];
-        for (let i=0; i<errorMsg.length; i++) {
-          errorText.push(<div key={i}>{errorMsg[i]}</div>);
-        }
-        context.setState({
-          taxonomySaving: false,
-          taxonomySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-          taxonomyErrorVisible: true,
-          taxonomyErrorText: errorText
-        });
-        setTimeout(function() {
-          context.setState({
-            taxonomySaveBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },2000);
-      }
-
+      return response.data;
     })
     .catch(function (error) {
     });
+    if (responseData.status) {
+      context.setState({
+        taxonomySaving: false,
+        taxonomySaveBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
+      });
+      context.load();
+      context.loadItem(responseData.data._id);
+      setTimeout(function() {
+        context.setState({
+          taxonomySaveBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },1000);
+    }
+    else {
+      let errorMsg = responseData.msg;
+      let errorText = [];
+      for (let i=0; i<errorMsg.length; i++) {
+        errorText.push(<div key={i}>{errorMsg[i]}</div>);
+      }
+      context.setState({
+        taxonomySaving: false,
+        taxonomySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
+        taxonomyErrorVisible: true,
+        taxonomyErrorText: errorText
+      });
+      setTimeout(function() {
+        context.setState({
+          taxonomySaveBtn: <span><i className="fa fa-save" /> Save</span>
+        });
+      },2000);
+    }
+    //addGenericReference
   }
 
   async editTermSubmit(e) {
@@ -433,6 +420,20 @@ export default class Taxonomies extends React.Component {
     .catch(function (error) {
     });
     if (putData.status) {
+      if (this.state.termId==="") {
+        await this.linkNewTermToTaxonomy(putData.data._id);
+        postData._id = putData.data._id;
+      }
+      if (typeof postData.parentRef!=="undefined") {
+        let newReference = {
+          items: [
+            {_id: postData.parentRef, type: "TaxonomyTerm"},
+            {_id: postData._id, type: "TaxonomyTerm"},
+          ],
+          taxonomyTermLabel: "hasChild",
+        }
+        await addGenericReference(newReference);
+      }
       this.setState({
         termSaving: false,
         termModalVisible: false,
@@ -443,9 +444,6 @@ export default class Taxonomies extends React.Component {
         termParentRef: '',
         updateTermBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
       });
-      if (this.state.termId==="") {
-        await this.linkNewTermToTaxonomy(putData.data._id);
-      }
       await this.load();
       await this.loadItem(this.state.taxonomy._id);
       setTimeout(function() {
@@ -475,29 +473,12 @@ export default class Taxonomies extends React.Component {
   }
 
   async linkNewTermToTaxonomy(newTermId) {
-    let hasChildTerm = await axios({
-        method: 'get',
-        url: APIPath+'taxonomy-term',
-        crossDomain: true,
-        params: {labelId: "hasChild"},
-      })
-    .then( async(response) => {
-      let responseData = response.data;
-      if (responseData.status) {
-        return responseData.data;
-      }
-      else {
-        return responseData.error;
-      }
-    })
-    .catch(function (error) {
-    });
     let newReference = {
       items: [
         {_id: this.state.taxonomy._id, type: "Taxonomy"},
         {_id: newTermId, type: "TaxonomyTerm"}
       ],
-      taxonomyTermId: hasChildTerm._id,
+      taxonomyTermLabel: "hasChild",
     }
     let addReference = await addGenericReference(newReference);
     return addReference;
@@ -525,6 +506,11 @@ export default class Taxonomies extends React.Component {
       if (term!==null) {
         this.loadTerm(term);
       }
+      else {
+        let termsListOptions = this.termsList(this.state.taxonomyTerms, null, "");
+        termsListOptions.unshift({value: "", label: "--"});
+        updateState.termsListOptions = termsListOptions;
+      }
     }
     else {
       updateState.termId = '';
@@ -532,6 +518,7 @@ export default class Taxonomies extends React.Component {
       updateState.termInverseLabel = '';
       updateState.termScopeNote = '';
       updateState.termParentRef = '';
+      updateState.parentRef = '';
       updateState.termCount = 0;
       updateState.termRelations = [];
     }
@@ -557,7 +544,6 @@ export default class Taxonomies extends React.Component {
     })
     .catch(function (error) {
     });
-
     let termId = "";
     if (typeof responseTerm._id!=="undefined" && responseTerm._id!==null) {
       termId = responseTerm._id;
@@ -579,6 +565,11 @@ export default class Taxonomies extends React.Component {
       count = parseInt(responseTerm.count,10);
     }
     let parentRef = "";
+    if (typeof responseTerm.parentRef!=="undefined" && responseTerm.parentRef!==null) {
+      parentRef = responseTerm.parentRef;
+    }
+    let termsListOptions = this.termsList(this.state.taxonomyTerms, termId, "");
+    termsListOptions.unshift({value: "", label: "--"});
     this.setState({
       termId: termId,
       termLabel: termLabel,
@@ -586,7 +577,17 @@ export default class Taxonomies extends React.Component {
       termScopeNote: scopeNote,
       termParentRef: parentRef,
       termCount: count,
-      termRelations: responseTerm.relations
+      termRelations: responseTerm.relations,
+      termsListOptions: termsListOptions
+    }, ()=> {
+      if (typeof parentRef!=="undefined" && parentRef!==null && parentRef!=="") {
+        let parentRefOption = this.state.termsListOptions.find(t=>t.value===parentRef);
+        if (typeof parentRefOption!=="undefined") {
+          this.setState({
+            parentRef: parentRefOption
+          });
+        }
+      }
     });
   }
 
@@ -713,8 +714,7 @@ export default class Taxonomies extends React.Component {
       }
       let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
 
-      let termsList = this.termsList(this.state.taxonomyTerms);
-
+      let termsList = this.state.termsListOptions;
 
       let scopeNoteValue = "";
       if (this.state.termScopeNote!=="") {
@@ -728,18 +728,27 @@ export default class Taxonomies extends React.Component {
         if (!this.state.termRelationsCollapse) {
           termRelationsCollapseActive = "";
         }
-        let domain = window.location.origin;
+
         let termRelationsOutput = this.state.termRelations.map((t,i)=>{
           let source = t.source;
           let target = t.target;
-          let sourceLabel = source.labels[0];
-          let targetLabel = target.labels[0];
-          let sourceLink = domain+"/"+sourceLabel.toLowerCase()+"/"+source.identity;
-          let targetLink = domain+"/"+targetLabel.toLowerCase()+"/"+target.identity;
+          let sourceLabel = source.nodeType.toLowerCase();
+          let targetLabel = target.nodeType.toLowerCase();
+          let sourceLink = "/"+sourceLabel+"/"+source._id;
+          let targetLink = "/"+targetLabel+"/"+target._id;
+          if (sourceLabel==="entity") {
+            sourceLabel = "entities";
+            sourceLink = "/"+sourceLabel;
+          }
+          if (targetLabel==="entity") {
+            targetLabel = "entities";
+            targetLink = "/"+targetLabel
+          }
+
           let item = <li key={i}>
-            <a href={sourceLink} target="_blank" rel="noopener noreferrer">{source.properties.label}</a>{' '}
+            <Link href={sourceLink} to={sourceLink} target="_blank">{source.label}</Link>{' '}
             <i>{this.state.termLabel}</i>{' '}
-            <a href={targetLink} target="_blank" rel="noopener noreferrer">{target.properties.label}</a>
+            <Link href={targetLink} to={targetLink} target="_blank">{target.label}</Link>
           </li>
           return item;
         });
