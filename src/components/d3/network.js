@@ -2,6 +2,295 @@ import React, {Component} from 'react';
 import {Input, FormGroup} from 'reactstrap';
 import * as d3 from "d3";
 
+var canvas, ctx, nodes, links, sizeRatio, width, height, edgesType, edgesLabels, transform={k:1,x:0,y:0};
+
+const calcNodeSize = (size, sizeRatio) => {
+  // min: 1.7 max: 5
+  let newSize = parseFloat(sizeRatio,10)*parseInt(size,10);
+  if (newSize<1.7) {
+    newSize = 1.7;
+  }
+  return newSize*15;
+}
+
+const zoomedEnd = async() => {
+  if (d3.event!==null && d3.event.transform!==null) {
+    transform = d3.event.transform;
+  }
+  let scale = transform.k;
+  ctx.save();
+  ctx.clearRect(0,0,width,height);
+  ctx.translate(transform.x, transform.y);
+  ctx.scale(scale, scale);
+  drawLines(transform);
+  drawNodes(transform);
+  ctx.restore();
+}
+
+const zoom_handler = d3.zoom()
+  .scaleExtent([0.1, 8])
+  .on("zoom",zoomedEnd);
+
+const drawNodes = (coords) => {
+  let nodesCount = d3.select("#nodes-count");
+  if (nodesCount.html()==="") {
+    nodesCount.html(nodes.length);
+  }
+  let lx = coords.x;
+  let ty = coords.y;
+  let scale = coords.k;
+  let sizes = nodes.map(n=>n.count);
+  let maxSize = Math.max(...sizes);
+  sizeRatio = 3/maxSize;
+  for (let i=0; i<nodes.length; i++) {
+    let d = nodes[i];
+    d.visible = false;
+    d.radius = calcNodeSize(d.count, sizeRatio);
+    let radius = d.radius;
+    let x = d.x;
+    let y = d.y;
+    let newX = lx+(x*scale);
+    let newY = ty+(y*scale);
+    if (newX>0 && newX<width && newY>0 && newY<height) {
+      d.visible = true;
+      let labelRows = d.label.split(" ").filter(i=>i!=="");
+      ctx.beginPath();
+      // circle
+      if (typeof d.selected!=="undefined" && d.selected) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#33729f";
+        radius+=5;
+      }
+      else if (typeof d.associated!=="undefined" && d.associated) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = d.strokeColor;
+      }
+      else {
+        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = d.strokeColor;
+      }
+      ctx.arc(x, y, radius, 0, 2 * Math.PI, true);
+      ctx.fillStyle = d.color;
+      ctx.fill();
+      ctx.stroke();
+      let textX = x;
+      let textY = y;
+      let length = labelRows.length;
+      if (length>2) {
+        textY -= 6 ;
+      }
+      for (let t=0; t<labelRows.length; t++) {
+        let label = labelRows[t];
+        ctx.fillStyle = "#333333";
+        ctx.font = "9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "Top";
+        ctx.fillText(label, textX, textY)
+        textY+=10;
+      }
+
+      ctx.closePath();
+    }
+  }
+}
+
+const drawLines = (coords) => {
+  let coordsX = coords.x;
+  let coordsY = coords.y;
+  let scale = coords.k;
+  if (edgesType==="simple") {
+    let compare = [];
+    let newLinks = [];
+    for (let i=0; i<links.length; i++) {
+      let item = links[i];
+      let nodes = `${item.source.index},${item.target.index}`;
+      if(compare.indexOf(nodes)===-1) {
+        compare.push(nodes);
+        newLinks.push(item);
+      }
+    }
+    links = newLinks;
+  }
+  let linksCount = d3.select("#links-count");
+  if (linksCount.html()==="") {
+    linksCount.html(links.length);
+  }
+  let pairs = [];
+  for (let i=0; i<links.length; i++) {
+    let d = links[i];
+    let sx = d.source.x;
+    let sy = d.source.y;
+    let tx = d.target.x;
+    let ty = d.target.y;
+
+    let inverse=false;
+    let pair = `${d.source.index},${d.target.index}`;
+    let inversePair = `${d.target.index},${d.source.index}`;
+    if (pairs.indexOf(pair)>-1 || pairs.indexOf(inversePair)>-1) {
+      inverse=true;
+    }
+    else {
+      pairs.push(pair);
+      pairs.push(inversePair);
+    }
+    //fix source direction
+    if (inverse) {
+      let origin = links.find(l=>l.source.index===d.source.index && l.target.index===d.target.index && l.index!==d.index);
+      if (typeof origin==="undefined") {
+        origin = links.find(l=>l.source.index===d.target.index && l.target.index===d.source.index && l.index!==d.index);
+      }
+      if (typeof origin!=="undefined") {
+        if (sx!==origin.source.x && sy!==origin.source.y) {
+          sx = origin.source.x;
+          sy = origin.source.y;
+          tx = origin.target.x;
+          ty = origin.target.y;
+        }
+      }
+    }
+
+    let newX = coordsX+(sx*scale);
+    let newY = coordsY+(sy*scale);
+    if (newX>0 && newX<width && newY>0 && newY<height) {
+      if (edgesType==="simple" && !inverse) {
+        ctx.beginPath();
+        ctx.moveTo(d.source.x, d.source.y);
+        ctx.lineTo(d.target.x, d.target.y);
+        if (typeof d.associated!=="undefined" && d.associated) {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#33729f";
+        }
+        else {
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = "#999";
+        }
+        if (edgesLabels==="visible") {
+          let sx = d.source.x, sy = d.source.y;
+          let tx = d.target.x, ty = d.target.y;
+          let lineWidth = 0;
+          let lineHeight = 0;
+          let textX = 0;
+          let textY = 0;
+          let smallX,smallY;
+          if (sx>tx) {
+            smallX = tx;
+            lineWidth = sx-tx;
+          }
+          else {
+            smallX = sx;
+            lineWidth = tx-sx;
+          }
+          textX = smallX+(lineWidth/2);
+          if (sy>ty) {
+            smallY = ty;
+            lineHeight = sy-ty;
+          }
+          else {
+            smallY = sy;
+            lineHeight = ty-sy;
+          }
+          textY= smallY+(lineHeight/2);
+          ctx.fillStyle = "#666";
+          ctx.font = "9px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(d.label, textX, textY);
+        }
+        ctx.stroke();
+        ctx.closePath();
+      }
+      if (edgesType==="double") {
+        let mx = 0;
+        let my = 0;
+        let middlePointX = 0;
+        let middlePointY = 0;
+        let tension = 50;
+        if (sx<=tx) {
+          middlePointX = (tx-sx)/2;
+        }
+        else {
+          middlePointX = (sx-tx)/2;
+        }
+        if (sy<=ty) {
+          middlePointY = (ty-sy)/2;
+        }
+        else {
+          middlePointY = (sy-ty)/2;
+        }
+        if (middlePointX<tension) middlePointX = tension
+        if (middlePointY<tension) middlePointY = tension;
+        if (inverse) {
+          if (sx<=tx && sy<=ty) {
+            mx = sx+(middlePointX/2);
+            my = ty-(middlePointY/2);
+          }
+          if (sx>tx && sy<ty) {
+            mx = sx-(middlePointX/2);
+            my = ty-(middlePointY/2);
+          }
+          if (sx>tx && sy>ty) {
+            mx = tx+(middlePointX/2);
+            my = sy-(middlePointY/2);
+          }
+          if (sx<tx && sy>ty) {
+          mx = sx+(middlePointX/2);
+          my = ty+(middlePointY/2);
+        }
+        }
+        else {
+          if (sx<=tx && sy<=ty) {
+            mx = tx-(middlePointX/2);
+            my = sy+(middlePointY/2);
+          }
+          if (sx>tx && sy<ty) {
+            mx = tx+(middlePointX/2);
+            my = sy+(middlePointY/2);
+          }
+          if (sx>tx && sy>ty) {
+            mx = sx-(middlePointX/2);
+            my = ty+(middlePointY/2);
+          }
+          if (sx<tx && sy>ty) {
+            mx = tx-(middlePointX/2);
+            my = sy-(middlePointY/2);
+          }
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(mx, my, tx, ty);
+        if (typeof d.associated!=="undefined" && d.associated) {
+          ctx.lineWidth = 3;
+          if (inverse) ctx.strokeStyle = "#36af50"
+          else ctx.strokeStyle = "#33729f";
+        }
+        else {
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = "#999";
+        }
+        if (edgesLabels==="visible") {
+          let textColor = "#666";
+          let fontStyle = "9px sans-serif";
+          if (typeof d.associated!=="undefined" && d.associated) {
+            if (inverse) {
+              textColor = "#36af50";
+            }
+            else {
+              textColor= "#33729f";
+            }
+            fontStyle = "bold 9px sans-serif";
+          }
+          ctx.fillStyle = textColor;
+          ctx.font = fontStyle;
+          ctx.textAlign = "center";
+          ctx.fillText(d.label, mx, my);
+        }
+        ctx.stroke();
+        ctx.closePath();
+      }
+    }
+  }
+}
+
 class NetworkGraph extends Component {
   constructor(props) {
     super(props);
@@ -10,81 +299,57 @@ class NetworkGraph extends Component {
       chart: [],
       optionsVisible: false,
       edgesType: "simple",
-      edgesLabels: "hidden",
-      d: null
+      edgesLabels: "visible",
+      d: null,
+      associatedNodes: [],
+      associatedLinks: []
     }
 
     this.drawGraph = this.drawGraph.bind(this);
-    this.chart = this.chart.bind(this);
-    this.calcNodeSize = this.calcNodeSize.bind(this);
-    this.drag = this.drag.bind(this);
-    this.dragstarted = this.dragstarted.bind(this);
-    this.dragged = this.dragged.bind(this);
-    this.dragended = this.dragended.bind(this);
-    this.zoomedStart = this.zoomedStart.bind(this);
-    this.zoomed = this.zoomed.bind(this);
-    this.zoomedEnd = this.zoomedEnd.bind(this);
+    this.updateDimensions = this.updateDimensions.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.toggleOptions = this.toggleOptions.bind(this);
     this.clickNode = this.clickNode.bind(this);
     this.selectedNodes = this.selectedNodes.bind(this);
-    this.clearSelected = this.clearSelected.bind(this);
+    this.clearAssociated = this.clearAssociated.bind(this);
   }
 
   drawGraph() {
     let data = this.props.data;
-    let width = this.props.width;
-    let height = this.props.height;
-
     if (data===null) {
       return false;
     }
-    let chart = this.chart(data,width,height);
-    document.getElementById("network-graph").innerHTML = "";
-    document.getElementById("network-graph").append(chart);
-  }
+    width = this.props.width;
+    height = this.props.height;
+    edgesType = this.state.edgesType;
+    edgesLabels = this.state.edgesLabels;
 
-  chart(data,width,height) {
-    const context = this;
-    var links = data.links.map(d => Object.create(d));
-    const nodes = data.nodes.map(d => Object.create(d));
+    let container = d3.select("#network-graph");
+    container.html("");
 
-    if (this.state.edgesType==="simple") {
-      let newLinks = [];
-      let linksCheck = [];
-      for (let i=0; i<links.length; i++) {
-        let link = links[i];
-        let source = String(link.source);
-        let target = String(link.target);
-        let check0 = source+", "+target;
-        let check1 = target+", "+source;
-        if (linksCheck.indexOf(check0)===-1 && linksCheck.indexOf(check1)===-1) {
-          newLinks.push(link);
-          linksCheck.push(check0);
-        }
-      }
-      links = newLinks;
-    }
+    canvas = container
+      .append("canvas")
+      .attr("id", "visualisation-canvas")
+			.attr('width', width)
+			.attr('height', height);
 
-    let sizes = nodes.map(n=>n.count);
-    let maxSize = Math.max(...sizes);
-    let sizeRatio = 3/maxSize;
+    ctx = canvas.node().getContext('2d');
+
+    nodes = data.nodes.map(d => Object.create(d));
+    links = data.links.map(d => Object.create(d));;
+
     let strength = -400;
-    if (this.state.edgesType==="double") {
-      strength = -2000;
-    }
     const simulation = d3.forceSimulation(nodes)
       .force("link",
-        d3.forceLink(links)
+      d3.forceLink(links)
           .id(d => d.id)
           .strength(1)
-          .distance(60)
+          .distance(200)
         )
       .force("charge", d3.forceManyBody().strength(strength))
       .force("center", d3.forceCenter(width/2, height/2))
-      .force('collide', d3.forceCollide(20))
+      .force('collide', d3.forceCollide(60))
       .stop();
-
 
     // control ticks aka performance trick
     const iterations = 100;
@@ -98,393 +363,64 @@ class NetworkGraph extends Component {
     }
     simulation.stop();
 
-    const svg = d3.create("svg")
-        .attr("viewBox", [0, 0, width, height]);
-
-    const g = svg.append("g")
-        .attr("class", "zoom-container");
-
-
-    var link = null;
-    if (this.state.edgesType==="simple") {
-      link = g.selectAll(".network-line")
-        .data(links)
-        .enter()
-        .append("line")
-        .attr('class', 'network-line')
-        .style("pointer-events", "none")
-        .attr("id", d=>"link-line-"+d.refId)
-        .attr("stroke-width", 1)
-        .attr("stroke", "#999")
-        .attr("stroke-opacity", 0.9)
-        .attr("x1", d=>d.source.x)
-        .attr("y1", d=>d.source.y)
-        .attr("x2", d=>d.target.x)
-        .attr("y2", d=>d.target.y);
-
-      if (this.state.edgesLabels==="visible") {
-        g.selectAll(".network-line-path")
-          .data(links)
-          .enter()
-          .append('path')
-          .attr('class', 'network-line-path')
-          .attr('fill-opacity', 0)
-          .attr('stroke-opacity', 0)
-          .attr('id',d=>"link-path-"+d.refId)
-          .style("pointer-events", "none")
-          .attr('d', d => 'M ' + d.source.x + ' ' + d.source.y + ' L ' + d.target.x + ' ' + d.target.y);
-
-        g.selectAll(".network-text")
-          .data(links)
-          .enter()
-          .append("text")
-          .attr("id", d=>"link-text-"+d.refId)
-          .attr("class", "network-text")
-          .style("pointer-events", "none")
-          .append("textPath")
-          .style("text-anchor","middle")
-          .style("pointer-events", "none")
-          .attr("font-size", "5pt")
-          .attr("xlink:href", d=>"#link-path-"+d.refId)
-          .attr("startOffset", "50%")
-          .attr("font-family", "sans-serif")
-          .attr("fill", "#666")
-          .text(d=> d.label);
-      }
-    }
-    if (this.state.edgesType==="double") {
-      link = g.selectAll("path")
-        .data(links)
-        .enter().append("g")
-        .style("pointer-events", "none")
-        .attr("id", d=>"link-"+d.refId)
-
-      link.append("path")
-        .attr("class", "network-line")
-        .attr("fill", "none")
-        .attr("stroke-width", 1)
-        .attr("stroke", "#999")
-        .attr("stroke-opacity", 0.9)
-        .attr("marker-end", "url(#end)")
-        .attr("id", d=>"link-line-"+d.refId)
-        .style("pointer-events", "none")
-        .attr("d", (d)=> {
-          let dx = d.target.x - d.source.x,
-          dy = d.target.y - d.source.y,
-          dr = Math.sqrt(dx * dx + dy * dy);
-          return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
-        });
-
-        // markers
-        g.append("svg:defs").selectAll("marker")
-          .data(["end"])
-          .enter().append("svg:marker")
-          .attr("id", String)
-          .attr("viewBox", "0 -5 10 10")
-          .attr("refX", 58)
-          .attr("refY",-4.5)
-          .attr("markerWidth", 4)
-          .attr("markerHeight", 4)
-          .attr("orient", "auto")
-          .attr("fill", "#999")
-          .style("pointer-events", "none")
-          .append("svg:path")
-          .attr("d", "M0,-5L10,0L0,5");
-
-        if (this.state.edgesLabels==="visible") {
-          link
-            .append("text")
-            .append("textPath")
-            .style("text-anchor","middle")
-            .style("pointer-events", "none")
-            .attr("font-size", "4.5pt")
-            .attr("class", "network-text")
-            .attr("id", d=>"link-text-"+d.refId)
-            .attr("xlink:href", d=>"#link-line-"+d.refId)
-            .attr("startOffset", "50%")
-            .attr("font-family", "sans-serif")
-            .attr("fill", "#666")
-            .text(d=> d.label);
-        }
-    }
-
-    const node = g.selectAll("circle")
-      .data(nodes)
-      .enter().append("g")
-      //.call(this.drag(simulation))
-      .attr("class", "network-node")
-      .attr("id", d=>"node-"+d.id)
-      .on("click", d=>{
-        this.clickNode(d)
-      })
-      .attr("transform", d=> "translate(" + d.x  + "," + d.y + ")")
-
-    node.append("circle")
-      .attr("stroke", d=>d.strokeColor)
-      .attr("stroke-width", 0.5)
-      .attr("r", d=>context.calcNodeSize(d.count, sizeRatio))
-      .attr("fill", d=>d.color)
-      .attr("class", "network-circle");
-
-    node.append("clipPath")
-      .attr("id", d => "clip-path-"+d.id);
-
-    node.append("text")
-        .attr("clip-path", d => "clip-path-"+d.id)
-        .selectAll("tspan")
-        .data(d => d.label.split(" "))
-        .join("tspan")
-        .attr("text-anchor", "middle")
-        .attr("font-size", "4.5pt")
-        .attr("font-family", "sans-serif")
-        .attr("fill", "#fff")
-        .attr("x", 0)
-        .attr("y", (d, i, nodes) => {
-          let y = i - nodes.length/2 + 0.6+"em";
-          return  y
-        })
-        .text(d => d);
-
-    const zoom_handler = d3.zoom()
-      .scaleExtent([0.1, 8])
-      .on("start", context.zoomedStart)
-      .on("zoom", context.zoomed)
-      .on("end", context.zoomedEnd);
-
-    zoom_handler(svg);
-
-    /* add zoom and pan btn actions */
     d3.select("#graph-zoom-in")
-      .on("click", function() {
-        zoom_handler.scaleBy(svg, 1.25);
-      });
+    .on("click", function() {
+      zoom_handler.scaleBy(canvas, 1.25);
+    });
     d3.select("#graph-zoom-out")
-      .on("click", function() {
-        zoom_handler.scaleBy(svg, 0.75);
-      });
-
+    .on("click", function() {
+      zoom_handler.scaleBy(canvas, 0.75);
+    });
     d3.select("#graph-pan-up")
-      .on("click", function() {
-        let currentTransform = d3.zoomTransform(svg);
-        let newX = currentTransform.x;
-        let newY = currentTransform.y - 50;
-        zoom_handler.translateBy(svg, newX, newY);
-      });
+    .on("click", function() {
+      let currentTransform = d3.zoomTransform(canvas);
+      let newX = currentTransform.x;
+      let newY = currentTransform.y - 50;
+      zoom_handler.translateBy(canvas, newX, newY);
+    });
     d3.select("#graph-pan-right")
-      .on("click", function() {
-        let currentTransform = d3.zoomTransform(svg);
-        let newX = currentTransform.x + 50;
-        let newY = currentTransform.y;
-        zoom_handler.translateBy(svg, newX, newY);
-      });
+    .on("click", function() {
+      let currentTransform = d3.zoomTransform(canvas);
+      let newX = currentTransform.x + 50;
+      let newY = currentTransform.y;
+      zoom_handler.translateBy(canvas, newX, newY);
+    });
     d3.select("#graph-pan-down")
-      .on("click", function() {
-        let currentTransform = d3.zoomTransform(svg);
-        let newX = currentTransform.x;
-        let newY = currentTransform.y + 50;
-        zoom_handler.translateBy(svg, newX, newY);
-      });
+    .on("click", function() {
+      let currentTransform = d3.zoomTransform(canvas);
+      let newX = currentTransform.x;
+      let newY = currentTransform.y + 50;
+      zoom_handler.translateBy(canvas, newX, newY);
+    });
     d3.select("#graph-pan-left")
-      .on("click", function() {
-        let currentTransform = d3.zoomTransform(svg);
-        let newX = currentTransform.x - 50;
-        let newY = currentTransform.y;
-        zoom_handler.translateBy(svg, newX, newY);
-      });
-
-    return svg.node();
-
-  }
-
-  clickNode(d) {
-    this.setState({d:d});
-    this.props.clickNode(d.id);
-  }
-
-  selectedNodes() {
-    let d = this.state.d;
-    // 1. clear selected and associated nodes and links
-    this.clearSelected();
-
-    // 2. update newly selected node
-    let node = document.getElementById("node-"+d.id);
-    node.classList.add("selected");
-    let circle = node.getElementsByTagName("circle")[0];
-
-    let curColor = circle.getAttribute("stroke");
-    let newR = circle.getAttribute("r");
-    circle.setAttribute("prev-stroke", curColor);
-    circle.setAttribute("r",parseFloat(newR,10)+5);
-    circle.setAttribute("stroke-width", 3);
-    circle.setAttribute("stroke", "#33729f");
-
-    // 3. get associated links
-    var links = this.props.data.links;
-    let incomingLinks = links.filter(l=>l.source===d.id);
-    let outgoingLinks = links.filter(l=>l.target===d.id);
-    incomingLinks = incomingLinks.map(l=>l.refId);
-    outgoingLinks = outgoingLinks.map(l=>l.refId);
-
-    let associatedLinks = incomingLinks.concat(outgoingLinks.filter(i => incomingLinks.indexOf(i)===-1));
-    let mergedAssociatedLinks = associatedLinks.concat(this.props.relatedLinks.filter(i => associatedLinks.indexOf(i)===-1));
-    // 3.3 associate new links
-    let associatedNodeIds = [];
-    mergedAssociatedLinks.forEach(l=>{
-      let line = document.getElementById("link-line-"+l);
-      if (line!==null) {
-        line.setAttribute("stroke-width", 2);
-        line.setAttribute("stroke", "#33729f");
-        line.classList.add("associated");
-      }
-      if (l.source!==d.id) {
-        if (associatedNodeIds.indexOf(l.source)===-1) {
-          associatedNodeIds.push(l.source)
-        }
-        if (associatedNodeIds.indexOf(l.target)===-1) {
-          associatedNodeIds.push(l.target)
-        }
-      }
+    .on("click", function() {
+      let currentTransform = d3.zoomTransform(canvas);
+      let newX = currentTransform.x - 50;
+      let newY = currentTransform.y;
+      zoom_handler.translateBy(canvas, newX, newY);
     });
-    let mergedNodesIds = [...associatedNodeIds,...this.props.relatedNodes];
-    // 4. get associated nodes
-    const nodes = this.props.data.nodes;
-    let associatedNodes = nodes.filter(n=>mergedNodesIds.indexOf(n.id)>-1);
 
-    // 4.3 associate new nodes
-    associatedNodes.forEach(n=>{
-      let node = document.getElementById("node-"+n.id);
-      let circle = node.getElementsByTagName("circle")[0];
-      circle.setAttribute("stroke-width", 3);
-      node.classList.add("associated");
-    });
+    zoom_handler(d3.select(ctx.canvas));
+    this.updateDimensions();
   }
 
-  clearSelected() {
-    // 1. revert selected node
-    let prev = document.getElementsByClassName("network-node selected")[0];
-    if (typeof prev!=="undefined") {
-      let prevCircle = prev.getElementsByTagName("circle")[0];
-      let prevColor = prevCircle.getAttribute("prev-stroke");
-      let r = prevCircle.getAttribute("r");
-      prevCircle.setAttribute("stroke-width", 0.5)
-      prevCircle.setAttribute("stroke",prevColor);
-      prevCircle.setAttribute("r",parseFloat(r,10)-5);
-      prev.classList.remove("selected");
+  async updateDimensions() {
+    let newWidth = this.props.width;
+    let newHeight = this.props.height;
+    width = newWidth;
+    height = newHeight;
+    if (ctx.canvas!==null) {
+      ctx.save();
+      canvas.attr("height", newHeight);
+      canvas.attr("width", newWidth);
+      ctx.clearRect(0,0,newWidth,newHeight);
+      ctx.translate(0,0);
+      ctx.scale(1, 1);
+      drawLines(transform);
+      drawNodes(transform);
+      ctx.restore();
     }
-
-    // 2. revert associated links
-    let selectedLinks = document.getElementsByClassName("network-line associated");
-    if (typeof selectedLinks!=="undefined" && selectedLinks.length>0) {
-      [...selectedLinks].forEach(line=> {
-        if (typeof line!=="undefined") {
-          line.setAttribute("stroke-width", 1);
-          line.setAttribute("stroke", "#999");
-          line.classList.remove("associated");
-        }
-      })
-    }
-
-    // 3. revert associated nodes
-    let selectedNodes = document.getElementsByClassName("network-node associated");
-    if (typeof selectedNodes!=="undefined" && selectedNodes.length>0) {
-      [...selectedNodes].forEach(node=> {
-        let circle = node.getElementsByTagName("circle")[0];
-        if (typeof circle!=="undefined") {
-          circle.setAttribute("stroke-width", 1);
-        }
-        node.classList.remove("associated");
-      })
-    }
-
-  }
-
-  calcNodeSize(size, sizeRatio) {
-    // min: 1.7 max: 5
-    let newSize = parseFloat(sizeRatio,10)*parseInt(size,10);
-    if (newSize<1.7) {
-      newSize = 1.7;
-    }
-    return newSize*10;
-  }
-
-  drag(simulation) {
-    return d3.drag()
-        .on("start", (d)=> this.dragstarted(d,simulation))
-        .on("drag", (d)=> this.dragged(d,simulation))
-        .on("end", (d)=> this.dragended(d,simulation));
-  }
-
-  dragstarted(d,simulation) {
-    if (!d3.event.active) simulation.alpha(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
-  }
-
-  dragged(d,simulation) {
-    d.fx = d3.event.x;
-    d.fy = d3.event.y;
-  }
-
-  dragended(d,simulation) {
-    if (!d3.event.active) simulation.alpha(0);
-    d.fx = null;
-    d.fy = null;
-  }
-
-  zoomedStart() {
-    // 1. hide edges and edge labels
-    d3.selectAll(".network-line").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-    d3.selectAll(".network-line-path").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-    d3.selectAll(".network-text").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-  }
-
-  zoomed() {
-    let g = document.getElementsByClassName("zoom-container")[0];
-    // 1. hide edges and edge labels
-    d3.selectAll(".network-line").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-    d3.selectAll(".network-line-path").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-    d3.selectAll(".network-text").each(function() {
-      d3.select(this).attr("visibility", "hidden");
-    });
-
-    // 2. apply transformation
-    g.setAttribute("transform", d3.event.transform.toString());
-
-    // 3. show edges and edge labels
-    setTimeout(function() {
-      d3.selectAll(".network-line").each(function() {
-        d3.select(this).attr("visibility", "visible");
-      });
-      d3.selectAll(".network-line-path").each(function() {
-        d3.select(this).attr("visibility", "visible");
-      });
-      d3.selectAll(".network-text").each(function() {
-        d3.select(this).attr("visibility", "visible");
-      });
-    },500);
-
-  }
-
-  zoomedEnd() {
-    d3.selectAll(".network-line").each(function() {
-      d3.select(this).attr("visibility", "visible");
-    });
-    d3.selectAll(".network-line-path").each(function() {
-      d3.select(this).attr("visibility", "visible");
-    });
-    d3.selectAll(".network-text").each(function() {
-      d3.select(this).attr("visibility", "visible");
-    });
+    zoomedEnd();
   }
 
   handleChange(e) {
@@ -494,7 +430,7 @@ class NetworkGraph extends Component {
     this.setState({
       [name]: value
     }, ()=>{
-      this.props.reload();
+      this.drawGraph();
     })
   }
 
@@ -504,25 +440,152 @@ class NetworkGraph extends Component {
     })
   }
 
+  clickNode(e) {
+    if (e.target.getAttribute("id")!=="visualisation-canvas") {
+      return false;
+    }
+    let visibleNodes = nodes.filter(n=>n.visible);
+    let transformX = transform.x;
+    let transformY = transform.y;
+    let scale = transform.k;
+    let x = e.offsetX/scale;
+    let y = e.offsetY/scale;
+    // locate node
+    let clickedNodes = [];
+    for (let i=0; i<visibleNodes.length; i++) {
+      let d = visibleNodes[i];
+      let dx = d.x;
+      let dy = d.y;
+      let radius = d.radius;
+      let lx = dx-radius+transformX/scale;
+      let rx = dx+radius+transformX/scale;
+      let ty = dy-radius+transformY/scale;
+      let by = dy+radius+transformY/scale;
+
+      if (x>=lx && x<=rx && y>=ty && y<=by) {
+        clickedNodes.push(d);
+      }
+    }
+    clickedNodes.sort((a,b)=>{
+      let keyA=a.index;
+      let keyB=b.index;
+      if (keyA>keyB) return -1;
+      if (keyA<keyB) return 1;
+      return 0;
+    });
+    let clickedNode = null;
+    if (clickedNodes.length>0) {
+      clickedNode = clickedNodes[0];
+    }
+    else {
+      return false;
+    }
+    clickedNode.selected=true;
+    this.props.clickNode(clickedNode.id);
+    if (this.state.d!==null) {
+      let prevNode = nodes.find(n=>n===this.state.d);
+      if (typeof prevNode!=="undefined") {
+        delete prevNode.selected;
+      }
+    }
+    this.setState({d:clickedNode});
+  }
+
+  selectedNodes() {
+    let d = this.state.d;
+    this.clearAssociated();
+
+    // 3. get associated links
+    let incomingLinks = links.filter(l=>l.source.id===d.id);
+    let outgoingLinks = links.filter(l=>l.target.id===d.id);
+    incomingLinks = incomingLinks.map(l=>l.refId);
+    outgoingLinks = outgoingLinks.map(l=>l.refId);
+
+    let associatedLinks = incomingLinks.concat(outgoingLinks.filter(i => incomingLinks.indexOf(i)===-1));
+    let mergedAssociatedLinks = associatedLinks.concat(this.props.relatedLinks.filter(i => associatedLinks.indexOf(i)===-1));
+    if (mergedAssociatedLinks.length>0) {
+      mergedAssociatedLinks = Array.from(new Set(mergedAssociatedLinks));
+    }
+
+    // 3.3 associate new links
+    let associatedNodeIds = [];
+    mergedAssociatedLinks.forEach(l=>{
+      let link = links.find(i=>i.refId===l);
+      link.associated=true;
+    });
+    let mergedNodesIds = [...associatedNodeIds,...this.props.relatedNodes];
+    // 4. get associated nodes
+    let associatedNodes = nodes.filter(n=>mergedNodesIds.indexOf(n.id)>-1);
+
+    // 4.3 associate new nodes
+    associatedNodes.forEach(n=>{
+      n.associated=true;
+    });
+    this.setState({
+      associatedNodes: associatedNodes,
+      associatedLinks: mergedAssociatedLinks,
+    });
+
+    let scale = transform.k;
+    ctx.save();
+    ctx.clearRect(0,0,width,height);
+    ctx.translate(transform.x, transform.y);
+    ctx.scale(scale, scale);
+    drawLines(transform);
+    drawNodes(transform);
+    ctx.restore();
+  }
+
+  clearAssociated() {
+    let associatedNodes = this.state.associatedNodes;
+    for (let n=0;n<associatedNodes.length; n++) {
+      let item = associatedNodes[n];
+      item.associated = false;
+      delete item.associated;
+    }
+    let associatedLinks = this.state.associatedLinks;
+    for (let l=0;l<associatedLinks.length; l++) {
+      let item = associatedLinks[l];
+      let link = links.find(i=>i.refId===item);
+      link.associated = false;
+      delete link.associated;
+    }
+    this.setState({
+      associatedNodes: [],
+      associatedLinks: [],
+    })
+  }
+
   componentDidMount() {
-    if (this.props.data!==null) {
+    let props = this.props;
+    if (props.data!==null) {
       this.drawGraph();
     }
+    document.addEventListener('click', this.clickNode);
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.data!==null && prevProps.data!==this.props.data) {
+    let props = this.props;
+    if (props.data!==null && prevProps.data!==props.data) {
       this.drawGraph();
     }
 
-    if (this.props.relatedNodes.length>0 && prevProps.relatedNodes!==this.props.relatedNodes) {
+    if (props.relatedNodes.length>0 && prevProps.relatedNodes!==props.relatedNodes) {
       this.selectedNodes();
     }
-    if (this.props.clearSelected) {
-      this.clearSelected();
+    if (props.clearAssociated) {
+      this.clearAssociated();
+    }
+    if (
+      (prevProps.width>0 && prevProps.width!==props.width)
+      || (prevProps.height>0 && prevProps.height!==props.height)) {
+      this.updateDimensions();
     }
   }
 
+  componentWillUnmount() {
+    document.removeEventListener('click', this.clickNode);
+  }
 
   render() {
     let zoomPanel = <div className="zoom-panel">
@@ -586,7 +649,7 @@ class NetworkGraph extends Component {
             </FormGroup>
             <FormGroup>
               <label>
-                <Input type="radio" name="edgesType" value="double" onChange={this.handleChange} checked={edgesType1}/> Two-directional edges
+                <Input type="radio" name="edgesType" value="double" onChange={this.handleChange} checked={edgesType1}/> Two-directional edges*
               </label>
             </FormGroup>
           </div>
@@ -599,7 +662,7 @@ class NetworkGraph extends Component {
             </FormGroup>
             <FormGroup>
               <label>
-                <Input type="radio" name="edgesLabels" value="visible" onChange={this.handleChange} checked={edgesLabels1}/> Visible
+                <Input type="radio" name="edgesLabels" value="visible" onChange={this.handleChange} checked={edgesLabels1}/> Visible*
               </label>
             </FormGroup>
             <div className="info">*May affect performance</div>
@@ -607,8 +670,12 @@ class NetworkGraph extends Component {
         </div>
       </div>
     </div>
+
     return (
       <div>
+        <div>
+          Nodes: <span id="nodes-count"></span> | Links: <span id="links-count"></span>
+        </div>
         <div id="network-graph"></div>
         <div className="graph-actions">
           {panPanel}

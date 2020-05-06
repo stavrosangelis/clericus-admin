@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import { Link } from "react-router-dom";
-import { Badge, Spinner } from 'reactstrap';
+import { Badge } from 'reactstrap';
 import axios from 'axios';
 import NetworkGraph from '../components/d3/network';
 
@@ -12,8 +12,8 @@ class GraphView extends Component {
     this.state = {
       data: null,
       loading: true,
-      width: 0,
-      height: 0,
+      width: 600,
+      height: 500,
       eventsLoad: true,
       organisationsLoad: true,
       peopleLoad: true,
@@ -63,7 +63,7 @@ class GraphView extends Component {
 	  });
     this.setState({
       loading: false,
-      data: JSON.parse(responseData)
+      data: responseData
     },()=> {
       this.updateCanvasSize();
     });
@@ -154,8 +154,6 @@ class GraphView extends Component {
       }
       return false;
     }).map(link=>link.refId);
-
-    relatedLinksIds = Array.from(new Set(relatedLinksIds));
 
     let detailsCardTitle = <h4>Entity details</h4>
     let step1Color = "light";
@@ -500,23 +498,21 @@ class GraphView extends Component {
         </div>
       </div>
     </div>
-    let graph = <div className="graph-loading"><i>Loading data...</i> <Spinner color="info" /></div>;
-    if (this.state.width>0 && this.state.height>0) {
-      graph = <NetworkGraph
-        data={this.state.data}
-        width={this.state.width}
-        height={this.state.height}
-        clickNode={this.clickNode}
-        clickLink={this.clickLink}
-        reload={this.updateGraphOptions}
-        relatedNodes={this.state.relatedNodes}
-        relatedLinks={this.state.relatedLinks}
-        clearSelected={this.state.clearSelectedNodes}
-        />
-    }
+
+
     return (
       <div className="graph-container" id="graph-container">
-        {graph}
+        <NetworkGraph
+          data={this.state.data}
+          width={this.state.width}
+          height={this.state.height}
+          clickNode={this.clickNode}
+          clickLink={this.clickLink}
+          reload={this.updateGraphOptions}
+          relatedNodes={this.state.relatedNodes}
+          relatedLinks={this.state.relatedLinks}
+          clearSelected={this.state.clearSelectedNodes}
+          />
         {legend}
         {detailsCard}
       </div>

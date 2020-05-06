@@ -33,6 +33,7 @@ import ImportClassPieceToDB from '../views/tools/import-class-piece.js';
 import DocumentOCR from '../views/tools/document-ocr.js';
 
 import Graph from '../views/graph.js';
+//import Graph2 from '../views/graph-2.js';
 
 var indexRoutes = [
   {

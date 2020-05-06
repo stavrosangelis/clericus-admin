@@ -13,6 +13,9 @@ import DeleteMany from './delete-many';
 import {parseReferenceLabels,parseReferenceTypes} from '../../helpers/helpers';
 import {useSelector} from "react-redux";
 import Notification from '../notification';
+import axios from 'axios';
+
+const APIPath = process.env.REACT_APP_APIPATH;
 
 const BatchActions = (props) => {
   const mainEntity = useSelector(state => {
@@ -47,9 +50,11 @@ const BatchActions = (props) => {
   const [referencesLabels, setReferencesLabels] = useState([]);
   const [referencesTypes, setReferencesTypes] = useState([]);
   const [referencesLoaded, setReferencesLoaded] = useState(false);
-  let [notificationVisible, setNotificationVisible] = useState(false);
-  let [notificationContent, setNotificationContent] = useState([]);
-  let [deleteManyVisible, setDeleteManyVisible] = useState(false);
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notificationContent, setNotificationContent] = useState([]);
+  const [deleteManyVisible, setDeleteManyVisible] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
 
   const toggleModal = (modal) => {
     if (props.items.length===0) {
@@ -185,6 +190,68 @@ const BatchActions = (props) => {
   if (props.allChecked) {
     selectAllText = "Deselect all";
   }
+
+  const updateStatus = async(status) => {
+    if (updatingStatus) {
+      return false;
+    }
+    setUpdatingStatus(true);
+    if (props.items.length===0) {
+      setNotificationVisible(true);
+      setNotificationContent(<div><i className="fa fa-exclamation-triangle" /> <span>Please select some items to continue</span></div>);
+      setTimeout(()=>{
+        setNotificationVisible(false);
+      },2000);
+      return false;
+    }
+    let path = "";
+    if (props.type==="Resource") {
+      path = APIPath+"resource-update-status";
+    }
+    if (props.type==="Person") {
+      path = APIPath+"person-update-status";
+    }
+    if (props.type==="Organisation") {
+      path = APIPath+"organisation-update-status";
+    }
+    if (props.type==="Event") {
+      path = APIPath+"event-update-status";
+    }
+    let _ids = props.items.map(i=>i._id);
+    let postData = {
+      _ids: _ids,
+      status: status
+    }
+    let update = await axios({
+      method: 'post',
+      url: path,
+      crossDomain: true,
+      data: postData
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+    setUpdatingStatus(false);
+    if (update.status) {
+      setNotificationVisible(true);
+      setNotificationContent(<div>Items status updated successfully</div>);
+      setTimeout(()=>{
+        setNotificationVisible(false);
+      },2000);
+    }
+  }
+
+  let updateStatusBtns = [];
+  if (props.type!=="Temporal" && props.type!=="Spatial") {
+    updateStatusBtns = [
+      <DropdownItem key={0} onClick={()=>updateStatus("public")}>Make public</DropdownItem>,
+      <DropdownItem key={1} onClick={()=>updateStatus("private")}>Make private</DropdownItem>,
+      <DropdownItem key={2} divider />
+    ]
+  }
   return (
     <div>
       {notification}
@@ -203,6 +270,7 @@ const BatchActions = (props) => {
           <DropdownItem className={temporalVisible} onClick={()=>toggleModal('temporalModal')}>... temporal</DropdownItem>
           <DropdownItem className={spatialVisible} onClick={()=>toggleModal('spatialModal')}>... spatial</DropdownItem>
           <DropdownItem divider />
+          {updateStatusBtns }
           <DropdownItem onClick={()=>toggleDeleteMany()}>Delete selected</DropdownItem>
         </DropdownMenu>
       </UncontrolledButtonDropdown>

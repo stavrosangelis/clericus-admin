@@ -2681,3 +2681,9 @@ input.form-control.active {
 .annotation-tool.zoom-container {
   border-radius: 4px;
 }
+.graph-loading {
+  height: 600px;
+  line-height: 500px;
+  display: block;
+  text-align: center;
+}
