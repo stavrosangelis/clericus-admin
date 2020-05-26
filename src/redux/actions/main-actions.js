@@ -203,16 +203,31 @@ export function setPaginationParams(type,params) {
           limit:params.limit,
           activeSystemType:params.activeSystemType,
           page:params.page,
+          status:params.status,
         }
       };
     }
-    else {
+    else if(type==="people"){
       payload = {
         peoplePagination: {
           limit:params.limit,
           page:params.page,
           orderField:params.orderField,
           orderDesc:params.orderDesc,
+          status:params.status,
+        }
+      };
+    }
+    else {
+      let field = `${type}Pagination`;
+      payload = {
+        [field]: {
+          limit:params.limit,
+          page:params.page,
+          orderField:params.orderField,
+          orderDesc:params.orderDesc,
+          activeType: params.activeType,
+          status:params.status,
         }
       };
     }

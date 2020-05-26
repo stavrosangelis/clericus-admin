@@ -5,6 +5,7 @@ import Dashboard from "../views/dashboard";
 import Entities from "../views/entities";
 import Events from "../views/events";
 import Event from "../views/event";
+import Highlights from "../views/highlights";
 import Login from "../views/login";
 import Menu from "../views/menu";
 import Organisations from "../views/organisations";
@@ -225,6 +226,13 @@ var indexRoutes = [
         name: "Slideshow",
         icon: "fa fa-circle-o",
         component: Slideshow,
+        showMenu: true,
+      },
+      {
+        path: "/highlights",
+        name: "Highlights",
+        icon: "fa fa-circle-o",
+        component: Highlights,
         showMenu: true,
       },
     ]

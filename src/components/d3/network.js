@@ -39,13 +39,13 @@ const drawNodes = (coords) => {
   let lx = coords.x;
   let ty = coords.y;
   let scale = coords.k;
-  let sizes = nodes.map(n=>n.count);
+  let sizes = nodes.map(n=>n.size);
   let maxSize = Math.max(...sizes);
   sizeRatio = 3/maxSize;
   for (let i=0; i<nodes.length; i++) {
     let d = nodes[i];
     d.visible = false;
-    d.radius = calcNodeSize(d.count, sizeRatio);
+    d.radius = calcNodeSize(d.size, sizeRatio);
     let radius = d.radius;
     let x = d.x;
     let y = d.y;

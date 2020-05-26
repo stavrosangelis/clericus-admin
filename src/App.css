@@ -2687,3 +2687,34 @@ input.form-control.active {
   display: block;
   text-align: center;
 }
+.edit-item.btn {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  padding: 0;
+}
+.highlight-row {
+  display: block;
+  min-height: 30px;
+  padding: 5px 0 10px 0;
+  border-bottom: 1px solid #ddd;
+}
+.highlight-row:last-child {
+  border-bottom: 0 none;
+}
+.update-direction-container {
+  text-align: center;
+}
+.update-direction-container .up, .update-direction-container .down {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin: 0 auto;
+  display: block;
+}
+.update-direction-container .up:hover, .update-direction-container .down:hover {
+  color: #666;
+}
+.update-direction-container .up:active, .update-direction-container .down:active {
+  color: #111;
+}

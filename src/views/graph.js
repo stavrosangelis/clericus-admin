@@ -51,7 +51,7 @@ class GraphView extends Component {
     }
     let responseData = await axios({
       method: 'get',
-      url: APIPath+'graph',
+      url: APIPath+'graph-network',
       crossDomain: true,
       params: params
     })

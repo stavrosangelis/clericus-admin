@@ -482,6 +482,13 @@ class People extends Component {
       if (thumbnailURL!==null) {
         thumbnailImage = <img src={thumbnailURL} className="people-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
+      let affiliation = null;
+      let organisation = "";
+      if (person.affiliations.length>0 && typeof person.affiliations[0].ref!=="undefined") {
+        affiliation = person.affiliations[0].ref;
+        organisation = <Link href={`/organisation/${affiliation._id}`} to={`/organisation/${affiliation._id}`}>{affiliation.label}</Link>;
+      }
+
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -493,6 +500,7 @@ class People extends Component {
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{thumbnailImage}</Link></td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{person.firstName}</Link></td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{person.lastName}</Link></td>
+        <td>{organisation}</td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -698,6 +706,7 @@ class People extends Component {
                       <th>Thumbnail</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
+                      <th>Organisation</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -716,6 +725,7 @@ class People extends Component {
                       <th>Thumbnail</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
+                      <th>Organisation</th>
                       <th></th>
                     </tr>
                   </tfoot>
