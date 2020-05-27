@@ -5,11 +5,12 @@ import {
   Form, FormGroup, Label, Input,
   Collapse,
 } from 'reactstrap';
+import InputMask from 'react-input-mask';
 import {
   loadRelatedEvents
 } from '../helpers/helpers';
-
 import axios from 'axios';
+
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ViewTemporal extends Component {
@@ -39,7 +40,6 @@ export default class ViewTemporal extends Component {
     this.state = {
       detailsOpen: true,
       eventsOpen: false,
-
       form: {
         label: label,
         startDate: startDate,
@@ -49,6 +49,7 @@ export default class ViewTemporal extends Component {
     }
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.setDate = this.setDate.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
@@ -96,6 +97,14 @@ export default class ViewTemporal extends Component {
     let name = target.name;
     let form = this.state.form;
     form[name] = value;
+    this.setState({
+      form:form
+    });
+  }
+
+  setDate(val,name) {
+    let form = this.state.form;
+    form[name] = val;
     this.setState({
       form:form
     });
@@ -171,7 +180,6 @@ export default class ViewTemporal extends Component {
       errorContainerClass = "";
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
-
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -190,20 +198,20 @@ export default class ViewTemporal extends Component {
                       <div className="col-xs-12 col-sm-6">
                         <FormGroup>
                           <Label>Start date</Label>
-                          <Input type="text" name="startDate" placeholder="Start date..." value={this.state.form.startDate} onChange={this.handleChange}/>
+                          <InputMask className="input-mask" placeholder="dd-mm-yyyy" mask="99-99-9999" name="startDate" value={this.state.form.startDate} onChange={this.handleChange}/>
                         </FormGroup>
                       </div>
                       <div className="col-xs-12 col-sm-6">
                         <FormGroup>
                           <Label>End date</Label>
-                          <Input type="text" name="endDate" placeholder="End date..." value={this.state.form.endDate} onChange={this.handleChange}/>
+                          <InputMask className="input-mask" placeholder="dd-mm-yyyy" mask="99-99-9999" name="endDate" value={this.state.form.endDate} onChange={this.handleChange}/>
                         </FormGroup>
                       </div>
                     </div>
-                    <FormGroup>
+                    {/*<FormGroup>
                       <Label>Date format</Label>
                       <Input type="text" name="format" placeholder="Temporal date format..." value={this.state.form.format} onChange={this.handleChange}/>
-                    </FormGroup>
+                    </FormGroup>*/}
 
                     <div className="text-right" style={{marginTop: "15px"}}>
                       <Button color="info" outline size="sm" onClick={(e)=>this.formSubmit(e)}>{this.props.updateBtn}</Button>

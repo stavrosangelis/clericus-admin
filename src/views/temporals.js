@@ -48,6 +48,7 @@ class Temporals extends Component {
       allChecked: false,
     }
     this.load = this.load.bind(this);
+    this.simpleSearch = this.simpleSearch.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
@@ -113,6 +114,62 @@ class Temporals extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
+        items: items
+      });
+    }
+  }
+  async simpleSearch(e) {
+    e.preventDefault();
+    if (this.state.searchInput<2) {
+      return false;
+    }
+    this.setState({
+      tableLoading: true
+    });
+    let params = {
+      page: this.state.page,
+      limit: this.state.limit,
+      label: this.state.searchInput,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
+      status: this.state.status,
+    }
+    let url = APIPath+'temporals';
+    let responseData = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true,
+      params: params
+    })
+	  .then(function (response) {
+      return response.data.data;
+	  })
+	  .catch(function (error) {
+	  });
+
+    let items = responseData.data.map(item=>{
+      item.checked = false;
+      return item;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage>0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage>1 && currentPage>responseData.totalPages) {
+      this.setState({
+        page: responseData.totalPages
+      },()=> {
+        this.load();
+      });
+    }
+    else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
         items: items
       });
     }
@@ -325,6 +382,7 @@ class Temporals extends Component {
       limit={this.state.limit}
       pageType="temporals"
       setStatus={this.setStatus}
+      simpleSearch={this.simpleSearch}
       status={this.state.status}
       total_pages={this.state.totalPages}
       types={[]}

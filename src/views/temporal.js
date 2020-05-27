@@ -4,6 +4,8 @@ import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 
+import moment from 'moment';
+
 import ViewTemporal from '../components/view-temporal';
 import AddRelation from '../components/add-relations';
 
@@ -156,6 +158,24 @@ class Temporal extends Component {
         updating: false,
         errorVisible: true,
         errorText: <div>Please enter the <b>Label</b> to continue!</div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    if(!moment(postData.startDate, 'DD-MM-YYYY',true).isValid()) {
+      this.setState({
+        updating: false,
+        errorVisible: true,
+        errorText: <div>The <b>Start date</b> is not valid. The valid format is <i>DD-MM-YYYY</i> </div>,
+        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+      });
+      return false;
+    }
+    if(!moment(postData.endDate, 'DD-MM-YYYY',true).isValid()) {
+      this.setState({
+        updating: false,
+        errorVisible: true,
+        errorText: <div>The <b>End date</b> is not valid. The valid format is <i>DD-MM-YYYY</i> </div>,
         updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
       });
       return false;
