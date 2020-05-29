@@ -198,7 +198,8 @@ export default class AddEvent extends Component {
         searchTemporal: '',
         list: []
       });
-      this.loadEvents();
+      let context = this;
+      setTimeout(()=>context.loadEvents(),250);
     }
   }
   clearSearchEventsSpatial() {
@@ -207,7 +208,8 @@ export default class AddEvent extends Component {
         searchSpatial: '',
         list: []
       });
-      this.loadEvents();
+      let context = this;
+      setTimeout(()=>context.loadEvents(),250);
     }
   }
 

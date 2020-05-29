@@ -188,7 +188,8 @@ export default class AddEvent extends Component {
     if (this.state.searchItem!=="") {
       this.setState({
         searchItem: '',
-        list: []
+        list: [],
+        loadMoreVisible:true
       });
     }
   }
@@ -196,18 +197,23 @@ export default class AddEvent extends Component {
     if (this.state.searchTemporal!=="") {
       this.setState({
         searchTemporal: '',
-        list: []
+        list: [],
+        loadMoreVisible:true
       });
-      this.loadEvents();
+      let context = this;
+      setTimeout(()=>context.loadEvents(),250);
+
     }
   }
   clearSearchEventsSpatial() {
     if (this.state.searchSpatial!=="") {
       this.setState({
         searchSpatial: '',
-        list: []
+        list: [],
+        loadMoreVisible:true
       });
-      this.loadEvents();
+      let context = this;
+      setTimeout(()=>context.loadEvents(),250);
     }
   }
 
