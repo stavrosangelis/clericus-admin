@@ -136,6 +136,7 @@ export default class PageActions extends Component {
     }
     let searchDropdown = [];
     let classpieces = [];
+    let sortDropdown = [];
     if (this.props.pageType==="people") {
 
       let availableElements = [];
@@ -239,6 +240,47 @@ export default class PageActions extends Component {
       </div>
     }
 
+    if (this.props.pageType==="resources") {
+      let labelSortIcon = [];
+      let createdAtSortIcon = [];
+      let updatedAtSortIcon = [];
+      if (this.props.orderField==="label" || this.props.orderField==="") {
+        if (this.props.orderDesc) {
+          labelSortIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          labelSortIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.props.orderField==="createdAt" || this.props.orderField==="") {
+        if (this.props.orderDesc) {
+          createdAtSortIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          createdAtSortIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.props.orderField==="updatedAt" || this.props.orderField==="") {
+        if (this.props.orderDesc) {
+          updatedAtSortIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          updatedAtSortIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      sortDropdown = <div className="filter-item">
+        <UncontrolledDropdown direction="down">
+          <DropdownToggle caret size="sm" outline>
+            Sort
+          </DropdownToggle>
+          <DropdownMenu right>
+            <DropdownItem onClick={()=>this.props.updateOrdering("label")}>Label {labelSortIcon}</DropdownItem>
+            <DropdownItem onClick={()=>this.props.updateOrdering("createdAt")}>Created {createdAtSortIcon}</DropdownItem>
+            <DropdownItem onClick={()=>this.props.updateOrdering("updatedAt")}>Updated {updatedAtSortIcon}</DropdownItem>
+          </DropdownMenu>
+        </UncontrolledDropdown>
+      </div>
+    }
     else {
       searchDropdown = <div className="filter-item search">
         <UncontrolledDropdown direction="down">
@@ -349,6 +391,7 @@ export default class PageActions extends Component {
           </div>
 
           {classpieces}
+          {sortDropdown}
 
         </div>
         <div className="page-actions">
@@ -402,4 +445,5 @@ PageActions.propTypes = {
   updateLimit: PropTypes.func.isRequired,
   updatePage: PropTypes.func.isRequired,
   updateAdvancedSearchInputs: PropTypes.func,
+  updateOrdering: PropTypes.func,
 };

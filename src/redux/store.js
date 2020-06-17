@@ -21,6 +21,8 @@ export const defaultState = {
     limit:25,
     activeType:null,
     page:1,
+    orderField: "label",
+    orderDesc: false,
     status: null,
   },
   peoplePagination: {

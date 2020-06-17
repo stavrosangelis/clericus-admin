@@ -40,6 +40,8 @@ class Resources extends Component {
       gotoPage: this.props.resourcesPagination.page,
       limit: this.props.resourcesPagination.limit,
       status: this.props.resourcesPagination.status,
+      orderField: this.props.resourcesPagination.orderField,
+      orderDesc: this.props.resourcesPagination.orderDesc,
       totalPages: 0,
       totalItems: 0,
       insertModalVisible: false,
@@ -49,6 +51,7 @@ class Resources extends Component {
     this.load = this.load.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
+    this.updateOrdering = this.updateOrdering.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.setActiveType = this.setActiveType.bind(this);
@@ -73,8 +76,12 @@ class Resources extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit,
-      label: this.state.searchInput,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
       status: this.state.status,
+    }
+    if (this.state.searchInput!=="" && !this.state.advancedSearch) {
+      params.label = this.state.searchInput;
     }
     let url = APIPath+'resources';
     if (this.state.activeType!==null) {
@@ -134,6 +141,8 @@ class Resources extends Component {
       page: this.state.page,
       limit: this.state.limit,
       label: this.state.searchInput,
+      orderField: this.state.orderField,
+      orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
     let url = APIPath+'resources';
@@ -204,7 +213,7 @@ class Resources extends Component {
     }
   }
 
-  updateStorePagination({limit=null, activeType=null, page=null, status=null}) {
+  updateStorePagination({limit=null, activeType=null, page=null, orderField="", orderDesc=false, status=null}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -217,6 +226,8 @@ class Resources extends Component {
     let payload = {
       limit:limit,
       activeType:activeType,
+      orderField:orderField,
+      orderDesc:orderDesc,
       page:page,
       status:status,
     }
@@ -248,6 +259,22 @@ class Resources extends Component {
     setTimeout(function(){
       context.load();
     },100)
+  }
+
+  updateOrdering(orderField="") {
+    let orderDesc = false;
+    if (orderField === this.state.orderField) {
+      orderDesc = !this.state.orderDesc;
+    }
+    this.setState({
+      orderField: orderField,
+      orderDesc: orderDesc
+    });
+    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
+    let context = this;
+    setTimeout(function(){
+      context.load();
+    },100);
   }
 
   handleChange(e) {
@@ -417,6 +444,11 @@ class Resources extends Component {
             <CardImg src={thumbnailPath} alt={resource.label} className={plainVisible} />
           </div>
         }
+        else if (resource.resourceType==="document") {
+          thumbnailImage = <div className="resource-list-document">
+            <Link to={parseUrl} href={parseUrl} className={linkVisible}><i className="fa fa-file-pdf-o"/></Link>
+          </div>
+        }
 
         let checked = "";
         if (typeof resource.checked!=="undefined" && resource.checked) {
@@ -457,6 +489,9 @@ class Resources extends Component {
         types={this.props.resourcesTypes}
         updateLimit={this.updateLimit}
         updatePage={this.updatePage}
+        orderField={this.state.orderField}
+        orderDesc={this.state.orderDesc}
+        updateOrdering={this.updateOrdering}
       />
       let selectionsClass="";
       if (this.state.allowSelections) {

@@ -296,13 +296,13 @@ class ViewResource extends Component {
     let thumbnailPath = getResourceThumbnailURL(resource);
     let thumbnailImage = [];
     let annotateBtn = [];
-    if (thumbnailPath!==null && resource.resourceType==="image") {
+    if (resource!==null && thumbnailPath!==null && typeof resource.resourceType!=="undefined" && resource.resourceType==="image") {
       annotateBtn = <Link to={"/resource-annotate/"+this.props.resource._id} href={"/resource-annotate/"+this.props.resource._id} className="resource-upload-btn btn btn-info"><i className="fa fa-pencil" /> Annotate</Link>
       let fullsizePath = getResourceFullsizeURL(resource);
       thumbnailImage = [<div onClick={()=>this.toggleImageViewer(fullsizePath)} key='thumbnail' className="open-lightbox"><img src={thumbnailPath} alt={resource.label} className="img-fluid img-thumbnail" /></div>];
       imgViewer = <Viewer visible={this.state.imageViewerVisible} path={fullsizePath} label={this.state.label} toggle={this.toggleImageViewer}/>
     }
-    if (resource!==null && resource.resourceType==="document") {
+    if (resource!==null && typeof resource.resourceType!=="undefined" && resource.resourceType==="document") {
       let fullsizePath = getResourceFullsizeURL(resource);
       thumbnailImage = [<a key="link" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><i className="fa fa-file-pdf-o"/></a>, <a key="link-label" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><label>Preview file</label> </a>];
     }

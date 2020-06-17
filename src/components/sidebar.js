@@ -1,6 +1,7 @@
 import React from "react";
 import { withRouter, NavLink, Link } from "react-router-dom";
 import { Nav } from "reactstrap";
+import logosrc from "../assets/img/cos-logo-bw-wide.png";
 
 class Sidebar extends React.Component {
   constructor(props) {
@@ -143,12 +144,13 @@ class Sidebar extends React.Component {
             href="/" to="/"
             className="simple-text logo-mini"
           >
-            <div className="logo-container">
+            <img src={logosrc} className="img-logo" alt="Clericus logo" />
+            {/*<div className="logo-container">
               <div className="triangle-left"></div>
               <div className="triangle-left-inner"></div>
               <div className="triangle-right"></div>
               <div className="triangle-right-inner"></div>
-            </div>
+            </div>*/}
           </Link>
           <Link
             href="/" to="/"

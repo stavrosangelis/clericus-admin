@@ -2,7 +2,11 @@ body {
   font-family: 'Roboto',"Helvetica Neue",Arial,sans-serif;
   font-size: 15px;
 }
-
+.img-logo {
+  width: 28px;
+  vertical-align: top;
+  margin-top: -2px;
+}
 .login-container {
   background-color: #f4f3ef;
   position: absolute;
@@ -14,11 +18,17 @@ body {
 .login-box {
   margin-top: 100px;
 }
-
+.login-logo-img {
+  position: relative;
+  margin: 0 auto;
+  display: block;
+  height: 80px;
+}
 .login-logo .simple-text {
+  text-align: center;
   color: #333;
   text-transform: uppercase;
-  display: inline-block;
+  display: block;
   font-size: 19px;
   line-height: 19px;
 }
@@ -2717,4 +2727,11 @@ input.form-control.active {
 }
 .update-direction-container .up:active, .update-direction-container .down:active {
   color: #111;
+}
+.person-default-thumbnail {
+  width: 50px;
+}
+.resource-list-document {
+  font-size: 64px;
+  text-align: center;
 }

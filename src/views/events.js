@@ -82,6 +82,9 @@ class Events extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
+    if (this.state.searchInput!=="" && !this.state.advancedSearch) {
+      params.label = this.state.searchInput;
+    }
     let url = APIPath+'events';
     if (this.state.activeType!==null) {
       let eventType = this.props.eventTypes.find(t=>t.label===this.state.activeType);
@@ -337,6 +340,8 @@ class Events extends Component {
         let spatialData = item.spatial[0].ref;
         spatial = spatialData.label;
       }
+      let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("T")[1]}</small></div>;
+      let updatedAt = <div><small>{item.updatedAt.split("T")[0]}</small><br/><small>{item.updatedAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -353,6 +358,8 @@ class Events extends Component {
         </td>
         <td>{temporal}</td>
         <td>{spatial}</td>
+        <td>{createdAt}</td>
+        <td>{updatedAt}</td>
         <td><Link href={"/event/"+item._id} to={"/event/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -471,7 +478,7 @@ class Events extends Component {
       let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/event/new" href="/event/new"><i className="fa fa-plus" /></Link>;
 
       let tableLoadingSpinner = <tr>
-        <td colSpan={4}><Spinner type="grow" color="info" /> <i>loading...</i></td>
+        <td colSpan={8}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
       let itemsRows = [];
       if (this.state.tableLoading) {
@@ -501,6 +508,8 @@ class Events extends Component {
       // ordering
       let labelOrderIcon = [];
       let typeOrderIcon = [];
+      let createdOrderIcon = [];
+      let updatedOrderIcon = [];
       if (this.state.orderField==="label" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           labelOrderIcon = <i className="fa fa-caret-down" />
@@ -515,6 +524,22 @@ class Events extends Component {
         }
         else {
           typeOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="createdAt") {
+        if (this.state.orderDesc) {
+          createdOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          createdOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="updatedAt") {
+        if (this.state.orderDesc) {
+          updatedOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          updatedOrderIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -541,6 +566,8 @@ class Events extends Component {
                       <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
                       <th>Temporal</th>
                       <th>Spatial</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th style={{width: "30px"}}></th>
                     </tr>
                   </thead>
@@ -560,6 +587,8 @@ class Events extends Component {
                       <th className="ordering-label" onClick={()=>this.updateOrdering("eventType")}>Type {typeOrderIcon}</th>
                       <th>Temporal</th>
                       <th>Spatial</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

@@ -13,6 +13,7 @@ import {Redirect} from 'react-router-dom';
 import {
   login
 } from "../redux/actions/main-actions";
+import logosrc from "../assets/img/cos-logo-bw-wide.png";
 
 import {connect} from "react-redux";
 
@@ -105,15 +106,17 @@ class Login extends Component {
 
                 <Card className="login-box">
                   <CardHeader>
+
                   <div className="login-logo">
-                    <div className="simple-text icon">
+                    <img src={logosrc} className="login-logo-img" alt="Clericus logo" />
+                    {/*<div className="simple-text icon">
                       <div className="logo-container">
                         <div className="triangle-left"></div>
                         <div className="triangle-left-inner"></div>
                         <div className="triangle-right"></div>
                         <div className="triangle-right-inner"></div>
                       </div>
-                    </div>
+                    </div>*/}
                     <div className="simple-text logo-normal">Clericus</div>
                   </div>
                   </CardHeader>

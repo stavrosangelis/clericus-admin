@@ -114,7 +114,8 @@ class Spatials extends Component {
         tableLoading: false,
         page: responseData.currentPage,
         totalPages: responseData.totalPages,
-        items: newItems
+        totalItems: responseData.totalItems,
+        items: newItems,
       });
     }
   }
@@ -266,6 +267,8 @@ class Spatials extends Component {
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
       let label = item.label;
+      let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("temp")[1]}</small></div>;
+      let updatedAt = <div><small>{item.updatedAt.split("T")[0]}</small><br/><small>{item.updatedAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -277,6 +280,8 @@ class Spatials extends Component {
         <td>
           <Link href={"/spatial/"+item._id} to={"/spatial/"+item._id}>{label}</Link>
         </td>
+        <td>{createdAt}</td>
+        <td>{updatedAt}</td>
         <td><Link href={"/spatial/"+item._id} to={"/spatial/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -390,7 +395,7 @@ class Spatials extends Component {
       let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/spatial/new" href="/spatial/new"><i className="fa fa-plus" /></Link>;
 
       let tableLoadingSpinner = <tr>
-        <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
+        <td colSpan={5}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
       let itemsRows = [];
       if (this.state.tableLoading) {
@@ -420,12 +425,30 @@ class Spatials extends Component {
 
       // ordering
       let labelOrderIcon = [];
+      let createdOrderIcon = [];
+      let updatedOrderIcon = [];
       if (this.state.orderField==="label" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           labelOrderIcon = <i className="fa fa-caret-down" />
         }
         else {
           labelOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="createdAt") {
+        if (this.state.orderDesc) {
+          createdOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          createdOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="updatedAt") {
+        if (this.state.orderDesc) {
+          updatedOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          updatedOrderIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -449,6 +472,8 @@ class Spatials extends Component {
                       </th>
                       <th style={{width: "40px"}}>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th style={{width: "30px"}}></th>
                     </tr>
                   </thead>
@@ -465,6 +490,8 @@ class Spatials extends Component {
                       </th>
                       <th>#</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>
@@ -486,7 +513,7 @@ class Spatials extends Component {
       <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <h2>{heading} <small>({this.state.totalItems})</small></h2>
           </div>
         </div>
         {content}

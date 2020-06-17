@@ -203,6 +203,8 @@ export function setPaginationParams(type,params) {
           limit:params.limit,
           activeSystemType:params.activeSystemType,
           page:params.page,
+          orderField:params.orderField,
+          orderDesc:params.orderDesc,
           status:params.status,
         }
       };

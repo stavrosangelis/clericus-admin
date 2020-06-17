@@ -326,6 +326,8 @@ class Organisations extends Component {
       if (thumbnailURL!==null) {
         thumbnailImage = <img src={thumbnailURL} className="organisations-list-thumbnail img-fluid img-thumbnail" alt={label} />
       }
+      let createdAt = <div><small>{organisation.createdAt.split("T")[0]}</small><br/><small>{organisation.createdAt.split("T")[1]}</small></div>;
+      let updatedAt = <div><small>{organisation.updatedAt.split("T")[0]}</small><br/><small>{organisation.updatedAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -337,6 +339,8 @@ class Organisations extends Component {
         <td><Link href={"/organisation/"+organisation._id} to={"/organisation/"+organisation._id}>{thumbnailImage}</Link></td>
         <td><Link href={"/organisation/"+organisation._id} to={"/organisation/"+organisation._id}>{organisation.label}</Link></td>
         <td>{organisation.organisationType}</td>
+        <td>{createdAt}</td>
+        <td>{updatedAt}</td>
         <td><Link href={"/organisation/"+organisation._id} to={"/organisation/"+organisation._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -459,7 +463,7 @@ class Organisations extends Component {
       let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/organisation/new" href="/organisation/new"><i className="fa fa-plus" /></Link>;
 
       let tableLoadingSpinner = <tr>
-        <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
+        <td colSpan={8}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
       let organisationsRows = [];
       if (this.state.tableLoading) {
@@ -489,6 +493,8 @@ class Organisations extends Component {
       // ordering
       let labelOrderIcon = [];
       let typeOrderIcon = [];
+      let createdOrderIcon = [];
+      let updatedOrderIcon = [];
       if (this.state.orderField==="label" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           labelOrderIcon = <i className="fa fa-caret-down" />
@@ -503,6 +509,22 @@ class Organisations extends Component {
         }
         else {
           typeOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="createdAt") {
+        if (this.state.orderDesc) {
+          createdOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          createdOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="updatedAt") {
+        if (this.state.orderDesc) {
+          updatedOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          updatedOrderIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -528,6 +550,8 @@ class Organisations extends Component {
                       <th>Thumbnail</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("organisationType")}>Type {typeOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -546,6 +570,8 @@ class Organisations extends Component {
                       <th>Thumbnail</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("organisationType")}>Type {typeOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>

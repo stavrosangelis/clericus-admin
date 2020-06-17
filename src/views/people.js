@@ -12,6 +12,7 @@ import PageActions from '../components/page-actions';
 import {getThumbnailURL} from '../helpers/helpers';
 import BatchActions from '../components/add-batch-relations';
 import {getResourceThumbnailURL} from '../helpers/helpers';
+import defaultThumbnail from '../assets/img/spcc.jpg';
 
 import {connect} from "react-redux";
 import {
@@ -311,7 +312,7 @@ class People extends Component {
 	  });
     if(responseData.status) {
       let items = responseData.data.data.map(item=>{
-        let thumbnailImage = [];
+        let thumbnailImage = <img src={defaultThumbnail} alt={item.label} className="person-default-thumbnail"/>;
         let thumbnailPath = getResourceThumbnailURL(item);
         if (thumbnailPath!==null) {
           thumbnailImage = <img src={thumbnailPath} alt={item.label} />
@@ -477,7 +478,7 @@ class People extends Component {
         label +=" "+person.lastName;
       }
 
-      let thumbnailImage = [];
+      let thumbnailImage = <img src={defaultThumbnail} alt={label} className="person-default-thumbnail" />;
       let thumbnailURL = getThumbnailURL(person);
       if (thumbnailURL!==null) {
         thumbnailImage = <img src={thumbnailURL} className="people-list-thumbnail img-fluid img-thumbnail" alt={label} />
@@ -488,7 +489,8 @@ class People extends Component {
         affiliation = person.affiliations[0].ref;
         organisation = <Link href={`/organisation/${affiliation._id}`} to={`/organisation/${affiliation._id}`}>{affiliation.label}</Link>;
       }
-
+      let createdAt = <div><small>{person.createdAt.split("T")[0]}</small><br/><small>{person.createdAt.split("T")[1]}</small></div>;
+      let updatedAt = <div><small>{person.updatedAt.split("T")[0]}</small><br/><small>{person.updatedAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>
           <div className="select-checkbox-container">
@@ -501,6 +503,8 @@ class People extends Component {
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{person.firstName}</Link></td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id}>{person.lastName}</Link></td>
         <td>{organisation}</td>
+        <td>{createdAt}</td>
+        <td>{updatedAt}</td>
         <td><Link href={"/person/"+person._id} to={"/person/"+person._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
       </tr>
       rows.push(row);
@@ -636,7 +640,7 @@ class People extends Component {
       let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/person/new" href="/person/new"><i className="fa fa-plus" /></Link>;
 
       let tableLoadingSpinner = <tr>
-        <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
+        <td colSpan={8}><Spinner type="grow" color="info" /> <i>loading...</i></td>
       </tr>;
       let peopleRows = [];
       if (this.state.tableLoading) {
@@ -667,6 +671,8 @@ class People extends Component {
       // ordering
       let firstNameOrderIcon = [];
       let lastNameOrderIcon = [];
+      let createdOrderIcon = [];
+      let updatedOrderIcon = [];
       if (this.state.orderField==="firstName" || this.state.orderField==="") {
         if (this.state.orderDesc) {
           firstNameOrderIcon = <i className="fa fa-caret-down" />
@@ -675,12 +681,20 @@ class People extends Component {
           firstNameOrderIcon = <i className="fa fa-caret-up" />
         }
       }
-      if (this.state.orderField==="lastName") {
+      if (this.state.orderField==="createdAt") {
         if (this.state.orderDesc) {
-          lastNameOrderIcon = <i className="fa fa-caret-down" />
+          createdOrderIcon = <i className="fa fa-caret-down" />
         }
         else {
-          lastNameOrderIcon = <i className="fa fa-caret-up" />
+          createdOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="updatedAt") {
+        if (this.state.orderDesc) {
+          updatedOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          updatedOrderIcon = <i className="fa fa-caret-up" />
         }
       }
 
@@ -707,6 +721,8 @@ class People extends Component {
                       <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
                       <th>Organisation</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th style={{width: '30px'}}></th>
                     </tr>
                   </thead>
@@ -726,6 +742,8 @@ class People extends Component {
                       <th className="ordering-label" onClick={()=>this.updateOrdering("firstName")}>First Name {firstNameOrderIcon}</th>
                       <th className="ordering-label" onClick={()=>this.updateOrdering("lastName")}>Last Name {lastNameOrderIcon}</th>
                       <th>Organisation</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
+                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
                       <th></th>
                     </tr>
                   </tfoot>
