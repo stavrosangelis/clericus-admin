@@ -267,7 +267,7 @@ class Spatials extends Component {
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
       let label = item.label;
-      let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("temp")[1]}</small></div>;
+      let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("T")[1]}</small></div>;
       let updatedAt = <div><small>{item.updatedAt.split("T")[0]}</small><br/><small>{item.updatedAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>

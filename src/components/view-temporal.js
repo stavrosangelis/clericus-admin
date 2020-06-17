@@ -36,7 +36,8 @@ export default class ViewTemporal extends Component {
         format = item.format;
       }
     }
-
+    startDate = this.normalizeDate(startDate);
+    endDate = this.normalizeDate(endDate);
     this.state = {
       detailsOpen: true,
       eventsOpen: false,
@@ -53,6 +54,23 @@ export default class ViewTemporal extends Component {
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.deleteRef = this.deleteRef.bind(this);
+  }
+
+  normalizeDate(date="") {
+    if(date==="") {
+      return "";
+    }
+    let dateArr = date.split("-");
+    let d = dateArr[0];
+    let m = dateArr[1];
+    let y = dateArr[2];
+    if (Number(d)<10) {
+      d = `0${d}`;
+    }
+    if (Number(m)<10) {
+      m = `0${m}`;
+    }
+    return `${d}-${m}-${y}`;
   }
 
   setFormValues() {
@@ -75,7 +93,6 @@ export default class ViewTemporal extends Component {
         format = item.format;
       }
     }
-
     this.setState({
       form: {
         label: label,

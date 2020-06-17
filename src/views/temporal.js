@@ -171,7 +171,7 @@ class Temporal extends Component {
       });
       return false;
     }
-    if(!moment(postData.endDate, 'DD-MM-YYYY',true).isValid()) {
+    if(postData.endDate!=="" && !moment(postData.endDate, 'DD-MM-YYYY',true).isValid()) {
       this.setState({
         updating: false,
         errorVisible: true,
