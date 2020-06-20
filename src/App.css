@@ -2735,3 +2735,11 @@ input.form-control.active {
   font-size: 64px;
   text-align: center;
 }
+.link {
+    color: #51cbce;
+    outline: none;
+    cursor:pointer;
+}
+.link:hover, .link:focus {
+    color: #51cbce;
+}

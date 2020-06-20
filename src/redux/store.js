@@ -90,6 +90,13 @@ export const defaultState = {
     orderDesc: false,
     status: null,
   },
+  contactFormsPagination: {
+    limit:25,
+    page:1,
+    orderField: "createdAt",
+    orderDesc: true,
+    searchInput: "",
+  },
   userGroups: [],
 
   resourcesTypes: [],

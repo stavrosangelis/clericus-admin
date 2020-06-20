@@ -1,7 +1,7 @@
 import React from "react";
 import { withRouter, NavLink, Link } from "react-router-dom";
 import { Nav } from "reactstrap";
-import logosrc from "../assets/img/cos-logo-bw-wide.png";
+import logosrc from "../assets/img/cos-logo-bw.png";
 
 class Sidebar extends React.Component {
   constructor(props) {

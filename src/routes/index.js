@@ -1,6 +1,7 @@
 import Articles from "../views/articles";
 import Article from "../views/article";
 import ArticleCategories from "../views/article-categories";
+import ContactForms from "../views/contact-forms";
 import Dashboard from "../views/dashboard";
 import Entities from "../views/entities";
 import Events from "../views/events";
@@ -19,6 +20,7 @@ import AnnotateTool from "../views/resource-annotate";
 import Slideshow from "../views/slideshow";
 import Spatial from "../views/spatial";
 import Spatials from "../views/spatials";
+import Settings from "../views/settings";
 import Taxonomies from "../views/taxonomies";
 import Temporals from "../views/temporals";
 import Temporal from "../views/temporal";
@@ -323,6 +325,22 @@ var indexRoutes = [
         }]
       }
     ]
+  },
+  /*{
+    path: "/settings",
+    name: "Settings",
+    icon: "pe-7s-settings",
+    component: Settings,
+    showMenu: true,
+    children:[]
+  },*/
+  {
+    path: "/contact-forms",
+    name: "Contact forms",
+    icon: "pe-7s-mail",
+    component: ContactForms,
+    showMenu: true,
+    children:[]
   },
 ];
 export default indexRoutes;

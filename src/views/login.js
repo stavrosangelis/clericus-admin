@@ -13,7 +13,7 @@ import {Redirect} from 'react-router-dom';
 import {
   login
 } from "../redux/actions/main-actions";
-import logosrc from "../assets/img/cos-logo-bw-wide.png";
+import logosrc from "../assets/img/cos-logo-bw.png";
 
 import {connect} from "react-redux";
 
