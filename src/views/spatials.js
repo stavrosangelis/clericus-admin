@@ -45,9 +45,11 @@ class Spatials extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
+      searchInput: this.props.spatialsPagination.searchInput
     }
     this.load = this.load.bind(this);
     this.simpleSearch = this.simpleSearch.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
@@ -73,6 +75,9 @@ class Spatials extends Component {
       limit: this.state.limit,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
+    }
+    if (this.state.searchInput!=="") {
+      params.label = this.state.searchInput;
     }
     let url = APIPath+'spatials';
     let responseData = await axios({
@@ -125,6 +130,7 @@ class Spatials extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     });
@@ -136,7 +142,7 @@ class Spatials extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
-    let url = APIPath+'temporals';
+    let url = APIPath+'spatials';
     let responseData = await axios({
       method: 'get',
       url: url,
@@ -177,6 +183,19 @@ class Spatials extends Component {
     }
   }
 
+  clearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        searchInput: ''
+      });
+      this.updateStorePagination({searchInput:""});
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+
   updateOrdering(orderField="") {
     let orderDesc = false;
     if (orderField === this.state.orderField) {
@@ -207,18 +226,28 @@ class Spatials extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false) {
+  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false, searchInput="") {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
     }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
+    }
     let payload = {
       limit:limit,
       page:page,
       orderField:orderField,
       orderDesc:orderDesc,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("spatials", payload);
   }

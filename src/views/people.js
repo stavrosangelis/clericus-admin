@@ -51,8 +51,8 @@ class People extends Component {
       totalItems: 0,
       allChecked: false,
 
-      searchInput: '',
-      advancedSearchInputs: [],
+      searchInput: this.props.peoplePagination.searchInput,
+      advancedSearchInputs: this.props.peoplePagination.advancedSearchInputs,
       simpleSearch: false,
       advancedSearch: false,
       classpieceSearchInput: '',
@@ -156,6 +156,7 @@ class People extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     });
@@ -213,6 +214,7 @@ class People extends Component {
 
   async advancedSearch(e) {
     e.preventDefault();
+    this.updateStorePagination({advancedSearchInputs:this.state.advancedSearchInputs});
     this.setState({
       tableLoading: true
     });
@@ -275,7 +277,8 @@ class People extends Component {
       this.setState({
         searchInput: '',
         simpleSearch: false,
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -359,6 +362,7 @@ class People extends Component {
         advancedSearchInputs: [],
         advancedSearch: false,
       })
+      this.updateStorePagination({advancedSearchInputs:[]});
       resolve(true)
     })
     .then(()=> {
@@ -402,12 +406,27 @@ class People extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput="", advancedSearchInputs=[]}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
+    }
+    if (advancedSearchInputs.length===0) {
+      advancedSearchInputs = this.state.advancedSearchInputs;
     }
     let payload = {
       limit:limit,
@@ -415,6 +434,8 @@ class People extends Component {
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
+      searchInput:searchInput,
+      advancedSearchInputs:advancedSearchInputs,
     }
     this.props.setPaginationParams("people", payload);
   }
@@ -679,6 +700,14 @@ class People extends Component {
         }
         else {
           firstNameOrderIcon = <i className="fa fa-caret-up" />
+        }
+      }
+      if (this.state.orderField==="lastName") {
+        if (this.state.orderDesc) {
+          lastNameOrderIcon = <i className="fa fa-caret-down" />
+        }
+        else {
+          lastNameOrderIcon = <i className="fa fa-caret-up" />
         }
       }
       if (this.state.orderField==="createdAt") {

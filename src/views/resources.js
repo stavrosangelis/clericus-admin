@@ -45,7 +45,7 @@ class Resources extends Component {
       totalPages: 0,
       totalItems: 0,
       insertModalVisible: false,
-      searchInput: '',
+      searchInput: this.props.resourcesPagination.searchInput,
       allowSelections: false,
     }
     this.load = this.load.bind(this);
@@ -80,7 +80,7 @@ class Resources extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
-    if (this.state.searchInput!=="" && !this.state.advancedSearch) {
+    if (this.state.searchInput!=="") {
       params.label = this.state.searchInput;
     }
     let url = APIPath+'resources';
@@ -134,6 +134,7 @@ class Resources extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     })
@@ -191,7 +192,8 @@ class Resources extends Component {
     return new Promise((resolve)=> {
       this.setState({
         searchInput: ''
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -213,7 +215,7 @@ class Resources extends Component {
     }
   }
 
-  updateStorePagination({limit=null, activeType=null, page=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, activeType=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -223,6 +225,18 @@ class Resources extends Component {
     if (page===null) {
       page = this.state.page;
     }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
+    }
     let payload = {
       limit:limit,
       activeType:activeType,
@@ -230,6 +244,7 @@ class Resources extends Component {
       orderDesc:orderDesc,
       page:page,
       status:status,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("resources", payload);
   }

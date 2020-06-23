@@ -24,6 +24,7 @@ export const defaultState = {
     orderField: "label",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   peoplePagination: {
     limit:25,
@@ -31,6 +32,8 @@ export const defaultState = {
     orderField: "firstName",
     orderDesc: false,
     status: null,
+    searchInput: "",
+    advancedSearchInputs: []
   },
   organisationsPagination: {
     limit:25,
@@ -39,6 +42,7 @@ export const defaultState = {
     orderDesc: false,
     activeType: null,
     status: null,
+    searchInput: "",
   },
   eventsPagination: {
     limit:25,
@@ -47,6 +51,7 @@ export const defaultState = {
     orderDesc: false,
     activeType: null,
     status: null,
+    searchInput: "",
   },
   temporalsPagination: {
     limit:25,
@@ -54,6 +59,7 @@ export const defaultState = {
     orderField: "label",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   spatialsPagination: {
     limit:25,
@@ -61,6 +67,7 @@ export const defaultState = {
     orderField: "label",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   usersPagination: {
     limit:25,
@@ -68,6 +75,7 @@ export const defaultState = {
     orderField: "firstName",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   usergroupsPagination: {
     limit:25,
@@ -75,6 +83,7 @@ export const defaultState = {
     orderField: "label",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   articlesPagination: {
     limit:25,
@@ -82,6 +91,7 @@ export const defaultState = {
     orderField: "label",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   slideshowPagination: {
     limit:25,
@@ -89,6 +99,7 @@ export const defaultState = {
     orderField: "order",
     orderDesc: false,
     status: null,
+    searchInput: "",
   },
   contactFormsPagination: {
     limit:25,

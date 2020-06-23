@@ -4,14 +4,11 @@ import {
   Card, CardBody,
   Modal, ModalHeader, ModalBody,
 } from 'reactstrap';
-import { Link } from 'react-router-dom';
 import { Spinner } from 'reactstrap';
 import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
 import PageActions from '../components/page-actions';
-import {getThumbnailURL} from '../helpers/helpers';
-import BatchActions from '../components/add-batch-relations';
 
 import {connect} from "react-redux";
 import {
@@ -50,7 +47,7 @@ class ContactForms extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      searchInput: '',
+      searchInput: this.props.contactFormsPagination.searchInput,
       modalVisible: false,
       modalDetails: {
         from: "",
@@ -163,6 +160,7 @@ class ContactForms extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     })
@@ -216,7 +214,8 @@ class ContactForms extends Component {
     return new Promise((resolve)=> {
       this.setState({
         searchInput: ''
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -260,6 +259,18 @@ class ContactForms extends Component {
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (activeType===null) {
+      activeType = this.state.activeType;
+    }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
     }
     let payload = {
       limit:limit,
@@ -315,7 +326,6 @@ class ContactForms extends Component {
       let item = items[i];
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
-      let label = item.label;
       let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("T")[1]}</small></div>;
       let row = <tr key={i}>
         <td>{count}</td>

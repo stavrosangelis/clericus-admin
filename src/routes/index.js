@@ -20,7 +20,7 @@ import AnnotateTool from "../views/resource-annotate";
 import Slideshow from "../views/slideshow";
 import Spatial from "../views/spatial";
 import Spatials from "../views/spatials";
-import Settings from "../views/settings";
+//import Settings from "../views/settings";
 import Taxonomies from "../views/taxonomies";
 import Temporals from "../views/temporals";
 import Temporal from "../views/temporal";

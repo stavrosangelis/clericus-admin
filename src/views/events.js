@@ -48,7 +48,7 @@ class Events extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      searchInput: '',
+      searchInput: this.props.eventsPagination.searchInput,
     }
     this.load = this.load.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
@@ -139,6 +139,7 @@ class Events extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     });
@@ -203,7 +204,8 @@ class Events extends Component {
     return new Promise((resolve)=> {
       this.setState({
         searchInput: ''
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -241,12 +243,27 @@ class Events extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (searchInput===null) {
+      searchInput = this.state.searchInput;
+    }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput===null) {
+      searchInput = this.state.searchInput;
     }
     let payload = {
       limit:limit,
@@ -255,6 +272,7 @@ class Events extends Component {
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("events", payload);
   }

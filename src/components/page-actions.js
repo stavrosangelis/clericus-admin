@@ -281,7 +281,7 @@ export default class PageActions extends Component {
         </UncontrolledDropdown>
       </div>
     }
-    else {
+    if (this.props.pageType!=="people") {
       searchDropdown = <div className="filter-item search">
         <UncontrolledDropdown direction="down">
           <DropdownToggle caret size="sm" outline>

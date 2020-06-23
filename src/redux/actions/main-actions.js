@@ -206,6 +206,7 @@ export function setPaginationParams(type,params) {
           orderField:params.orderField,
           orderDesc:params.orderDesc,
           status:params.status,
+          searchInput: params.searchInput
         }
       };
     }
@@ -217,6 +218,8 @@ export function setPaginationParams(type,params) {
           orderField:params.orderField,
           orderDesc:params.orderDesc,
           status:params.status,
+          searchInput: params.searchInput,
+          advancedSearchInputs: params.advancedSearchInputs
         }
       };
     }
@@ -230,6 +233,7 @@ export function setPaginationParams(type,params) {
           orderDesc:params.orderDesc,
           activeType: params.activeType,
           status:params.status,
+          searchInput: params.searchInput,
         }
       };
     }

@@ -48,7 +48,7 @@ class Slideshow extends Component {
       totalPages: 0,
       totalItems: 0,
       modalVisible: false,
-      searchInput: '',
+      searchInput: this.props.slideshowPagination.searchInput,
       // form
       form: {
         _id: null,
@@ -207,6 +207,7 @@ class Slideshow extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       loading: true
     });
@@ -243,7 +244,8 @@ class Slideshow extends Component {
       this.setState({
         searchInput: '',
         simpleSearch: false,
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -281,12 +283,24 @@ class Slideshow extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
     }
     let payload = {
       limit:limit,
@@ -294,6 +308,7 @@ class Slideshow extends Component {
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("slideshow", payload);
   }

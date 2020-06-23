@@ -177,11 +177,11 @@ const ArticleImageBrowser = props => {
     let itemsHTML = items.map((item,i)=>{
       let active = "";
       if (featuredImage===item._id) {
-        active = " active";
+        active = "active";
       }
       let thumbPath = item.paths.find(p=>p.pathType==="thumbnail").path;
       let fullPath = item.paths.find(p=>p.pathType==="source").path;
-      let itemHTML = <div className={"image-file"+active} key={i} onDoubleClick={()=>returnFile(item._id)}>
+      let itemHTML = <div className={`col-xs-12 col-sm-3 col-lg-2 image-file ${active}`} key={i} onDoubleClick={()=>returnFile(item._id)}>
         <a href={fullPath} target="_blank" rel="noopener noreferrer" className="show-featured-image btn btn-outline-primary"><i className="fa fa-eye" /></a>
         <img src={thumbPath} alt="" className="img-fluid" onClick={()=>selectFile(item._id)} />
         <Button outline color="danger" size="sm" onClick={()=>deleteFile(item._id)} className="remove-featured-image"><i className="fa fa-trash-o" /></Button>
@@ -198,37 +198,37 @@ const ArticleImageBrowser = props => {
             onClick={() => { toggleTab('1'); }}
           >Browse</NavLink>
         </NavItem>
-          <NavItem>
-            <NavLink
-              className={classnames({ active: activeTab === '2' })}
-              onClick={() => { toggleTab('2'); }}
-            >Upload new</NavLink>
-          </NavItem>
-        </Nav>
-        <TabContent activeTab={activeTab}>
-          <TabPane tabId="1">
-            <div className="row">
-                <div className="col-12">
-                  <div className="images-browser">
-                    {itemsHTML}
-                  </div>
+        <NavItem>
+          <NavLink
+            className={classnames({ active: activeTab === '2' })}
+            onClick={() => { toggleTab('2'); }}
+          >Upload new</NavLink>
+        </NavItem>
+      </Nav>
+      <TabContent activeTab={activeTab}>
+        <TabPane tabId="1">
+          <div className="row">
+              <div className="col-12">
+                <div className="images-browser row">
+                  {itemsHTML}
                 </div>
-            </div>
-          </TabPane>
-          <TabPane tabId="2">
-            <div className="dropzone-container">
-              <div className="browse-img-btn" onClick={()=>openFileDialog()}>Browse for an Image</div>
-              <input type="file" style={{display: "none"}} ref={inputRef} onChange={(e)=>handleFileChange(e)}/>
-              <div className="browse-img-or">OR</div>
-              <div {...getRootProps()} className="dropzone-box">
-                {
-                  <p>DROP AN IMAGE HERE</p>
-                }
               </div>
+          </div>
+        </TabPane>
+        <TabPane tabId="2">
+          <div className="dropzone-container">
+            <div className="browse-img-btn" onClick={()=>openFileDialog()}>Browse for an Image</div>
+            <input type="file" style={{display: "none"}} ref={inputRef} onChange={(e)=>handleFileChange(e)}/>
+            <div className="browse-img-or">OR</div>
+            <div {...getRootProps()} className="dropzone-box">
+              {
+                <p>DROP AN IMAGE HERE</p>
+              }
             </div>
-          </TabPane>
-        </TabContent>
-      </div>;
+          </div>
+        </TabPane>
+      </TabContent>
+    </div>;
   }
 
   const dirPathItemPath = (i) => {

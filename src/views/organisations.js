@@ -35,7 +35,6 @@ function mapDispatchToProps(dispatch) {
 class Organisations extends Component {
   constructor(props) {
     super(props);
-
     this.state = {
       loading: true,
       tableLoading: true,
@@ -50,7 +49,7 @@ class Organisations extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      searchInput: ''
+      searchInput: this.props.organisationsPagination.searchInput
     }
     this.load = this.load.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
@@ -83,6 +82,9 @@ class Organisations extends Component {
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
       status: this.state.status,
+    }
+    if (this.state.searchInput!=="") {
+      params.label = this.state.searchInput;
     }
     let url = APIPath+'organisations';
     if (this.state.activeType!==null) {
@@ -135,6 +137,7 @@ class Organisations extends Component {
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     })
@@ -196,7 +199,8 @@ class Organisations extends Component {
     return new Promise((resolve)=> {
       this.setState({
         searchInput: ''
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -234,7 +238,7 @@ class Organisations extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null} ) {
+  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null, searchInput=""} ) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -244,6 +248,18 @@ class Organisations extends Component {
     if (activeType===null) {
       activeType = this.state.activeType;
     }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
+    }
     let payload = {
       limit:limit,
       page:page,
@@ -251,6 +267,7 @@ class Organisations extends Component {
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("organisations", payload);
   }

@@ -45,7 +45,7 @@ class Articles extends Component {
       totalItems: 0,
       allChecked: false,
 
-      searchInput: '',
+      searchInput: this.props.articlesPagination.searchInput,
     }
     this.load = this.load.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
@@ -137,6 +137,7 @@ class Articles extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     let url = APIPath+'articles';
     let responseData = await axios({
       method: 'get',
@@ -183,7 +184,8 @@ class Articles extends Component {
       this.setState({
         searchInput: '',
         simpleSearch: false,
-      })
+      });
+      this.updateStorePagination({searchInput:""});
       resolve(true)
     })
     .then(()=> {
@@ -221,12 +223,24 @@ class Articles extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput===null) {
+      searchInput = this.state.searchInput;
     }
     let payload = {
       limit:limit,
@@ -234,6 +248,7 @@ class Articles extends Component {
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
+      searchInput:searchInput,
     }
     this.props.setPaginationParams("articles", payload);
   }

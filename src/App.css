@@ -1019,6 +1019,9 @@ header {
 .people-card {
   padding: 15px 0 !important;
 }
+.table > tr th {
+  white-space: nowrap;
+}
 .people-table > tbody> tr > td, .people-table > thead > tr > th,  .people-table > tfoot > tr > th{
   padding: 5px;
 }
@@ -2432,6 +2435,14 @@ input.form-control.active {
   position: relative;
   transition: background-color 0.4s;
   cursor: pointer;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.images-browser .image-directory, .images-browser .image-file label {
+  background-color: #fff;
+  width: calc(100% + 10px);
+  margin-left: -5px;
+  padding-left: 5px;
 }
 .images-browser .image-directory:hover, .images-browser .image-file:hover {
   background-color: #f0f0f0;

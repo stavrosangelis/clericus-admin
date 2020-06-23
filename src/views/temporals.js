@@ -46,9 +46,11 @@ class Temporals extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
+      searchInput: this.props.temporalsPagination.searchInput
     }
     this.load = this.load.bind(this);
     this.simpleSearch = this.simpleSearch.bind(this);
+    this.clearSearch = this.clearSearch.bind(this);
     this.updateOrdering = this.updateOrdering.bind(this);
     this.updatePage = this.updatePage.bind(this);
     this.updateLimit = this.updateLimit.bind(this);
@@ -76,6 +78,9 @@ class Temporals extends Component {
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
       status: this.state.status,
+    }
+    if (this.state.searchInput!=="") {
+      params.label = this.state.searchInput;
     }
     let url = APIPath+'temporals';
     let responseData = await axios({
@@ -119,11 +124,13 @@ class Temporals extends Component {
       });
     }
   }
+
   async simpleSearch(e) {
     e.preventDefault();
     if (this.state.searchInput<2) {
       return false;
     }
+    this.updateStorePagination({searchInput:this.state.searchInput});
     this.setState({
       tableLoading: true
     });
@@ -176,6 +183,19 @@ class Temporals extends Component {
     }
   }
 
+  clearSearch() {
+    return new Promise((resolve)=> {
+      this.setState({
+        searchInput: ''
+      });
+      this.updateStorePagination({searchInput:""});
+      resolve(true)
+    })
+    .then(()=> {
+      this.load();
+    });
+  }
+  
   updateOrdering(orderField="") {
     let orderDesc = false;
     if (orderField === this.state.orderField) {
@@ -206,19 +226,32 @@ class Temporals extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null}) {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
     }
+    if (orderField==="") {
+      orderField = this.state.orderField;
+    }
+    if (orderDesc===false) {
+      orderDesc = this.state.orderDesc;
+    }
+    if (status===null) {
+      status = this.state.status;
+    }
+    if (searchInput==="") {
+      searchInput = this.state.searchInput;
+    }
     let payload = {
       limit:limit,
       page:page,
       orderField:orderField,
       orderDesc:orderDesc,
-      status: status
+      status: status,
+      searchInput: searchInput,
     }
     this.props.setPaginationParams("temporals", payload);
   }
