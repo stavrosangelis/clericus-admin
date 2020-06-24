@@ -35,6 +35,7 @@ class Articles extends Component {
     this.state = {
       loading: true,
       items: [],
+      activeType: this.props.articlesPagination.activeType,
       orderField: this.props.articlesPagination.orderField,
       orderDesc: this.props.articlesPagination.orderDesc,
       page: this.props.articlesPagination.page,
@@ -44,6 +45,7 @@ class Articles extends Component {
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
+      articleCategories: [],
 
       searchInput: this.props.articlesPagination.searchInput,
     }
@@ -54,6 +56,8 @@ class Articles extends Component {
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.setStatus = this.setStatus.bind(this);
+    this.loadTypes = this.loadTypes.bind(this);
+    this.setActiveType = this.setActiveType.bind(this);
     this.tableRows = this.tableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
@@ -72,6 +76,7 @@ class Articles extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit,
+      categoryName: this.state.activeType,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
       status: this.state.status,
@@ -132,6 +137,7 @@ class Articles extends Component {
     let params = {
       page: this.state.page,
       limit: this.state.limit,
+      categoryName: this.state.activeType,
       label: this.state.searchInput,
       orderField: this.state.orderField,
       orderDesc: this.state.orderDesc,
@@ -223,12 +229,15 @@ class Articles extends Component {
     }
   }
 
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
+  updateStorePagination({limit=null, page=null, activeType=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
     if (page===null) {
       page = this.state.page;
+    }
+    if (activeType===null) {
+      activeType = this.state.activeType;
     }
     if (orderField==="") {
       orderField = this.state.orderField;
@@ -245,6 +254,7 @@ class Articles extends Component {
     let payload = {
       limit:limit,
       page:page,
+      activeType:activeType,
       orderField:orderField,
       orderDesc:orderDesc,
       status:status,
@@ -285,6 +295,34 @@ class Articles extends Component {
       status: status
     })
     this.updateStorePagination({status:status});
+    let context = this;
+    setTimeout(function() {
+      context.load();
+    },100)
+  }
+
+  async loadTypes() {
+    let url = APIPath+'article-categories';
+    let articleCategories = await axios({
+      method: 'get',
+      url: url,
+      crossDomain: true
+    })
+    .then(function (response) {
+      return response.data.data;
+    })
+    .catch(function (error) {
+    });
+    this.setState({
+      articleCategories: articleCategories
+    });
+  }
+
+  setActiveType(type) {
+    this.setState({
+      activeType: type,
+    })
+    this.updateStorePagination({activeType:type});
     let context = this;
     setTimeout(function() {
       context.load();
@@ -350,6 +388,7 @@ class Articles extends Component {
 
   componentDidMount() {
     this.load();
+    this.loadTypes();
   }
 
   componentWillUnmount() {
@@ -363,6 +402,7 @@ class Articles extends Component {
     ];
 
     let pageActions = <PageActions
+      activeType={this.state.activeType}
       clearSearch={this.clearSearch}
       current_page={this.state.page}
       gotoPage={this.gotoPage}
@@ -371,11 +411,12 @@ class Articles extends Component {
       limit={this.state.limit}
       pageType="articles"
       searchInput={this.state.searchInput}
+      setActiveType={this.setActiveType}
       setStatus={this.setStatus}
       status={this.state.status}
       simpleSearch={this.simpleSearch}
       total_pages={this.state.totalPages}
-      types={[]}
+      types={this.state.articleCategories}
       updateLimit={this.updateLimit}
       updatePage={this.updatePage}
     />

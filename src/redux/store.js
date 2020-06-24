@@ -88,6 +88,7 @@ export const defaultState = {
   articlesPagination: {
     limit:25,
     page:1,
+    activeType: null,
     orderField: "label",
     orderDesc: false,
     status: null,

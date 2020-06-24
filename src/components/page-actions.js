@@ -33,6 +33,7 @@ export default class PageActions extends Component {
     this.removeAdvancedSearchRow = this.removeAdvancedSearchRow.bind(this);
     this.randomString = this.randomString.bind(this);
     this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
+    this.parsePropTypes = this.parsePropTypes.bind(this);
   }
 
   toggleSearch() {
@@ -117,6 +118,33 @@ export default class PageActions extends Component {
     this.props.clearAdvancedSearch();
   }
 
+  parsePropTypes(types, sep="", parentI=null) {
+    let typesDropdownItems = types.map((item,i)=> {
+      let active = false;
+      if (this.props.activeType===item.label) {
+        active = true;
+      }
+      let key = i;
+      if (parentI!==null) {
+        key = `${parentI}-${i}`;
+      }
+      let sepOut = "";
+      if (sep!=="") {
+        sepOut = <span style={{padding: "0 5px"}}>{sep}</span>;
+      }
+
+
+      let returnItem = [<DropdownItem active={active} onClick={()=>this.props.setActiveType(item.label)} key={key}><span className="first-cap">{sepOut}{item.label}</span></DropdownItem>];
+      if (typeof item.children!=="undefined" && item.children.length>0) {
+        let newSep = sep+"-";
+        let childrenItems = this.parsePropTypes(item.children, newSep);
+        returnItem.push(childrenItems);
+      }
+      return returnItem;
+    });
+    return typesDropdownItems;
+  }
+
   render() {
     let limitActive0 = "";
     let limitActive1 = "";
@@ -138,7 +166,6 @@ export default class PageActions extends Component {
     let classpieces = [];
     let sortDropdown = [];
     if (this.props.pageType==="people") {
-
       let availableElements = [];
       for (let e=0;e<this.props.searchElements.length;e++) {
         let searchElement = this.props.searchElements[e];
@@ -311,14 +338,7 @@ export default class PageActions extends Component {
 
     let typesDropdownFilter = [];
     if (typeof this.props.types!=="undefined" && this.props.types.length>0) {
-      let typesDropdownItems = this.props.types.map((item,i)=> {
-        let active = false;
-        if (this.props.activeType===item.label) {
-          active = true;
-        }
-        let returnItem = <DropdownItem active={active} onClick={()=>this.props.setActiveType(item.label)} key={i}><span className="first-cap">{item.label}</span></DropdownItem>
-        return returnItem;
-      });
+      let typesDropdownItems = this.parsePropTypes(this.props.types);
       let typesDropdown = <UncontrolledDropdown direction="down">
         <DropdownToggle outline caret size="sm">
           Select type
