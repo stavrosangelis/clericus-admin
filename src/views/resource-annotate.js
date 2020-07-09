@@ -88,7 +88,7 @@ const AnnotateTool = props => {
       });
       setItem(responseData);
       let itemResources = responseData.resources.filter(r=>r.term.label==="hasPart");
-      setResources(itemResources); 
+      setResources(itemResources);
     }
     return loadData();
   },[props.match.params._id]);
@@ -381,7 +381,9 @@ const AnnotateTool = props => {
   }
 
   const updateEditItem = async (e) => {
-    e.preventDefault();
+    if (typeof e!=="undefined") {
+      e.preventDefault();
+    }    
     if (editItemSaving) {
       return false;
     }

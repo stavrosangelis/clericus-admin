@@ -217,7 +217,7 @@ class Person extends Component {
       });
       return false;
     }
-    if (postData.lastName.length<2) {
+    /*if (postData.lastName.length<2) {
       this.setState({
         updating: false,
         errorVisible: true,
@@ -225,7 +225,7 @@ class Person extends Component {
         updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
       });
       return false;
-    }
+    }*/
     this.setState({
       updating: false,
       errorVisible: false,

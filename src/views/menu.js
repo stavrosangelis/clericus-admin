@@ -522,7 +522,7 @@ const Menu = (props) => {
   if (menuItemForm.type==="article") {
     articleVisible = "";
   }
-  if (menuItemForm.type==="category") {
+  if (menuItemForm.type==="article-category") {
     categoryVisible = "";
   }
   if (menuItemForm.type==="link") {

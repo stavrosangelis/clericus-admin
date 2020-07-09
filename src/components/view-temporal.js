@@ -64,10 +64,10 @@ export default class ViewTemporal extends Component {
     let d = dateArr[0];
     let m = dateArr[1];
     let y = dateArr[2];
-    if (Number(d)<10) {
+    if (Number(d)<10 && d.length===1) {
       d = `0${d}`;
     }
-    if (Number(m)<10) {
+    if (Number(m)<10 && m.length===1) {
       m = `0${m}`;
     }
     return `${d}-${m}-${y}`;

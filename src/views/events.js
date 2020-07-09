@@ -82,7 +82,7 @@ class Events extends Component {
       orderDesc: this.state.orderDesc,
       status: this.state.status,
     }
-    if (this.state.searchInput!=="" && !this.state.advancedSearch) {
+    if (this.state.searchInput!=="") {
       params.label = this.state.searchInput;
     }
     let url = APIPath+'events';
@@ -262,7 +262,7 @@ class Events extends Component {
     if (status===null) {
       status = this.state.status;
     }
-    if (searchInput===null) {
+    if (searchInput==="") {
       searchInput = this.state.searchInput;
     }
     let payload = {

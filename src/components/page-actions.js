@@ -133,8 +133,11 @@ export default class PageActions extends Component {
         sepOut = <span style={{padding: "0 5px"}}>{sep}</span>;
       }
 
-
-      let returnItem = [<DropdownItem active={active} onClick={()=>this.props.setActiveType(item.label)} key={key}><span className="first-cap">{sepOut}{item.label}</span></DropdownItem>];
+      let activeTypeValue = item.label;
+      if (this.props.pageType==="organisations") {
+        activeTypeValue = item.labelId;
+      }
+      let returnItem = [<DropdownItem active={active} onClick={()=>this.props.setActiveType(activeTypeValue)} key={key}><span className="first-cap">{sepOut}{item.label}</span></DropdownItem>];
       if (typeof item.children!=="undefined" && item.children.length>0) {
         let newSep = sep+"-";
         let childrenItems = this.parsePropTypes(item.children, newSep);

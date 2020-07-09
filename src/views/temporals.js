@@ -195,7 +195,7 @@ class Temporals extends Component {
       this.load();
     });
   }
-  
+
   updateOrdering(orderField="") {
     let orderDesc = false;
     if (orderField === this.state.orderField) {
@@ -413,12 +413,14 @@ class Temporals extends Component {
     ];
 
     let pageActions = <PageActions
+      clearSearch={this.clearSearch}
       current_page={this.state.page}
       gotoPage={this.gotoPage}
       gotoPageValue={this.state.gotoPage}
       handleChange={this.handleChange}
       limit={this.state.limit}
       pageType="temporals"
+      searchInput={this.state.searchInput}
       setStatus={this.setStatus}
       simpleSearch={this.simpleSearch}
       status={this.state.status}

@@ -75,7 +75,6 @@ const Plot = props => {
     let hint = {date:date,x:val.x,y:val.y}
     setValue(hint);
   }
-
   if (!loading) {
     content = <FlexibleWidthXYPlot
       height={300}
@@ -87,7 +86,7 @@ const Plot = props => {
         tickValues={ticks}
         tickFormat={val=>_tickFormat(val)}
       />
-      <YAxis />
+      <YAxis tickLabelAngle={-60}/>
       <LineMarkSeries
         className="linemark-series-example"
         style={{

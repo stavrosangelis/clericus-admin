@@ -7,7 +7,8 @@ import {
   Collapse,
 } from 'reactstrap';
 import {
-  loadRelatedEvents
+  loadRelatedEvents,
+  loadRelatedOrganisations,
 } from '../helpers/helpers';
 import axios from 'axios';
 import { Map, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -78,6 +79,7 @@ export default class ViewSpatial extends Component {
 
       detailsOpen: true,
       eventsOpen: false,
+      organisationsOpen: false,
 
       form: {
         label: label,
@@ -565,12 +567,20 @@ export default class ViewSpatial extends Component {
     if (!this.state.eventsOpen) {
       eventsOpenActive = "";
     }
-
+    let organisationsOpenActive = " active";
+    if (!this.state.organisationsOpen) {
+      organisationsOpenActive = "";
+    }
     let relatedEvents = loadRelatedEvents(this.props.item, this.deleteRef);
+    let relatedOrganisations = loadRelatedOrganisations(this.props.item, this.deleteRef);
 
     let relatedEventsCard = " hidden";
     if (relatedEvents.length>0) {
       relatedEventsCard = "";
+    }
+    let relatedOrganisationsCard = " hidden";
+    if (relatedOrganisations.length>0) {
+      relatedOrganisationsCard = "";
     }
     let errorContainerClass = " hidden";
     if (this.props.errorVisible) {
@@ -680,6 +690,15 @@ export default class ViewSpatial extends Component {
                   <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
                   <Collapse isOpen={this.state.eventsOpen}>
                     {relatedEvents}
+                  </Collapse>
+                </CardBody>
+              </Card>
+
+              <Card className={relatedOrganisationsCard}>
+                <CardBody>
+                  <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
+                  <Collapse isOpen={this.state.organisationsOpen}>
+                    {relatedOrganisations}
                   </Collapse>
                 </CardBody>
               </Card>

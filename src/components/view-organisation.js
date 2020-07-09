@@ -10,7 +10,8 @@ import {
   loadRelatedEvents,
   loadRelatedOrganisations,
   loadRelatedPeople,
-  loadRelatedResources
+  loadRelatedResources,
+  loadRelatedSpatial
 } from '../helpers/helpers';
 import axios from 'axios';
 import OrganisationAppelations from './organisation-alternate-appelations';
@@ -44,6 +45,7 @@ export default class ViewOrganisation extends Component {
       eventsOpen: false,
       organisationsOpen: false,
       peopleOpen: false,
+      spatialOpen: false,
       label: label,
       description: description,
       organisationType: organisationType,
@@ -235,6 +237,10 @@ export default class ViewOrganisation extends Component {
     if (!this.state.resourcesOpen) {
       resourcesOpenActive = "";
     }
+    let spatialOpenActive = " active";
+    if (!this.state.spatialOpen) {
+      spatialOpenActive = "";
+    }
 
     let statusPublic = "secondary";
     let statusPrivate = "secondary";
@@ -251,6 +257,7 @@ export default class ViewOrganisation extends Component {
     let relatedOrganisations = loadRelatedOrganisations(this.props.organisation, this.deleteRef);
     let relatedPeople = loadRelatedPeople(this.props.organisation, this.deleteRef);
     let relatedResources = loadRelatedResources(this.props.organisation, this.deleteRef);
+    let relatedSpatial = loadRelatedSpatial(this.props.organisation, this.deleteRef);
 
     let metadataCard = " hidden";
     if (metadataItems.length>0) {
@@ -272,6 +279,10 @@ export default class ViewOrganisation extends Component {
     let relatedResourcesCard = " hidden";
     if (relatedResources.length>0) {
       relatedResourcesCard = "";
+    }
+    let relatedSpatialCard = " hidden";
+    if (relatedSpatial.length>0) {
+      relatedSpatialCard = "";
     }
     let thumbnailImage = [];
     let thumbnailURL = getThumbnailURL(this.props.organisation);
@@ -387,6 +398,15 @@ export default class ViewOrganisation extends Component {
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.resourcesOpen}>
                   {relatedResources}
+                </Collapse>
+              </CardBody>
+            </Card>
+
+            <Card className={relatedSpatialCard}>
+              <CardBody>
+                <CardTitle onClick={this.toggleCollapse.bind(this, 'spatialOpen')}>Related spatial (<span className="related-num">{relatedSpatial.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+spatialOpenActive} /></Button></CardTitle>
+                <Collapse isOpen={this.state.spatialOpen}>
+                  {relatedSpatial}
                 </Collapse>
               </CardBody>
             </Card>

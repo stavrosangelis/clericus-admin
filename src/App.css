@@ -137,6 +137,10 @@ body {
   border-left: 13px solid transparent;
   z-index: 4;
 }
+.sidebar .sidebar-wrapper, .off-canvas-sidebar .sidebar-wrapper {
+  overflow-x: hidden;
+  height: 100vh;
+}
 .sidebar .logo:after, .off-canvas-sidebar .logo:after {
   width: 100%;
   left: 0;
