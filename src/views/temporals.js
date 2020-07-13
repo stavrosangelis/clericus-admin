@@ -423,7 +423,6 @@ class Temporals extends Component {
       searchInput={this.state.searchInput}
       setStatus={this.setStatus}
       simpleSearch={this.simpleSearch}
-      status={this.state.status}
       total_pages={this.state.totalPages}
       types={[]}
       updateLimit={this.updateLimit}

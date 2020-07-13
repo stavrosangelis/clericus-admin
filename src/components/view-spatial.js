@@ -332,7 +332,7 @@ export default class ViewSpatial extends Component {
     if (typeof selectedLocation.display_name!=="undefined") {
       label = selectedLocation.display_name;
     }
-    if (typeof selectedLocation.address) {
+    if (typeof selectedLocation.address!=="undefined") {
       if (typeof selectedLocation.address.road!=="undefined") {
         streetAddress = selectedLocation.address.road;
       }
@@ -359,7 +359,7 @@ export default class ViewSpatial extends Component {
       locationType = selectedLocation.type;
     }
 
-    if ((typeof selectedLocation.address.region==="undefined" || selectedLocation.address.region==="") && selectedLocation.address.county!=="") {
+    if (typeof selectedLocation.address!=="undefined" && (typeof selectedLocation.address.region==="undefined" || selectedLocation.address.region==="") && selectedLocation.address.county!=="") {
       region = selectedLocation.address.county;
     }
 

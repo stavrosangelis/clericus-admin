@@ -226,7 +226,7 @@ class Spatials extends Component {
     }
   }
 
-  updateStorePagination(limit=null, page=null, orderField="", orderDesc=false, searchInput="") {
+  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, searchInput=""}) {
     if (limit===null) {
       limit = this.state.limit;
     }
@@ -398,6 +398,7 @@ class Spatials extends Component {
     ];
 
     let pageActions = <PageActions
+      clearSearch={this.clearSearch}
       current_page={this.state.page}
       gotoPage={this.gotoPage}
       gotoPageValue={this.state.gotoPage}
@@ -405,7 +406,9 @@ class Spatials extends Component {
       limit={this.state.limit}
       pageType="spatials"
       simpleSearch={this.simpleSearch}
+      searchInput={this.state.searchInput}
       total_pages={this.state.totalPages}
+      types={[]}
       updateLimit={this.updateLimit}
       updatePage={this.updatePage}
     />
