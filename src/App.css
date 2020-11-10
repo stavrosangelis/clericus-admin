@@ -990,7 +990,7 @@ header {
   transform: rotate(-90deg);
 }
 .related-resource {
-  max-width: 120px;
+  max-width: 110px;
   display: inline-block;
   margin: 5px 10px;
   position: relative;
@@ -2757,4 +2757,21 @@ input.form-control.active {
 }
 .link:hover, .link:focus {
     color: #51cbce;
+}
+.lazylist {
+  max-height: 300px;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.lazylist > ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+.lazylist::-webkit-scrollbar {
+  display: none;
+}
+.resources.lazylist > ul > li {
+  display: inline-block;
 }

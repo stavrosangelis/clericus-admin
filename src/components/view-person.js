@@ -4,17 +4,9 @@ import {
   Button, ButtonGroup,
   Form, FormGroup, Label, Input, InputGroup, InputGroupAddon,
   Collapse} from 'reactstrap';
-import {
-  getThumbnailURL,
-  getPersonLabel,
-  loadRelatedEvents,
-  loadRelatedOrganisations,
-  loadRelatedPeople,
-  loadRelatedResources
-} from '../helpers/helpers';
-import axios from 'axios';
+import { getThumbnailURL, getPersonLabel} from '../helpers/helpers';
 import PersonAppelations from './person-alternate-appelations.js';
-const APIPath = process.env.REACT_APP_APIPATH;
+import RelatedEntitiesBlock from './related-entities-block';
 
 export default class ViewPerson extends Component {
   constructor(props) {
@@ -55,9 +47,6 @@ export default class ViewPerson extends Component {
     this.state = {
       detailsOpen: true,
       metadataOpen: false,
-      eventsOpen: false,
-      organisationsOpen: false,
-      peopleOpen: false,
       honorificPrefix: honorificPrefix,
       firstName: firstName,
       middleName: middleName,
@@ -73,7 +62,6 @@ export default class ViewPerson extends Component {
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
     this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
     this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
     this.removeHP = this.removeHP.bind(this);
@@ -177,28 +165,6 @@ export default class ViewPerson extends Component {
     });
   }
 
-  deleteRef(ref, refTerm, model) {
-    let context = this;
-    let params = {
-      items: [
-        {_id: this.props.person._id, type: "Person"},
-        {_id: ref, type: model}
-      ],
-      taxonomyTermLabel: refTerm,
-    }
-    axios({
-      method: 'delete',
-      url: APIPath+'reference',
-      crossDomain: true,
-      data: params
-    })
-	  .then(function (response) {
-      context.props.reload();
-	  })
-	  .catch(function (error) {
-	  });
-  }
-
   updateAlternateAppelation(index, data) {
     let person = this.props.person;
     let alternateAppelations = person.alternateAppelations;
@@ -253,6 +219,7 @@ export default class ViewPerson extends Component {
       honorificPrefix: hps
     });
   }
+
   addHP() {
     let hps = this.state.honorificPrefix;
     hps.push("");
@@ -270,22 +237,6 @@ export default class ViewPerson extends Component {
     if (!this.state.metadataOpen) {
       metadataOpenActive = "";
     }
-    let eventsOpenActive = " active";
-    if (!this.state.eventsOpen) {
-      eventsOpenActive = "";
-    }
-    let organisationsOpenActive = " active";
-    if (!this.state.organisationsOpen) {
-      organisationsOpenActive = "";
-    }
-    let peopleOpenActive = " active";
-    if (!this.state.peopleOpen) {
-      peopleOpenActive = "";
-    }
-    let resourcesOpenActive = " active";
-    if (!this.state.resourcesOpen) {
-      resourcesOpenActive = "";
-    }
     let statusPublic = "secondary";
     let statusPrivate = "secondary";
     let publicOutline = true;
@@ -297,31 +248,10 @@ export default class ViewPerson extends Component {
     }
 
     let metadataItems = this.parseMetadata();
-    let relatedEvents = loadRelatedEvents(this.props.person, this.deleteRef);
-    let relatedOrganisations = loadRelatedOrganisations(this.props.person, this.deleteRef);
-    let relatedPeople = loadRelatedPeople(this.props.person, this.deleteRef);
-    let relatedResources = loadRelatedResources(this.props.person, this.deleteRef);
 
     let metadataCard = " hidden";
     if (metadataItems.length>0) {
       metadataItems = "";
-    }
-
-    let relatedEventsCard = " hidden";
-    if (relatedEvents.length>0) {
-      relatedEventsCard = "";
-    }
-    let relatedOrganisationsCard = " hidden";
-    if (relatedOrganisations.length>0) {
-      relatedOrganisationsCard = "";
-    }
-    let relatedPeopleCard = " hidden";
-    if (relatedPeople.length>0) {
-      relatedPeopleCard = "";
-    }
-    let relatedResourcesCard = " hidden";
-    if (relatedResources.length>0) {
-      relatedResourcesCard = "";
     }
     let thumbnailImage = [];
     let thumbnailURL = getThumbnailURL(this.props.person);
@@ -370,7 +300,7 @@ export default class ViewPerson extends Component {
         />
       </div>
     }
-
+    
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -432,42 +362,11 @@ export default class ViewPerson extends Component {
               </CardBody>
             </Card>
 
-            <Card className={relatedEventsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.eventsOpen}>
-                  {relatedEvents}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedOrganisationsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.organisationsOpen}>
-                  {relatedOrganisations}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-
-            <Card className={relatedPeopleCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.peopleOpen}>
-                  {relatedPeople}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedResourcesCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources  (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.resourcesOpen}>
-                  {relatedResources}
-                </Collapse>
-              </CardBody>
-            </Card>
+            <RelatedEntitiesBlock
+              item={this.props.person}
+              itemType="Person"
+              reload={this.props.reload}
+              />
 
           </div>
         </div>

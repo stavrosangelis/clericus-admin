@@ -6,15 +6,9 @@ import {
   Form, FormGroup, Label, Input,
   Collapse,
 } from 'reactstrap';
-import {
-  loadRelatedEvents,
-  loadRelatedOrganisations,
-} from '../helpers/helpers';
-import axios from 'axios';
 import { Map, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-
-const APIPath = process.env.REACT_APP_APIPATH;
+import RelatedEntitiesBlock from './related-entities-block';
 
 export default class ViewSpatial extends Component {
   constructor(props) {
@@ -76,11 +70,7 @@ export default class ViewSpatial extends Component {
       zoom: 8,
       mapSearchInputVisible: false,
       mapLoad: false,
-
       detailsOpen: true,
-      eventsOpen: false,
-      organisationsOpen: false,
-
       form: {
         label: label,
         streetAddress: streetAddress,
@@ -98,7 +88,6 @@ export default class ViewSpatial extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
 
     // map
     this.collapseToggle = this.collapseToggle.bind(this);
@@ -212,28 +201,6 @@ export default class ViewSpatial extends Component {
     this.setState({
       [name]: value
     });
-  }
-
-  async deleteRef(ref, refTerm, model) {
-    let params = {
-      items: [
-        {_id: this.props.item._id, type: "Spatial"},
-        {_id: ref, type: model}
-      ],
-      taxonomyTermLabel: refTerm,
-    }
-    await axios({
-      method: 'delete',
-      url: APIPath+'reference',
-      crossDomain: true,
-      data: params
-    })
-	  .then(function(response) {
-      return true;
-	  })
-	  .catch(function (error) {
-	  });
-    this.props.reload();
   }
 
   mapSearch(e) {
@@ -563,25 +530,6 @@ export default class ViewSpatial extends Component {
     if (!this.state.detailsOpen) {
       detailsOpenActive = "";
     }
-    let eventsOpenActive = " active";
-    if (!this.state.eventsOpen) {
-      eventsOpenActive = "";
-    }
-    let organisationsOpenActive = " active";
-    if (!this.state.organisationsOpen) {
-      organisationsOpenActive = "";
-    }
-    let relatedEvents = loadRelatedEvents(this.props.item, this.deleteRef);
-    let relatedOrganisations = loadRelatedOrganisations(this.props.item, this.deleteRef);
-
-    let relatedEventsCard = " hidden";
-    if (relatedEvents.length>0) {
-      relatedEventsCard = "";
-    }
-    let relatedOrganisationsCard = " hidden";
-    if (relatedOrganisations.length>0) {
-      relatedOrganisationsCard = "";
-    }
     let errorContainerClass = " hidden";
     if (this.props.errorVisible) {
       errorContainerClass = "";
@@ -685,23 +633,11 @@ export default class ViewSpatial extends Component {
           <div className="col-xs-12 col-sm-6">
             <div className="item-details">
 
-              <Card className={relatedEventsCard}>
-                <CardBody>
-                  <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
-                  <Collapse isOpen={this.state.eventsOpen}>
-                    {relatedEvents}
-                  </Collapse>
-                </CardBody>
-              </Card>
-
-              <Card className={relatedOrganisationsCard}>
-                <CardBody>
-                  <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
-                  <Collapse isOpen={this.state.organisationsOpen}>
-                    {relatedOrganisations}
-                  </Collapse>
-                </CardBody>
-              </Card>
+              <RelatedEntitiesBlock
+                item={this.props.item}
+                itemType="Spatial"
+                reload={this.props.reload}
+                />
 
             </div>
           </div>

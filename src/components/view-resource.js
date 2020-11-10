@@ -6,17 +6,10 @@ import {
   Collapse,
   Modal, ModalHeader, ModalBody, ModalFooter
 } from 'reactstrap';
-import {
-  getResourceThumbnailURL,
-  getResourceFullsizeURL,
-  loadRelatedEvents,
-  loadRelatedOrganisations,
-  loadRelatedPeople,
-  loadRelatedResources
-} from '../helpers/helpers';
+import { getResourceThumbnailURL, getResourceFullsizeURL } from '../helpers/helpers';
 import {Link} from 'react-router-dom';
 import UploadFile from './upload-file';
-
+import RelatedEntitiesBlock from './related-entities-block';
 
 import axios from 'axios';
 import Viewer from './image-viewer'
@@ -52,10 +45,6 @@ class ViewResource extends Component {
       zoom: 100,
       detailsOpen: true,
       metadataOpen: false,
-      eventsOpen: false,
-      organisationsOpen: false,
-      peopleOpen: false,
-      resourcesOpen: false,
       label: newLabel,
       systemType: newSystemType,
       description: newDescription,
@@ -71,7 +60,6 @@ class ViewResource extends Component {
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
     this.toggleUpdateFileModal = this.toggleUpdateFileModal.bind(this);
     this.toggleImageViewer = this.toggleImageViewer.bind(this);
     this.deleteClasspieceModalToggle = this.deleteClasspieceModalToggle.bind(this);
@@ -178,28 +166,6 @@ class ViewResource extends Component {
     this.setState({
       updateFileModal: !this.state.updateFileModal
     })
-  }
-
-  deleteRef(ref, refTerm, model) {
-    let context = this;
-    let reference = {
-      items: [
-        {_id: this.props.resource._id, type: "Resource"},
-        {_id: ref, type: model},
-      ],
-      taxonomyTermLabel: refTerm,
-    }
-    axios({
-      method: 'delete',
-      url: APIPath+'reference',
-      crossDomain: true,
-      data: reference
-    })
-	  .then(function (response) {
-      context.props.reload();
-	  })
-	  .catch(function (error) {
-	  });
   }
 
   toggleImageViewer(src) {
@@ -397,22 +363,7 @@ class ViewResource extends Component {
     if (!this.state.metadataOpen) {
       metadataOpenActive = "";
     }
-    let eventsOpenActive = " active";
-    if (!this.state.eventsOpen) {
-      eventsOpenActive = "";
-    }
-    let organisationsOpenActive = " active";
-    if (!this.state.organisationsOpen) {
-      organisationsOpenActive = "";
-    }
-    let peopleOpenActive = " active";
-    if (!this.state.peopleOpen) {
-      peopleOpenActive = "";
-    }
-    let resourcesOpenActive = " active";
-    if (!this.state.resourcesOpen) {
-      resourcesOpenActive = "";
-    }
+
     let statusPublic = "secondary";
     let statusPrivate = "secondary";
     let publicOutline = true;
@@ -423,32 +374,11 @@ class ViewResource extends Component {
       privateOutline = true;
     }
 
-    let relatedEvents = loadRelatedEvents(this.props.resource, this.deleteRef);
-    let relatedOrganisations = loadRelatedOrganisations(this.props.resource, this.deleteRef);
-    let relatedPeople = loadRelatedPeople(this.props.resource, this.deleteRef);
-    let relatedResources = loadRelatedResources(this.props.resource, this.deleteRef);
-
     let metadataCard = " hidden";
     if (metadataOutput.length>0) {
       metadataCard = "";
     }
 
-    let relatedEventsCard = " hidden";
-    if (relatedEvents.length>0) {
-      relatedEventsCard = "";
-    }
-    let relatedOrganisationsCard = " hidden";
-    if (relatedOrganisations.length>0) {
-      relatedOrganisationsCard = "";
-    }
-    let relatedPeopleCard = " hidden";
-    if (relatedPeople.length>0) {
-      relatedPeopleCard = "";
-    }
-    let relatedResourcesCard = " hidden";
-    if (relatedResources.length>0) {
-      relatedResourcesCard = "";
-    }
     let errorContainerClass = " hidden";
     if (this.props.errorVisible) {
       errorContainerClass = "";
@@ -509,42 +439,11 @@ class ViewResource extends Component {
               </CardBody>
             </Card>
 
-            <Card className={relatedEventsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.eventsOpen}>
-                  {relatedEvents}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedOrganisationsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.organisationsOpen}>
-                  {relatedOrganisations}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-
-            <Card className={relatedPeopleCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.peopleOpen}>
-                  {relatedPeople}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedResourcesCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.resourcesOpen}>
-                  {relatedResources}
-                </Collapse>
-              </CardBody>
-            </Card>
+            <RelatedEntitiesBlock
+              item={this.props.resource}
+              itemType="Resource"
+              reload={this.props.reload}
+              />
 
           </div>
         </div>

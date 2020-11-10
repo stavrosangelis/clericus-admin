@@ -85,7 +85,7 @@ const Settings = props => {
     setFormData(form);
   }
 
-  const testConfiguration = async() => {
+  /*const testConfiguration = async() => {
     let test = await axios({
       method: 'get',
       url: APIPath+'test-contact',
@@ -98,7 +98,7 @@ const Settings = props => {
       console.log(error)
     });
     console.log(test)
-  }
+  }*/
 
   // render
   let content = <div className="row">

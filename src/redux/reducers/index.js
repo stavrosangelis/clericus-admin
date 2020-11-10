@@ -3,9 +3,7 @@ import {
 } from "../constants/action-types";
 import {defaultState} from "../store";
 
-const initialState = defaultState;
-
-function rootReducer(state = initialState, action) {
+function rootReducer(state = defaultState, action) {
   if (action.type === GENERIC_UPDATE) {
     return Object.assign({}, state, action.payload);
   }

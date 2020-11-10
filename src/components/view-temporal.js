@@ -6,12 +6,7 @@ import {
   Collapse,
 } from 'reactstrap';
 import InputMask from 'react-input-mask';
-import {
-  loadRelatedEvents
-} from '../helpers/helpers';
-import axios from 'axios';
-
-const APIPath = process.env.REACT_APP_APIPATH;
+import RelatedEntitiesBlock from './related-entities-block';
 
 export default class ViewTemporal extends Component {
   constructor(props) {
@@ -40,7 +35,6 @@ export default class ViewTemporal extends Component {
     endDate = this.normalizeDate(endDate);
     this.state = {
       detailsOpen: true,
-      eventsOpen: false,
       form: {
         label: label,
         startDate: startDate,
@@ -53,7 +47,6 @@ export default class ViewTemporal extends Component {
     this.setDate = this.setDate.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
   }
 
   normalizeDate(date="") {
@@ -148,28 +141,6 @@ export default class ViewTemporal extends Component {
     });
   }
 
-  async deleteRef(ref, refTerm, model) {
-    let params = {
-      items: [
-        {_id: this.props.item._id, type: "Temporal"},
-        {_id: ref, type: model}
-      ],
-      taxonomyTermLabel: refTerm,
-    }
-    await axios({
-      method: 'delete',
-      url: APIPath+'reference',
-      crossDomain: true,
-      data: params
-    })
-	  .then(function(response) {
-      return true;
-	  })
-	  .catch(function (error) {
-	  });
-    this.props.reload();
-  }
-
   componentDidUpdate(prevProps, prevState) {
     if (prevProps.item!==this.props.item) {
       this.setFormValues();
@@ -180,17 +151,6 @@ export default class ViewTemporal extends Component {
     let detailsOpenActive = " active";
     if (!this.state.detailsOpen) {
       detailsOpenActive = "";
-    }
-    let eventsOpenActive = " active";
-    if (!this.state.eventsOpen) {
-      eventsOpenActive = "";
-    }
-
-    let relatedEvents = loadRelatedEvents(this.props.item, this.deleteRef);
-
-    let relatedEventsCard = " hidden";
-    if (relatedEvents.length>0) {
-      relatedEventsCard = "";
     }
     let errorContainerClass = " hidden";
     if (this.props.errorVisible) {
@@ -243,14 +203,11 @@ export default class ViewTemporal extends Component {
         <div className="col-xs-12 col-sm-6">
           <div className="item-details">
 
-            <Card className={relatedEventsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.eventsOpen}>
-                  {relatedEvents}
-                </Collapse>
-              </CardBody>
-            </Card>
+          <RelatedEntitiesBlock
+            item={this.props.item}
+            itemType="Temporal"
+            reload={this.props.reload}
+            />
 
           </div>
         </div>

@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Card, CardTitle, CardBody, Button, Form, FormGroup, Label, Input, Collapse} from 'reactstrap';
 import { Link } from 'react-router-dom';
 import {getResourceThumbnailURL} from '../helpers/helpers';
+import LazyList from './lazylist';
 
 export default class ViewClasspiece extends Component {
   constructor(props) {
@@ -24,6 +25,7 @@ export default class ViewClasspiece extends Component {
     this.relatedEvents = this.relatedEvents.bind(this);
     this.relatedOrganisations = this.relatedOrganisations.bind(this);
     this.relatedPeople = this.relatedPeople.bind(this);
+    this.renderPerson = this.renderPerson.bind(this);
     this.relatedResources = this.relatedResources.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
   }
@@ -125,6 +127,26 @@ export default class ViewClasspiece extends Component {
       }
     }
     return output;
+  }
+
+  renderPerson(reference) {
+    if (reference.ref!==null) {
+      let label = reference.ref.firstName;
+      if (reference.ref.middleName!=="") {
+        label+= " "+reference.ref.middleName;
+      }
+      if (reference.ref.lastName!=="") {
+        label+= " "+reference.ref.lastName;
+      }
+      let _id = reference.ref._id;
+      let url = `/person/${_id}`;
+      let newRow = <div key={_id}>
+        <Link to={url} href={url}>
+          <i>{reference.refType}</i> <b>{label}</b>
+        </Link>
+      </div>
+      return newRow;
+    }
   }
 
   relatedPeople() {
@@ -292,7 +314,13 @@ export default class ViewClasspiece extends Component {
               <CardBody>
                 <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
                 <Collapse isOpen={this.state.peopleOpen}>
-                  {relatedPeople}
+                  <LazyList
+                    limit={50}
+                    range={25}
+                    items={this.props.resource.people}
+                    containerClass="filter-body"
+                    renderItem={this.renderPerson}
+                  />
                 </Collapse>
               </CardBody>
             </Card>

@@ -205,7 +205,7 @@ class Spatials extends Component {
       orderField: orderField,
       orderDesc: orderDesc
     });
-    this.updateStorePagination(null,null,orderField,orderDesc);
+    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
     let context = this;
     setTimeout(function(){
       context.load();
@@ -218,7 +218,7 @@ class Spatials extends Component {
         page: e,
         gotoPage: e,
       });
-      this.updateStorePagination(null,e);
+      this.updateStorePagination({page:e});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -260,7 +260,7 @@ class Spatials extends Component {
       this.setState({
         page: gotoPage
       })
-      this.updateStorePagination(null,gotoPage);
+      this.updateStorePagination({page:gotoPage});
       let context = this;
       setTimeout(function(){
         context.load();
@@ -272,7 +272,7 @@ class Spatials extends Component {
     this.setState({
       limit: limit
     })
-    this.updateStorePagination(limit,null);
+    this.updateStorePagination({limit:limit});
     let context = this;
     setTimeout(function(){
       context.load();

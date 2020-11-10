@@ -5,17 +5,9 @@ import {
   Form, FormGroup, Label, Input,
   Collapse
 } from 'reactstrap';
-import {
-  getThumbnailURL,
-  loadRelatedEvents,
-  loadRelatedOrganisations,
-  loadRelatedPeople,
-  loadRelatedResources,
-  loadRelatedSpatial
-} from '../helpers/helpers';
-import axios from 'axios';
+import { getThumbnailURL } from '../helpers/helpers';
 import OrganisationAppelations from './organisation-alternate-appelations';
-const APIPath = process.env.REACT_APP_APIPATH;
+import RelatedEntitiesBlock from './related-entities-block';
 
 export default class ViewOrganisation extends Component {
   constructor(props) {
@@ -42,10 +34,6 @@ export default class ViewOrganisation extends Component {
     }
     this.state = {
       detailsOpen: true,
-      eventsOpen: false,
-      organisationsOpen: false,
-      peopleOpen: false,
-      spatialOpen: false,
       label: label,
       description: description,
       organisationType: organisationType,
@@ -58,7 +46,6 @@ export default class ViewOrganisation extends Component {
     this.parseMetadata = this.parseMetadata.bind(this);
     this.parseMetadataItems = this.parseMetadataItems.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
-    this.deleteRef = this.deleteRef.bind(this);
     this.updateAlternateAppelation = this.updateAlternateAppelation.bind(this);
     this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
   }
@@ -147,28 +134,6 @@ export default class ViewOrganisation extends Component {
     });
   }
 
-  deleteRef(ref, refTerm, model) {
-    let context = this;
-    let params = {
-      items: [
-        {_id: this.props.organisation._id, type: "Organisation"},
-        {_id: ref, type: model}
-      ],
-      taxonomyTermLabel: refTerm,
-    }
-    axios({
-      method: 'delete',
-      url: APIPath+'reference',
-      crossDomain: true,
-      data: params
-    })
-	  .then(function (response) {
-      context.props.reload();
-	  })
-	  .catch(function (error) {
-	  });
-  }
-
   updateAlternateAppelation(index, data) {
     let organisation = this.props.organisation;
     let alternateAppelations = organisation.alternateAppelations;
@@ -221,26 +186,6 @@ export default class ViewOrganisation extends Component {
     if (!this.state.metadataOpen) {
       metadataOpenActive = "";
     }
-    let eventsOpenActive = " active";
-    if (!this.state.eventsOpen) {
-      eventsOpenActive = "";
-    }
-    let organisationsOpenActive = " active";
-    if (!this.state.organisationsOpen) {
-      organisationsOpenActive = "";
-    }
-    let peopleOpenActive = " active";
-    if (!this.state.peopleOpen) {
-      peopleOpenActive = "";
-    }
-    let resourcesOpenActive = " active";
-    if (!this.state.resourcesOpen) {
-      resourcesOpenActive = "";
-    }
-    let spatialOpenActive = " active";
-    if (!this.state.spatialOpen) {
-      spatialOpenActive = "";
-    }
 
     let statusPublic = "secondary";
     let statusPrivate = "secondary";
@@ -253,37 +198,12 @@ export default class ViewOrganisation extends Component {
     }
 
     let metadataItems = this.parseMetadata();
-    let relatedEvents = loadRelatedEvents(this.props.organisation, this.deleteRef);
-    let relatedOrganisations = loadRelatedOrganisations(this.props.organisation, this.deleteRef);
-    let relatedPeople = loadRelatedPeople(this.props.organisation, this.deleteRef);
-    let relatedResources = loadRelatedResources(this.props.organisation, this.deleteRef);
-    let relatedSpatial = loadRelatedSpatial(this.props.organisation, this.deleteRef);
 
     let metadataCard = " hidden";
     if (metadataItems.length>0) {
       metadataItems = "";
     }
 
-    let relatedEventsCard = " hidden";
-    if (relatedEvents.length>0) {
-      relatedEventsCard = "";
-    }
-    let relatedOrganisationsCard = " hidden";
-    if (relatedOrganisations.length>0) {
-      relatedOrganisationsCard = "";
-    }
-    let relatedPeopleCard = " hidden";
-    if (relatedPeople.length>0) {
-      relatedPeopleCard = "";
-    }
-    let relatedResourcesCard = " hidden";
-    if (relatedResources.length>0) {
-      relatedResourcesCard = "";
-    }
-    let relatedSpatialCard = " hidden";
-    if (relatedSpatial.length>0) {
-      relatedSpatialCard = "";
-    }
     let thumbnailImage = [];
     let thumbnailURL = getThumbnailURL(this.props.organisation);
     if (thumbnailURL!==null) {
@@ -366,50 +286,11 @@ export default class ViewOrganisation extends Component {
               </CardBody>
             </Card>
 
-            <Card className={relatedEventsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'eventsOpen')}>Related events (<span className="related-num">{relatedEvents.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+eventsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.eventsOpen}>
-                  {relatedEvents}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedOrganisationsCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'organisationsOpen')}>Related Organisations (<span className="related-num">{relatedOrganisations.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+organisationsOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.organisationsOpen}>
-                  {relatedOrganisations}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedPeopleCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'peopleOpen')}>Related people (<span className="related-num">{relatedPeople.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+peopleOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.peopleOpen}>
-                  {relatedPeople}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedResourcesCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'resourcesOpen')}>Related resources (<span className="related-num">{relatedResources.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+resourcesOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.resourcesOpen}>
-                  {relatedResources}
-                </Collapse>
-              </CardBody>
-            </Card>
-
-            <Card className={relatedSpatialCard}>
-              <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'spatialOpen')}>Related spatial (<span className="related-num">{relatedSpatial.length}</span>) <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+spatialOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.spatialOpen}>
-                  {relatedSpatial}
-                </Collapse>
-              </CardBody>
-            </Card>
+            <RelatedEntitiesBlock
+              item={this.props.organisation}
+              itemType="Organisation"
+              reload={this.props.reload}
+              />
 
           </div>
         </div>
