@@ -214,6 +214,7 @@ export function setPaginationParams(type,params) {
       payload = {
         peoplePagination: {
           limit:params.limit,
+          peopleType:params.peopleType,
           page:params.page,
           orderField:params.orderField,
           orderDesc:params.orderDesc,
@@ -308,6 +309,40 @@ export function getPeopleRoles() {
 	  .catch(function (error) {
       console.log(error)
 	  });
+  }
+}
+
+export function getPersonTypes() {
+  return async (dispatch,getState) => {
+    let params = {
+      systemType: "personTypes"
+    }
+    let responseData = await axios({
+      method: 'get',
+      url: APIPath+'taxonomy',
+      crossDomain: true,
+      params: params,
+    })
+    .then(function (response) {
+      return response.data;
+    })
+    .catch(function (error) {
+      console.log(error)
+    });
+    if (responseData.status) {
+      let personTypes = responseData.data.taxonomyterms;
+      let payload ={
+        personTypes: personTypes,
+      };
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload: payload
+      });
+    }
+    else {
+      return false;
+    }
+
   }
 }
 

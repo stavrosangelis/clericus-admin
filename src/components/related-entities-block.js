@@ -132,13 +132,7 @@ const RelatedEntitiesBlock = props => {
 
   if (item?.people?.length>0) {
     const renderPerson = (reference) => {
-      let label = reference.ref.firstName;
-      if (reference.ref.middleName!=="") {
-        label+= " "+reference.ref.middleName
-      }
-      if (reference.ref.lastName!=="") {
-        label+= " "+reference.ref.lastName
-      }
+      let label = reference.ref.label;
       let role = [];
       if (typeof reference.term.role!=="undefined" && reference.term.role!=="null") {
         role = <label>as {reference.term.roleLabel}</label>

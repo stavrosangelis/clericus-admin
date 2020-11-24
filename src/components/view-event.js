@@ -13,36 +13,27 @@ export default class ViewEvent extends Component {
     super(props);
 
     let item = this.props.item;
-    let status = 'private', label = '', description = '', eventType = '';
-    if (item!==null) {
-      if (typeof item.label!=="undefined" && item.label!==null) {
-        label = item.label;
-      }
-      if (typeof item.description!=="undefined" && item.description!==null) {
-        description = item.description;
-      }
-      if (typeof item.eventType!=="undefined" && item.eventType!==null && this.props.eventTypes.length>0) {
-        let eventTypeFind = this.props.eventTypes.find(type=>type._id===item.eventType);
-        eventType = {value: item.eventType, label:eventTypeFind.label};
-      }
-      if (typeof item.status!=="undefined" && item.status!==null) {
-        status = item.status;
-      }
-    }
+    let status = item?.status || 'private';
+    let label = item?.label || '';
+    let description = item?.description || '';
+    let eventType = item?.eventType || '';
 
     this.state = {
       detailsOpen: true,
       label: label,
       description: description,
-      eventType: eventType,
+      eventType: "",
+      initialEventType: eventType,
       status: status,
     }
     this.eventTypesList = this.eventTypesList.bind(this);
+    this.eventTypesListChildren = this.eventTypesListChildren.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleCollapse = this.toggleCollapse.bind(this);
     this.updateStatus = this.updateStatus.bind(this);
+    this.initialSelect2Value = this.initialSelect2Value.bind(this);
   }
 
   eventTypesList(eventTypes) {
@@ -53,6 +44,31 @@ export default class ViewEvent extends Component {
       let eventType = eventTypes[i];
       let option = {value: eventType._id, label: eventType.label};
       options.push(option);
+      if (eventType.children.length>0) {
+        let sep = "";
+        let childOptions = this.eventTypesListChildren(eventType.children,sep);
+        for (let k in childOptions) {
+          options.push(childOptions[k]);
+        }
+      }
+    }
+    return options;
+  }
+
+  eventTypesListChildren(children, sep="") {
+    let options = [];
+    sep += "-";
+    for (let i=0;i<children.length; i++) {
+      let child = children[i];
+      let newLabel = `${sep} ${child.label}`;
+      let option = {value: child._id, label: newLabel};
+      options.push(option);
+      if (child.children.length>0) {
+        let childOptions = this.eventTypesListChildren(child.children,sep);
+        for (let k in childOptions) {
+          options.push(childOptions[k]);
+        }
+      }
     }
     return options;
   }
@@ -78,6 +94,12 @@ export default class ViewEvent extends Component {
     });
   }
 
+  initialSelect2Value(){
+    let options = this.eventTypesList(this.props.eventTypes);
+    let initialItem = options.find(o=>o.value===this.state.initialEventType) || "";
+    this.setState({eventType:initialItem});
+  }
+
   select2Change(selectedOption, element=null) {
     if (element===null) {
       return false;
@@ -99,6 +121,16 @@ export default class ViewEvent extends Component {
 
   updateStatus(value) {
     this.setState({status:value});
+  }
+
+  componentDidMount() {
+    this.initialSelect2Value();
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.eventTypes.length!==this.props.eventTypes.length) {
+      this.initialSelect2Value();
+    }
   }
 
   render() {
@@ -123,7 +155,7 @@ export default class ViewEvent extends Component {
       errorContainerClass = "";
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
-    
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">

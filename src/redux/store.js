@@ -19,7 +19,7 @@ export const defaultState = {
 
   resourcesPagination: {
     limit:25,
-    activeType:null,
+    activeSystemType:null,
     page:1,
     orderField: "label",
     orderDesc: false,
@@ -28,6 +28,7 @@ export const defaultState = {
   },
   peoplePagination: {
     limit:25,
+    peopleType:null,
     page:1,
     orderField: "firstName",
     orderDesc: false,
@@ -112,6 +113,7 @@ export const defaultState = {
   userGroups: [],
 
   resourcesTypes: [],
+  personTypes: [],
   organisationTypes: [],
   eventTypes: [],
 

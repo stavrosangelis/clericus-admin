@@ -143,6 +143,8 @@ class Resource extends Component {
       resource = {};
     }
     resource.label = newData.label;
+    resource.alternateLabels = newData.alternateLabels;
+    resource.originalLocation = newData.originalLocation;
     resource.systemType = newData.systemType;
     resource.description = newData.description;
     resource.status = newData.status;
@@ -151,16 +153,14 @@ class Resource extends Component {
     delete resource.organisations;
     delete resource.resources;
 
-    let postData = {
-      resource: resource
-    }
+    let postData = {resource: resource};
     let responseData = await axios({
       method: 'put',
       url: APIPath+'resource',
       crossDomain: true,
       data: postData,
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       }
     })
     .then(function (response) {
@@ -171,9 +171,13 @@ class Resource extends Component {
     if (responseData.status) {
       this.setState({
         updating: false,
-        updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>
+        updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+        newId: responseData.data.data._id,
+        redirectReload: true
       });
-      this.load();
+      if (typeof resource._id!=="undefined") {
+        this.load();
+      }
       let context = this;
       setTimeout(function() {
         context.setState({

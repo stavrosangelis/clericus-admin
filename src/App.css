@@ -952,6 +952,9 @@ header {
 .breadcrumb-item a:active {
   color: #105b6b;
 }
+.breadcrumb-item a i, .breadcrumb-item i {
+  padding: 3px 5px 0 0;
+}
 .card {
   border-radius: 4px !important;
 }
@@ -1251,6 +1254,9 @@ header {
 }
 input.form-control.active {
   box-shadow: 0 0 8px #1f89dd;
+}
+textarea.form-control {
+  line-height:normal;
 }
 ::placeholder {
   color: #ccc !important;

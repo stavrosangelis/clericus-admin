@@ -23,7 +23,8 @@ const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = state => {
   return {
     peoplePagination: state.peoplePagination,
-    resourcesTypes: state.resourcesTypes
+    resourcesTypes: state.resourcesTypes,
+    personTypes: state.personTypes
    };
 };
 
@@ -65,6 +66,7 @@ class People extends Component {
     this.updateLimit = this.updateLimit.bind(this);
     this.gotoPage = this.gotoPage.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.setActiveType = this.setActiveType.bind(this);
     this.setStatus = this.setStatus.bind(this);
     this.peopleTableRows = this.peopleTableRows.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
@@ -109,6 +111,9 @@ class People extends Component {
       }
     }
     let url = APIPath+'people';
+    if (this.state.activeType!==null) {
+      params.personType = this.state.activeType;
+    }
     let responseData = await axios({
       method: 'get',
       url: url,
@@ -467,6 +472,17 @@ class People extends Component {
     },100)
   }
 
+  setActiveType(type) {
+    this.setState({
+      activeType: type
+    })
+    this.updateStorePagination({activeType:type});
+    let context = this;
+    setTimeout(function() {
+      context.load();
+    },100)
+  }
+
   setStatus(status=null) {
     this.setState({
       status: status
@@ -636,11 +652,12 @@ class People extends Component {
       pageType="people"
       searchElements={searchElements}
       searchInput={this.state.searchInput}
+      setActiveType={this.setActiveType}
       setStatus={this.setStatus}
       status={this.state.status}
       simpleSearch={this.simpleSearch}
       total_pages={this.state.totalPages}
-      types={[]}
+      types={this.props.personTypes}
       updateLimit={this.updateLimit}
       updatePage={this.updatePage}
       updateAdvancedSearchInputs={this.updateAdvancedSearchInputs}

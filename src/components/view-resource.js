@@ -10,6 +10,7 @@ import { getResourceThumbnailURL, getResourceFullsizeURL } from '../helpers/help
 import {Link} from 'react-router-dom';
 import UploadFile from './upload-file';
 import RelatedEntitiesBlock from './related-entities-block';
+import ResourceAlternateLabels from './resource-alternate-labels.js';
 
 import axios from 'axios';
 import Viewer from './image-viewer'
@@ -27,32 +28,24 @@ class ViewResource extends Component {
     super(props);
     let resource = this.props.resource;
     let status = 'private';
-    let newLabel = '';
-    let newDescription = '';
-    let newSystemType = 'undefined';
-    if (resource!==null) {
-      if (typeof resource.label!=="undefined" && resource.label!==null) {
-        newLabel = resource.label;
-      }
-      if (typeof resource.systemType!=="undefined" && resource.systemType!==null) {
-        newSystemType = resource.systemType;
-      }
-      if (typeof resource.description!=="undefined" && resource.description!==null) {
-        newDescription = resource.description;
-      }
-    }
+    let newLabel = resource?.label || '';
+    let newDescription = resource?.description || '';
+    let newOriginalLocation = resource?.originalLocation || '';
+    let newSystemType = resource?.systemType || 'undefined';
     this.state = {
       zoom: 100,
       detailsOpen: true,
       metadataOpen: false,
       label: newLabel,
+      alternateLabels: [],
       systemType: newSystemType,
+      originalLocation: newOriginalLocation,
       description: newDescription,
       updateFileModal: false,
       imageViewerVisible: false,
       status: status,
       deleteClasspieceModal: false,
-      deletingClasspiece: false
+      deletingClasspiece: false,
     }
     this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
@@ -65,6 +58,8 @@ class ViewResource extends Component {
     this.deleteClasspieceModalToggle = this.deleteClasspieceModalToggle.bind(this);
     this.deleteClasspiece = this.deleteClasspiece.bind(this);
     this.updateSystemType = this.updateSystemType.bind(this);
+    this.updateAlternateLabel = this.updateAlternateLabel.bind(this);
+    this.removeAlternateLabel = this.removeAlternateLabel.bind(this);
   }
 
   updateSystemType(value) {
@@ -88,6 +83,8 @@ class ViewResource extends Component {
     }
     let updateData = {
       label: this.state.label,
+      alternateLabels: this.state.alternateLabels,
+      originalLocation: this.state.originalLocation,
       systemType: systemType,
       description: this.state.description,
       status: this.state.status,
@@ -199,7 +196,6 @@ class ViewResource extends Component {
     })
     .catch(function (error) {
     });
-    console.log(responseData)
     if (responseData.status) {
       this.setState({
         deletingClasspiece: false,
@@ -207,6 +203,57 @@ class ViewResource extends Component {
       });
       this.props.setRedirect();
     }
+  }
+
+  updateAlternateLabel(index, data) {
+    let resource = this.props.resource;
+    let alternateLabels = resource.alternateLabels;
+    if (index==="new") {
+      alternateLabels.push(data);
+    }
+    else if (index!==null) {
+      alternateLabels[index] = data;
+    }
+    this.setState({
+      alternateLabels: alternateLabels
+    },()=> {
+      let systemType = this.state.systemType;
+      if(typeof systemType==="object") {
+        systemType = JSON.stringify(systemType);
+      }
+      let updateData = {
+        label: this.state.label,
+        alternateLabels: this.state.alternateLabels,
+        systemType: systemType,
+        description: this.state.description,
+        status: this.state.status,
+      };
+      this.props.update(updateData);
+    });
+  }
+
+  removeAlternateLabel(index) {
+    let resource = this.props.resource;
+    let alternateLabels = resource.alternateLabels;
+    if (index!==null) {
+      alternateLabels.splice(index,1);
+    }
+    this.setState({
+      alternateLabels: alternateLabels
+    },()=> {
+      let systemType = this.state.systemType;
+      if(typeof systemType==="object") {
+        systemType = JSON.stringify(systemType);
+      }
+      let updateData = {
+        label: this.state.label,
+        alternateLabels: this.state.alternateLabels,
+        systemType: systemType,
+        description: this.state.description,
+        status: this.state.status,
+      };
+      this.props.update(updateData);
+    });
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -227,25 +274,15 @@ class ViewResource extends Component {
         (prevProps.resource._id!==this.props.resource._id)
       ) {
         let status = 'private';
-        let newLabel = '';
-        let newDescription = '';
-        let newSystemType = 'undefined';
-        if (typeof this.props.resource.label!=="undefined" && this.props.resource.label!==null) {
-          newLabel = this.props.resource.label;
-        }
-        if (typeof this.props.resource.systemType!=="undefined" && this.props.resource.systemType!==null) {
-          newSystemType = this.props.resource.systemType;
-        }
-        if (typeof this.props.resource.description!=="undefined" && this.props.resource.description!==null) {
-          newDescription = this.props.resource.description;
-        }
-        if (typeof this.props.resource.status!=="undefined" && this.props.resource.status!==null) {
-          status = this.props.resource.status;
-        }
+        let newLabel = this.props.resource?.label || '';
+        let newOriginalLocation = this.props.resource?.originalLocation || '';
+        let newDescription = this.props.resource?.description || '';
+        let newSystemType = this.props.resource?.systemType || 'undefined';
         this.setState({
           status: status,
           label: newLabel,
           systemType: newSystemType,
+          originalLocation: newOriginalLocation,
           description: newDescription,
           detailsOpen: true,
           metadataOpen: false,
@@ -285,8 +322,6 @@ class ViewResource extends Component {
         description={this.state.description}
         updateSystemType={this.updateSystemType}
         />;
-      deleteBtn = [];
-      updateBtn = [];
     }
     else {
       thumbnailImage.push(<Button style={{marginTop: "10px"}} color="info" className="resource-upload-btn" key="update-img-btn" onClick={this.toggleUpdateFileModal}><i className="fa fa-refresh" /> Update file</Button>);
@@ -385,6 +420,21 @@ class ViewResource extends Component {
     }
     let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
 
+    let alternateLabelsBlock = [];
+    if (this.props.resource!==null) {
+      let alData = this.props.resource.alternateLabels || [];
+      alternateLabelsBlock = <div className="alternate-appelations">
+        <div className="label">Alternate labels</div>
+        <ResourceAlternateLabels
+          data={alData}
+          update={this.updateAlternateLabel}
+          remove={this.removeAlternateLabel}
+        />
+      </div>
+    }
+
+
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -410,6 +460,7 @@ class ViewResource extends Component {
                       <Label>Label</Label>
                       <Input type="text" name="label" placeholder="Resource label..." value={this.state.label} onChange={this.handleChange}/>
                     </FormGroup>
+                    {alternateLabelsBlock}
                     <FormGroup>
                      <Label>Type</Label>
                      <Input type="select" name="systemType" onChange={this.handleChange} value={this.state.systemType}>
@@ -419,6 +470,10 @@ class ViewResource extends Component {
                     <FormGroup>
                       <Label>Description</Label>
                       <Input type="textarea" name="description" placeholder="Resource description..." value={this.state.description} onChange={this.handleChange}/>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>Original location</Label>
+                      <Input type="textarea" name="originalLocation" placeholder="A URI pointint to the original location of the resource" value={this.state.originalLocation} onChange={this.handleChange}/>
                     </FormGroup>
                     <div className="text-right">
                       {deleteBtn}

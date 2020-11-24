@@ -26,6 +26,7 @@ import {connect} from "react-redux";
 import {
   getSystemTypes,
   getPeopleRoles,
+  getPersonTypes,
   getOrganisationTypes,
   getEventTypes,
   loadDefaultEntities,
@@ -57,6 +58,7 @@ function mapDispatchToProps(dispatch) {
     loadSettings: () => dispatch(loadSettings()),
     getSystemTypes: () => dispatch(getSystemTypes()),
     getPeopleRoles: () => dispatch(getPeopleRoles()),
+    getPersonTypes: () => dispatch(getPersonTypes()),
     getOrganisationTypes: () => dispatch(getOrganisationTypes()),
     getEventTypes: () => dispatch(getEventTypes()),
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
@@ -132,6 +134,7 @@ class App extends Component {
       this.openSidebar();
       this.props.getSystemTypes();
       this.props.getPeopleRoles();
+      this.props.getPersonTypes();
       this.props.getOrganisationTypes();
       this.props.getEventTypes();
       this.props.loadDefaultEntities();
