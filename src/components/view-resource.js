@@ -307,7 +307,9 @@ class ViewResource extends Component {
     }
     if (resource!==null && typeof resource.resourceType!=="undefined" && resource.resourceType==="document") {
       let fullsizePath = getResourceFullsizeURL(resource);
-      thumbnailImage = [<a key="link" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><i className="fa fa-file-pdf-o"/></a>, <a key="link-label" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><label>Preview file</label> </a>];
+      if (fullsizePath!==null) {
+        thumbnailImage = [<a key="link" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><i className="fa fa-file-pdf-o"/></a>, <a key="link-label" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><label>Preview file</label> </a>];
+      }      
     }
     let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
     let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>

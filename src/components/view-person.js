@@ -8,41 +8,28 @@ import { getThumbnailURL, getPersonLabel} from '../helpers/helpers';
 import PersonAppelations from './person-alternate-appelations.js';
 import RelatedEntitiesBlock from './related-entities-block';
 
-export default class ViewPerson extends Component {
+import {connect} from "react-redux";
+
+const mapStateToProps = (state) => {
+  return {
+    personTypes: state.personTypes
+   };
+};
+
+
+class ViewPerson extends Component {
   constructor(props) {
     super(props);
 
     let person = this.props.person;
-    let status = 'private';
-    let honorificPrefix = [""];
-    let firstName = '';
-    let middleName = '';
-    let lastName = '';
-    let alternateAppelations = [];
-    let description = '';
-    if (person!==null) {
-      if (typeof person.honorificPrefix!=="undefined" && person.honorificPrefix!==null) {
-        honorificPrefix = person.honorificPrefix;
-      }
-      if (typeof person.firstName!=="undefined" && person.firstName!==null) {
-        firstName = person.firstName;
-      }
-      if (typeof person.middleName!=="undefined" && person.middleName!==null) {
-        middleName = person.middleName;
-      }
-      if (typeof person.lastName!=="undefined" && person.lastName!==null) {
-        lastName = person.lastName;
-      }
-      if (typeof person.alternateAppelations!=="undefined" && person.alternateAppelations!==null) {
-        alternateAppelations = person.alternateAppelations;
-      }
-      if (typeof person.description!=="undefined" && person.description!==null) {
-        description = person.description;
-      }
-      if (typeof person.status!=="undefined" && person.status!==null) {
-        status = person.status;
-      }
-    }
+    let status = person?.status || 'private';
+    let honorificPrefix = person?.honorificPrefix || [""];
+    let firstName = person?.firstName || '';
+    let middleName = person?.middleName || '';
+    let lastName = person?.lastName || '';
+    let alternateAppelations = person?.alternateAppelations || [];
+    let description = person?.description || '';
+    let personType = person?.personType || '';
 
     this.state = {
       detailsOpen: true,
@@ -53,6 +40,7 @@ export default class ViewPerson extends Component {
       lastName: lastName,
       alternateAppelations: alternateAppelations,
       description: description,
+      personType: personType,
       status: status,
     }
     this.updateStatus = this.updateStatus.bind(this);
@@ -81,6 +69,7 @@ export default class ViewPerson extends Component {
       lastName: this.state.lastName,
       alternateAppelations: this.state.alternateAppelations,
       description: this.state.description,
+      personType: this.state.personType,
       status: this.state.status,
     }
     this.props.update(newData);
@@ -184,6 +173,7 @@ export default class ViewPerson extends Component {
         lastName: this.state.lastName,
         alternateAppelations: this.state.alternateAppelations,
         description: this.state.description,
+        personType: this.state.personType,
         status: this.state.status,
       }
       this.props.update(newData);
@@ -206,6 +196,7 @@ export default class ViewPerson extends Component {
         lastName: this.state.lastName,
         alternateAppelations: this.state.alternateAppelations,
         description: this.state.description,
+        personType: this.state.personType,
         status: this.state.status,
       }
       this.props.update(newData);
@@ -300,7 +291,9 @@ export default class ViewPerson extends Component {
         />
       </div>
     }
-    
+
+    let selectPersonTypes = this.props.personTypes?.map((p,i)=><option key={i} value={p.label}>{p.label}</option>);
+
     return (
       <div className="row">
         <div className="col-xs-12 col-sm-6">
@@ -344,6 +337,12 @@ export default class ViewPerson extends Component {
                       <Label>Description</Label>
                       <Input type="textarea" name="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>
                     </FormGroup>
+                    <FormGroup>
+                      <Label>Type</Label>
+                      <Input type="select" name="personType" value={this.state.personType} onChange={this.handleChange}>
+                        {selectPersonTypes}
+                      </Input>
+                    </FormGroup>
                     <div className="text-right">
                       {deleteBtn}
                       {updateBtn}
@@ -374,3 +373,5 @@ export default class ViewPerson extends Component {
     )
   }
 }
+
+export default ViewPerson = connect(mapStateToProps, [])(ViewPerson);;

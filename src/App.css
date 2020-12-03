@@ -210,6 +210,9 @@ body {
   color: #555;
   font-size: 15px;
 }
+.form-group label span {
+  font-weight: normal;
+}
 
 h1 {
   font-size: 32px;

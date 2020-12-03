@@ -32,7 +32,9 @@ export default class Taxonomies extends React.Component {
       termRelationsCollapse: false,
       termId: '',
       termLabel: '',
+      termLabelId: '',
       termInverseLabel: '',
+      termInverseLabelId: '',
       termScopeNote: '',
       termParentRef: '',
       termCount: 0,
@@ -439,7 +441,9 @@ export default class Taxonomies extends React.Component {
         termModalVisible: false,
         termId: '',
         termLabel: '',
+        termLabelId: '',
         termInverseLabel: '',
+        termInverseLabelId: '',
         termScopeNote: '',
         termParentRef: '',
         updateTermBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>
@@ -515,7 +519,9 @@ export default class Taxonomies extends React.Component {
     else {
       updateState.termId = '';
       updateState.termLabel = '';
+      updateState.termLabelId = '';
       updateState.termInverseLabel = '';
+      updateState.termInverseLabelId = '';
       updateState.termScopeNote = '';
       updateState.termParentRef = '';
       updateState.parentRef = '';
@@ -548,32 +554,24 @@ export default class Taxonomies extends React.Component {
     if (typeof responseTerm._id!=="undefined" && responseTerm._id!==null) {
       termId = responseTerm._id;
     }
-    let termLabel = "";
-    if (typeof responseTerm.label!=="undefined" && responseTerm.label!==null) {
-      termLabel = responseTerm.label;
-    }
-    let termInverseLabel = "";
-    if (typeof responseTerm.inverseLabel!=="undefined" && responseTerm.inverseLabel!==null) {
-      termInverseLabel = responseTerm.inverseLabel;
-    }
-    let scopeNote = "";
-    if (typeof responseTerm.scopeNote!=="undefined" && responseTerm.scopeNote!==null) {
-      scopeNote = responseTerm.scopeNote;
-    }
+    let termLabel = responseTerm?.label || "";
+    let termLabelId = responseTerm?.labelId || "";
+    let termInverseLabel = responseTerm?.inverseLabel || "";
+    let termInverseLabelId = responseTerm?.inverseLabelId || "";
+    let scopeNote = responseTerm?.scopeNote || "";
     let count = "";
     if (typeof responseTerm.count!=="undefined" && responseTerm.count!==null) {
       count = parseInt(responseTerm.count,10);
     }
-    let parentRef = "";
-    if (typeof responseTerm.parentRef!=="undefined" && responseTerm.parentRef!==null) {
-      parentRef = responseTerm.parentRef;
-    }
+    let parentRef = responseTerm?.parentRef || "";
     let termsListOptions = this.termsList(this.state.taxonomyTerms, termId, "");
     termsListOptions.unshift({value: "", label: "--"});
     this.setState({
       termId: termId,
       termLabel: termLabel,
+      termLabelId: termLabelId,
       termInverseLabel: termInverseLabel,
+      termInverseLabelId: termInverseLabelId,
       termScopeNote: scopeNote,
       termParentRef: parentRef,
       termCount: count,
@@ -771,8 +769,14 @@ export default class Taxonomies extends React.Component {
                 <Input type="text" name="termLabel" id="termLabelInput" placeholder="Term label..." value={this.state.termLabel} onChange={this.handleChange}/>
               </FormGroup>
               <FormGroup>
+                <Label>LabelId<span>: <i>{this.state.termLabelId}</i></span></Label>
+              </FormGroup>
+              <FormGroup>
                 <Label for="termInverseLabelInput">Inverse Label</Label>
                 <Input type="text" name="termInverseLabel" id="termInverseLabelInput" placeholder="Term inverse label..." value={this.state.termInverseLabel} onChange={this.handleChange}/>
+              </FormGroup>
+              <FormGroup>
+                <Label>Inverse LabelId<span>: <i>{this.state.termInverseLabelId}</i> </span></Label>
               </FormGroup>
               <FormGroup>
                 <Label for="termScopeNoteInput">Scope Note</Label>

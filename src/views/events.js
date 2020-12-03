@@ -66,6 +66,8 @@ class Events extends Component {
     this.removeSelected = this.removeSelected.bind(this);
     this.simpleSearch = this.simpleSearch.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
+    this.findEventType = this.findEventType.bind(this);
+    this.findEventTypeById = this.findEventTypeById.bind(this);
 
     // hack to kill load promise on unmount
     this.cancelLoad=false;
@@ -87,8 +89,8 @@ class Events extends Component {
     }
     let url = APIPath+'events';
     if (this.state.activeType!==null) {
-      let eventType = this.props.eventTypes.find(t=>t.label===this.state.activeType);
-      if (typeof eventType!=="undefined") {
+      let eventType = this.findEventType();
+      if (eventType!==null) {
         params.eventType = eventType._id;
       }
     }
@@ -134,6 +136,40 @@ class Events extends Component {
     }
   }
 
+  findEventType() {
+    let type = this.state.activeType;
+    let eventTypes = this.props.eventTypes;
+    let eventType = eventTypes.find(t=>t.label===type) || null;
+    if (eventType===null) {
+      for (let c in eventTypes) {
+        let children = eventTypes[c].children;
+        eventType = children.find(t=>t.label===type) || null;
+        if (eventType!==null) {
+          break;
+        }
+      }
+    }
+    return eventType;
+  }
+
+  findEventTypeById(_id=null) {
+    if (_id===null) {
+      return null;
+    }
+    let eventTypes = this.props.eventTypes;
+    let eventType = eventTypes.find(t=>t._id===_id) || null;
+    if (eventType===null) {
+      for (let c in eventTypes) {
+        let children = eventTypes[c].children;
+        eventType = children.find(t=>t._id===_id) || null;
+        if (eventType!==null) {
+          break;
+        }
+      }
+    }
+    return eventType;
+  }
+
   async simpleSearch(e) {
     e.preventDefault();
     if (this.state.searchInput<2) {
@@ -153,8 +189,8 @@ class Events extends Component {
     }
     let url = APIPath+'events';
     if (this.state.activeType!==null) {
-      let eventType = this.props.eventTypes.find(t=>t.label===this.state.activeType);
-      if (typeof eventType!=="undefined") {
+      let eventType = this.findEventType();
+      if (eventType!==null) {
         params.eventType = eventType._id;
       }
     }
@@ -318,7 +354,7 @@ class Events extends Component {
   setActiveType(type) {
     this.setState({
       activeType: type
-    })
+    });
     this.updateStorePagination({activeType:type});
     let context = this;
     setTimeout(function() {
@@ -343,9 +379,10 @@ class Events extends Component {
       let countPage = parseInt(this.state.page,10)-1;
       let count = (i+1) + (countPage*this.state.limit);
       let label = item.label;
-      let findEventType = this.props.eventTypes.find(t=>t._id===item.eventType);
+      let findEventType = this.findEventTypeById(item.eventType);
+      console.log(findEventType)
       let eventType = "";
-      if (typeof findEventType!=="undefined") {
+      if (findEventType!==null) {
         eventType = findEventType.label;
       }
       let temporal = [];

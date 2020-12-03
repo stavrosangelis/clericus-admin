@@ -57,7 +57,7 @@ export const getResourceThumbnailURL = (resource) => {
 }
 
 export const getResourceFullsizeURL = (resource) => {
-  if (resource===null || typeof resource.paths==="undefined") {
+  if (resource===null || typeof resource.paths==="undefined" || resource.paths.length===0) {
     return null;
   }
   if(typeof resource.paths[0].path==="undefined") {
