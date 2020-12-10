@@ -53,13 +53,13 @@ class PersonAppelations extends Component {
     };
     if (index!==null && index!=="new") {
       let appelation = this.props.data[index];
-      update.appelation = appelation.appelation;
-      update.firstName = appelation.firstName;
-      update.middleName = appelation.middleName;
-      update.lastName = appelation.lastName;
-      update.note = appelation.note;
+      update.appelation = appelation.appelation || "";
+      update.firstName = appelation.firstName || "";
+      update.middleName = appelation.middleName || "";
+      update.lastName = appelation.lastName || "";
+      update.note = appelation.note || "";
       update.language = appelation.language;
-      if (update.appelation.length<2 && update.firstName>2) {
+      if (update.appelation.trim()==="") {
         update.simple = false;
       }
       else {

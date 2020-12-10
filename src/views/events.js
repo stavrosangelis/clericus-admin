@@ -67,7 +67,9 @@ class Events extends Component {
     this.simpleSearch = this.simpleSearch.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
     this.findEventType = this.findEventType.bind(this);
+    this.findEventTypeRec = this.findEventTypeRec.bind(this);
     this.findEventTypeById = this.findEventTypeById.bind(this);
+    this.findEventTypeByIdRec = this.findEventTypeByIdRec.bind(this);
 
     // hack to kill load promise on unmount
     this.cancelLoad=false;
@@ -139,11 +141,16 @@ class Events extends Component {
   findEventType() {
     let type = this.state.activeType;
     let eventTypes = this.props.eventTypes;
-    let eventType = eventTypes.find(t=>t.label===type) || null;
+    let eventType = this.findEventTypeRec(type, eventTypes);
+    return eventType;
+  }
+
+  findEventTypeRec(type, types) {
+    let eventType = types.find(t=>t.label===type) || null;
     if (eventType===null) {
-      for (let c in eventTypes) {
-        let children = eventTypes[c].children;
-        eventType = children.find(t=>t.label===type) || null;
+      for (let c in types) {
+        let children = types[c].children;
+        eventType = this.findEventTypeRec(type, children);
         if (eventType!==null) {
           break;
         }
@@ -157,11 +164,16 @@ class Events extends Component {
       return null;
     }
     let eventTypes = this.props.eventTypes;
-    let eventType = eventTypes.find(t=>t._id===_id) || null;
+    let eventType = this.findEventTypeByIdRec(_id,eventTypes);
+    return eventType;
+  }
+
+  findEventTypeByIdRec(_id, types) {
+    let eventType = types.find(t=>t._id===_id) || null;
     if (eventType===null) {
-      for (let c in eventTypes) {
-        let children = eventTypes[c].children;
-        eventType = children.find(t=>t._id===_id) || null;
+      for (let c in types) {
+        let children = types[c].children;
+        eventType = this.findEventTypeByIdRec(_id, children);
         if (eventType!==null) {
           break;
         }
@@ -380,7 +392,6 @@ class Events extends Component {
       let count = (i+1) + (countPage*this.state.limit);
       let label = item.label;
       let findEventType = this.findEventTypeById(item.eventType);
-      console.log(findEventType)
       let eventType = "";
       if (findEventType!==null) {
         eventType = findEventType.label;

@@ -44,7 +44,7 @@ class Dashboard extends React.Component {
       countOrganisations: data.organisations,
       countEvents: data.events,
       countSpatial: data.spatial,
-      countTemporal: data.events,
+      countTemporal: data.temporal,
     });
   }
 

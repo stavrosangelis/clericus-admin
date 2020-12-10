@@ -53,11 +53,14 @@ export default class Taxonomies extends React.Component {
 
     this.load = this.load.bind(this);
     this.loadItem = this.loadItem.bind(this);
+    this.flattenItems = this.flattenItems.bind(this);
     this.processTerms = this.processTerms.bind(this);
     this.list = this.list.bind(this);
     this.showItem = this.showItem.bind(this);
     this.showTerms = this.showTerms.bind(this);
+    this.renderTerm = this.renderTerm.bind(this);
     this.toggleTermChildren = this.toggleTermChildren.bind(this);
+    this.filterItemChildren = this.filterItemChildren.bind(this);
     this.termsList = this.termsList.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.editTermSubmit = this.editTermSubmit.bind(this);
@@ -82,10 +85,44 @@ export default class Taxonomies extends React.Component {
     })
     .catch(function (error) {
     });
+
     this.setState({
       loading: false,
       taxonomies: responseData.data,
     })
+  }
+
+  flattenItems(items, parentIds=null, parentId=null) {
+    let newItems = [];
+    for (let i in items) {
+      let item = items[i];
+      if (parentIds!==null) {
+        item.parentIds = parentIds;
+      }
+      if (parentId!==null) {
+        item.parentId = parentId;
+      }
+      let itemCopy = Object.assign({},item);
+      itemCopy.hasChildren = false;
+      itemCopy.visible = true;
+      if (typeof item.children!=="undefined" && item.children.length>0) {
+        delete itemCopy.children;
+        itemCopy.hasChildren = true;
+      }
+      newItems.push(itemCopy);
+      let newParentIds = [];
+      if (parentIds===null) {
+        newParentIds.push(item._id);
+      }
+      else {
+        newParentIds = [...parentIds, item._id];
+        itemCopy.visible = false;
+      }
+      if (item.children?.length>0) {
+        newItems = [...newItems, ...this.flattenItems(item.children, newParentIds, item._id)]
+      }
+    }
+    return newItems;
   }
 
   async loadItem(_id=null) {
@@ -123,11 +160,12 @@ export default class Taxonomies extends React.Component {
     if (taxonomy.description!==null) {
       newDescription = taxonomy.description;
     }
+    let taxonomyTerms = this.flattenItems(taxonomy.taxonomyterms);
     this.setState({
       taxonomy: taxonomy,
       taxonomyLabel: newLabel,
       taxonomyDescription: newDescription,
-      taxonomyTerms: taxonomy.taxonomyterms
+      taxonomyTerms: taxonomyTerms
     });
   }
 
@@ -207,33 +245,12 @@ export default class Taxonomies extends React.Component {
     return output;
   }
 
-  showTerms(terms=null, termIndex=0) {
+  showTerms(terms=null) {
     let termsOutput = [];
     if (terms!==null) {
       for (let i=0; i<terms.length; i++) {
-        let count = i+1+".";
-        let countOutput = '';
-        if (termIndex>0) {
-          let newTermIndex = termIndex+1;
-          countOutput = newTermIndex+".";
-        }
-        countOutput += count;
         let term = terms[i];
-        let termChildren = [];
-        let termChildrenOutput = [];
-        let collapseIcon = [];
-        let collapseIconClass = " fa-plus";
-        let childrenVisibleClass = "hidden";
-        if (term.childrenVisible) {
-          childrenVisibleClass = "";
-          collapseIconClass = " fa-minus";
-        }
-        if (typeof term.children!=="undefined" && term.children!==null && term.children.length>0) {
-          termChildren = this.showTerms(term.children, i);
-          collapseIcon = <i className={"fa"+collapseIconClass} onClick={()=>this.toggleTermChildren(i, termIndex)}/>;
-          termChildrenOutput = <div className={childrenVisibleClass}>{termChildren}</div>
-        }
-        let termItem = <li key={i}>{collapseIcon} {countOutput} <span className="term-item" onClick={()=>this.termModalToggle(term)}>{term.label}</span> {termChildrenOutput}</li>;
+        let termItem = this.renderTerm(term);
         termsOutput.push(termItem);
       }
       if (terms.length>0) {
@@ -243,38 +260,79 @@ export default class Taxonomies extends React.Component {
     return termsOutput;
   }
 
-  toggleTermChildren(index=null, parentIndex=null) {
-    let taxonomyTerms = this.state.taxonomyTerms;
-    let activeTerm;
-    if (parentIndex===0 || parentIndex===null) {
-      activeTerm = taxonomyTerms[index];
-      activeTerm.childrenVisible = !activeTerm.childrenVisible;
-      taxonomyTerms[index] = activeTerm;
+  renderTerm(item) {
+    let collapseIcon = [];
+    let collapseIconClass = " fa-plus";
+    if (typeof item.collapsed!=="undefined" && item.collapsed) {
+      collapseIconClass = " fa-minus";
     }
-    if (parentIndex!==null && parentIndex>0) {
-      activeTerm = taxonomyTerms[parentIndex][index];
-      activeTerm.childrenVisible = !activeTerm.childrenVisible;
-      taxonomyTerms[parentIndex][index] = activeTerm;
+    if (item.hasChildren) {
+      collapseIcon = <i className={"fa"+collapseIconClass} onClick={()=>this.toggleTermChildren(item)}/>;
+    }
+    let visibleClass = "hidden";
+    if (item.visible) {
+      visibleClass = "";
+    }
+    let left = 0;
+    let parentIds = item.parentIds || null;
+    if (parentIds!==null) {
+      left = 15*parentIds.length;
+    }
+    let style = {marginLeft: left}
+    let output = <li className={`${visibleClass}`} style={style} key={item._id}>{collapseIcon} <span className="term-item" onClick={()=>this.termModalToggle(item)}>{item.label}</span></li>;
+    return output;
+  }
+
+  toggleTermChildren(item) {
+    let taxonomyTerms = Object.assign([], this.state.taxonomyTerms);
+    let itemIndex = taxonomyTerms.indexOf(item);
+    if (typeof item.collapsed==="undefined") {
+      item.collapsed = true;
+    }
+    else {
+      item.collapsed = !item.collapsed;
+    }
+    taxonomyTerms[itemIndex] = item;
+    let children = this.filterItemChildren(item);
+    let childrenTerms = taxonomyTerms.filter(i=>children.indexOf(i._id)>-1);
+    for (let k in childrenTerms) {
+      let c = childrenTerms[k];
+      let index = taxonomyTerms.indexOf(c);
+      c.visible = !c.visible;
+      taxonomyTerms[index] = c;
     }
     this.setState({
       taxonomyTerms: taxonomyTerms
     })
   }
 
+  filterItemChildren(item) {
+    let taxonomyTerms = this.state.taxonomyTerms;
+    let newItems = taxonomyTerms.filter(i=>(typeof i.parentId!=="undefined" && i.parentId!==null));
+    let childrenIds = [];
+    if (typeof newItems!=="undefined") {
+      let children = newItems.filter(i=>i.parentId.indexOf(item._id)>-1);
+      if (typeof children!=="undefined") {
+        for (let key in children) {
+          let c = children[key];
+          childrenIds.push(c._id);
+        }
+      }
+    }
+    return childrenIds;
+  }
+
   termsList(terms, termId=null, sep="") {
     let options = [];
     for (let i=0; i<terms.length; i++) {
       let term = terms[i];
+      let seps = [];
+      for (let k in term.parentIds) {
+        seps.push("-");
+      }
       if (termId!==term._id) {
-        let option = {value: term._id, label: sep+" "+term.label};
+        let option = {value: term._id, label: seps.join("")+" "+term.label};
         options.push(option);
-        if (term.children.length>0) {
-          let childSep = "-"+sep;
-          let termChildren = this.termsList(term.children, termId, childSep);
-          for (let c=0; c<termChildren.length; c++) {
-            options.push(termChildren[c]);
-          }
-        }
       }
     }
 
