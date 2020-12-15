@@ -201,7 +201,7 @@ export function setPaginationParams(type,params) {
       payload = {
         resourcesPagination: {
           limit:params.limit,
-          activeSystemType:params.activeSystemType,
+          activeType:params.activeType,
           page:params.page,
           orderField:params.orderField,
           orderDesc:params.orderDesc,

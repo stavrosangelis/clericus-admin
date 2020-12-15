@@ -218,3 +218,11 @@ const lowerCaseStr = (str) => {
   let output = lowerChars.join("");
   return output;
 }
+
+export const jsonStringToObject = (data) => {
+  let output = null;
+  if (typeof data==="string") {
+    output = JSON.parse(data);
+  }
+  return output;
+}

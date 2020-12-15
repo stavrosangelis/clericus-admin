@@ -31,7 +31,6 @@ function mapDispatchToProps(dispatch) {
 class Resources extends Component {
   constructor(props) {
     super(props);
-
     this.state = {
       loading: true,
       tableLoading: true,

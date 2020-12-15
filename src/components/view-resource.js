@@ -11,7 +11,7 @@ import {Link} from 'react-router-dom';
 import UploadFile from './upload-file';
 import RelatedEntitiesBlock from './related-entities-block';
 import ResourceAlternateLabels from './resource-alternate-labels.js';
-
+import {jsonStringToObject} from '../helpers/helpers';
 import axios from 'axios';
 import Viewer from './image-viewer'
 
@@ -109,6 +109,9 @@ class ViewResource extends Component {
     let i = 0;
     for (let key in metadata) {
       let metaItems = metadata[key];
+      if (typeof metaItems==="string") {
+        metaItems = jsonStringToObject(metaItems);
+      }
       let metadataOutputItems = [];
       if (metaItems!==null && typeof metaItems.length==="undefined") {
         metadataOutputItems = this.parseMetadataItems(metaItems);
@@ -140,8 +143,13 @@ class ViewResource extends Component {
         newRow = <div key={i}><label>{metaKey}</label> : {metaItems[metaKey]}</div>
       }
       else {
-        let newRows = <div className="list-items">{this.parseMetadataItems(value)}</div>;
-        newRow = <div key={i}><div className="metadata-title">{metaKey}</div>{newRows}</div>
+        if (metaKey!=="data" && metaKey!=="XPKeywords") {
+          let newRows = <div className="list-items">{this.parseMetadataItems(value)}</div>;
+          newRow = <div key={i}><div className="metadata-title">{metaKey}</div>{newRows}</div>
+        }
+        else {
+          newRow = <div key={i}><label>{metaKey}</label> : {value.join(" ")}</div>
+        }
       }
       items.push(newRow);
       i++;
@@ -309,7 +317,7 @@ class ViewResource extends Component {
       let fullsizePath = getResourceFullsizeURL(resource);
       if (fullsizePath!==null) {
         thumbnailImage = [<a key="link" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><i className="fa fa-file-pdf-o"/></a>, <a key="link-label" target="_blank" href={fullsizePath} className="pdf-thumbnail" rel="noopener noreferrer"><label>Preview file</label> </a>];
-      }      
+      }
     }
     let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
     let updateBtn = <Button color="primary" outline type="submit" size="sm">{this.props.updateBtn}</Button>

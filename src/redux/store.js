@@ -19,7 +19,7 @@ export const defaultState = {
 
   resourcesPagination: {
     limit:25,
-    activeSystemType:null,
+    activeType:null,
     page:1,
     orderField: "label",
     orderDesc: false,
