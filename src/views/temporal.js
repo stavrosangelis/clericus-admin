@@ -1,25 +1,29 @@
 import React, { Component } from 'react';
-import { Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import {Breadcrumbs} from '../components/breadcrumbs';
-
+import {
+  Spinner,
+  Button,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from 'reactstrap';
 import axios from 'axios';
-
 import moment from 'moment';
+import { Redirect } from 'react-router-dom';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
 
+import Breadcrumbs from '../components/breadcrumbs';
 import ViewTemporal from '../components/view-temporal';
 import AddRelation from '../components/add-relations';
 
-import {Redirect} from 'react-router-dom';
+import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
 
-import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
-
-import {connect} from "react-redux";
-const mapStateToProps = state => {
-  return {
-    entitiesLoaded: state.entitiesLoaded,
-    temporalEntity: state.temporalEntity,
-   };
-};
+const mapStateToProps = (state) => ({
+  entitiesLoaded: state.entitiesLoaded,
+  temporalEntity: state.temporalEntity,
+});
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -36,13 +40,19 @@ class Temporal extends Component {
       redirectReload: false,
       deleteModal: false,
       updating: false,
-      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
       errorVisible: false,
       errorText: [],
-      deleteBtn: <span><i className="fa fa-trash-o" /> Delete</span>,
+      deleteBtn: (
+        <span>
+          <i className="fa fa-trash-o" /> Delete
+        </span>
+      ),
       closeUploadModal: false,
-
-      addReferencesVisible: true,
       referencesLoaded: false,
       referencesLabels: [],
       referencesTypes: {
@@ -51,7 +61,10 @@ class Temporal extends Component {
         person: [],
         resource: [],
       },
-    }
+    };
+    this.toggleRedirect = this.toggleRedirect.bind(this);
+    this.toggleRedirectReload = this.toggleRedirectReload.bind(this);
+    this.toggleUploadModal = this.toggleUploadModal.bind(this);
     this.load = this.load.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
     this.update = this.update.bind(this);
@@ -60,28 +73,91 @@ class Temporal extends Component {
     this.reload = this.reload.bind(this);
   }
 
+  componentDidMount() {
+    this.load();
+  }
+
+  componentDidUpdate(prevProps) {
+    const { match, entitiesLoaded } = this.props;
+    const {
+      reload,
+      redirect,
+      redirectReload,
+      closeUploadModal,
+      referencesLoaded,
+    } = this.state;
+    if (prevProps.match.params._id !== match.params._id) {
+      this.load();
+    }
+    if (reload) {
+      this.load();
+    }
+    if (redirect) {
+      this.toggleRedirect(false);
+    }
+    if (redirectReload) {
+      this.toggleRedirectReload(false);
+    }
+    if (closeUploadModal) {
+      this.toggleUploadModal(false);
+    }
+    if (entitiesLoaded && !referencesLoaded) {
+      this.loadReferenceLabelsNTypes();
+    }
+  }
+
+  toggleRedirect(value = null) {
+    const { redirect } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirect;
+    }
+    this.setState({
+      redirect: valueCopy,
+    });
+  }
+
+  toggleRedirectReload(value = null) {
+    const { redirectReload } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirectReload;
+    }
+    this.setState({
+      redirectReload: valueCopy,
+    });
+  }
+
+  toggleUploadModal(value = null) {
+    const { closeUploadModal } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !closeUploadModal;
+    }
+    this.setState({
+      closeUploadModal: valueCopy,
+    });
+  }
+
   async load() {
-    let _id = this.props.match.params._id;
-    if (_id==="new") {
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id === 'new') {
       this.setState({
         loading: false,
-        addReferencesVisible: false
       });
-    }
-    else {
-      let params = {_id:_id}
-      let responseData = await axios({
+    } else {
+      const params = { _id };
+      const responseData = await axios({
         method: 'get',
-        url: APIPath+'temporal',
+        url: `${APIPath}temporal`,
         crossDomain: true,
-        params: params
+        params,
       })
-  	  .then(function (response) {
-        return response.data.data;
-  	  })
-  	  .catch(function (error) {
-        console.log(error);
-  	  });
+        .then((response) => response.data.data)
+        .catch((error) => {
+          console.log(error);
+        });
       this.setState({
         loading: false,
         item: responseData,
@@ -91,248 +167,307 @@ class Temporal extends Component {
   }
 
   loadReferenceLabelsNTypes() {
-    let properties = this.props.temporalEntity.properties;
-    let referencesLabels = parseReferenceLabels(properties);
-    let referencesTypes = parseReferenceTypes(properties);
+    const { temporalEntity } = this.props;
+    const { properties } = temporalEntity;
+    const referencesLabels = parseReferenceLabels(properties);
+    const referencesTypes = parseReferenceTypes(properties);
     this.setState({
-      referencesLabels: referencesLabels,
-      referencesTypes: referencesTypes,
+      referencesLabels,
+      referencesTypes,
       referencesLoaded: true,
-    })
-  }
-
-  update(newData) {
-    if (this.state.updating) {
-      return false;
-    }
-    this.setState({
-      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>,
-      updating: true
     });
-    let postData = {
-      label: newData.label,
-      startDate: newData.startDate,
-      endDate: newData.endDate,
-      format: newData.format,
-    }
-    let _id = this.props.match.params._id;
-    if (_id!=="new") {
-      postData._id = _id;
-    }
-    let isValid = this.validate(postData);
-    if (isValid) {
-      let context = this;
-      axios({
-          method: 'put',
-          url: APIPath+'temporal',
-          crossDomain: true,
-          data: postData
-        })
-      .then(function (response) {
-        let responseData = response.data;
-        let newState = {
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-          reload: true
-        };
-        if (_id==="new") {
-          newState.redirectReload = true;
-          newState.newId = responseData.data._id;
-        }
-        context.setState(newState);
-
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update</span>
-          });
-        },2000);
-      })
-      .catch(function (error) {
-      });
-    }
   }
 
   validate(postData) {
-    if (postData.label==="") {
+    if (postData.label === '') {
       this.setState({
         updating: false,
         errorVisible: true,
-        errorText: <div>Please enter the <b>Label</b> to continue!</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        errorText: (
+          <div>
+            Please enter the <b>Label</b> to continue!
+          </div>
+        ),
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
-    if(!moment(postData.startDate, 'DD-MM-YYYY',true).isValid()) {
+    if (!moment(postData.startDate, 'DD-MM-YYYY', true).isValid()) {
       this.setState({
         updating: false,
         errorVisible: true,
-        errorText: <div>The <b>Start date</b> is not valid. The valid format is <i>DD-MM-YYYY</i> </div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        errorText: (
+          <div>
+            The <b>Start date</b> is not valid. The valid format is{' '}
+            <i>DD-MM-YYYY</i>{' '}
+          </div>
+        ),
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
-    if(postData.endDate!=="" && !moment(postData.endDate, 'DD-MM-YYYY',true).isValid()) {
+    if (
+      postData.endDate !== '' &&
+      !moment(postData.endDate, 'DD-MM-YYYY', true).isValid()
+    ) {
       this.setState({
         updating: false,
         errorVisible: true,
-        errorText: <div>The <b>End date</b> is not valid. The valid format is <i>DD-MM-YYYY</i> </div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        errorText: (
+          <div>
+            The <b>End date</b> is not valid. The valid format is{' '}
+            <i>DD-MM-YYYY</i>{' '}
+          </div>
+        ),
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
     this.setState({
       updating: false,
       errorVisible: false,
-      errorText: []
-    })
+      errorText: [],
+    });
     return true;
   }
 
-  toggleDeleteModal() {
+  async update(newData) {
+    const { updating } = this.state;
+    if (updating) {
+      return false;
+    }
     this.setState({
-      deleteModal: !this.state.deleteModal
-    })
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner color="info" size="sm" />
+        </span>
+      ),
+      updating: true,
+    });
+    const postData = {
+      label: newData.label,
+      startDate: newData.startDate,
+      endDate: newData.endDate,
+      format: newData.format,
+    };
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id !== 'new') {
+      postData._id = _id;
+    }
+    const isValid = this.validate(postData);
+    if (isValid) {
+      const context = this;
+      const responseData = await axios({
+        method: 'put',
+        url: `${APIPath}temporal`,
+        crossDomain: true,
+        data: postData,
+      })
+        .then((response) => response.data)
+        .catch((error) => {
+          console.log(error);
+        });
+      const newState = {
+        updating: false,
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update success{' '}
+            <i className="fa fa-check" />
+          </span>
+        ),
+        reload: true,
+      };
+      if (_id === 'new') {
+        newState.redirectReload = true;
+        newState.newId = responseData.data._id;
+      }
+      this.setState(newState);
+
+      setTimeout(() => {
+        context.setState({
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update
+            </span>
+          ),
+        });
+      }, 2000);
+    }
+    return false;
+  }
+
+  toggleDeleteModal() {
+    const { deleteModal } = this.state;
+    this.setState({
+      deleteModal: !deleteModal,
+    });
   }
 
   async delete() {
-    let _id = this.props.match.params._id;
-    if (_id==="new") {
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id === 'new') {
       this.setState({
-        loading: false
-      })
-    }
-    else {
-      let responseData = await axios({
+        loading: false,
+      });
+    } else {
+      const responseData = await axios({
         method: 'delete',
-        url: APIPath+'temporal?_id='+_id,
+        url: `${APIPath}temporal?_id=${_id}`,
         crossDomain: true,
       })
-  	  .then(function (response) {
-        return response.data;
-  	  })
-  	  .catch(function (error) {
-  	  });
+        .then((response) => response.data)
+        .catch((error) => {
+          console.log(error);
+        });
 
       if (responseData.status) {
         this.setState({
-          redirect: true
+          redirect: true,
         });
       }
     }
-
   }
 
   reload() {
     this.setState({
-      reload: true
-    })
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if(prevProps.match.params._id!==this.props.match.params._id){
-      this.load();
-    }
-    if (this.state.reload) {
-      this.load();
-    }
-    if (this.state.redirect) {
-      this.setState({
-        redirect: false
-      })
-    }
-    if (this.state.redirectReload) {
-      this.setState({
-        redirectReload: false
-      })
-    }
-    if (this.state.closeUploadModal) {
-      this.setState({
-        closeUploadModal: false
-      })
-    }
-    if (this.props.entitiesLoaded && !this.state.referencesLoaded) {
-      this.loadReferenceLabelsNTypes();
-    }
+      reload: true,
+    });
   }
 
   render() {
+    const {
+      item,
+      loading,
+      errorText,
+      errorVisible,
+      updateBtn,
+      redirect,
+      redirectReload: stateRedirectReload,
+      newId,
+      deleteModal: stateDeleteModal,
+      referencesLabels,
+      referencesTypes,
+      deleteBtn,
+      closeUploadModal,
+    } = this.state;
+    const { match, className } = this.props;
     let label = '';
-    if (this.state.item!==null && typeof this.state.item.label!=="undefined") {
-      label = this.state.item.label;
+    if (item !== null && typeof item.label !== 'undefined') {
+      label = item.label;
     }
     let heading = label;
-    if (this.props.match.params._id==="new") {
-      heading = "Add new temporal";
+    if (match.params._id === 'new') {
+      heading = 'Add new temporal';
     }
-    let breadcrumbsItems = [
-      {label: "Temporal", icon: "pe-7s-clock", active: false, path: "/temporals"},
-      {label: heading, icon: "", active: true, path: ""}
+    const breadcrumbsItems = [
+      {
+        label: 'Temporal',
+        icon: 'pe-7s-clock',
+        active: false,
+        path: '/temporals',
+      },
+      { label: heading, icon: '', active: true, path: '' },
     ];
 
     let redirectElem = [];
     let redirectReload = [];
     let deleteModal = [];
 
-    let content = <div className="row">
-      <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
-          <Spinner type="grow" color="info" /> <i>loading...</i>
+    let content = (
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </div>
         </div>
       </div>
-    </div>
-    if (!this.state.loading) {
-      let viewComponent = <ViewTemporal
-        item={this.state.item}
-        delete={this.toggleDeleteModal}
-        update={this.update}
-        updateBtn={this.state.updateBtn}
-        deleteBtn={this.state.deleteBtn}
-        errorVisible={this.state.errorVisible}
-        errorText={this.state.errorText}
-        closeUploadModal={this.state.closeUploadModal}
-        reload={this.reload}
-        />;
-      content = <div className="items-container">
-          {viewComponent}
-      </div>
-      if (this.state.redirect) {
+    );
+    if (!loading) {
+      const viewComponent = (
+        <ViewTemporal
+          item={item}
+          delete={this.toggleDeleteModal}
+          update={this.update}
+          updateBtn={updateBtn}
+          deleteBtn={deleteBtn}
+          errorVisible={errorVisible}
+          errorText={errorText}
+          closeUploadModal={closeUploadModal}
+          reload={this.reload}
+        />
+      );
+      content = <div className="items-container">{viewComponent}</div>;
+      if (redirect) {
         redirectElem = <Redirect to="/temporals" />;
       }
-      if (this.state.redirectReload) {
-        redirectReload = <Redirect to={"/temporal/"+this.state.newId} />;
+      if (stateRedirectReload) {
+        redirectReload = <Redirect to={`/temporal/${newId}`} />;
       }
 
-      deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal} className={this.props.className}>
-          <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
+      deleteModal = (
+        <Modal
+          isOpen={stateDeleteModal}
+          toggle={this.toggleDeleteModal}
+          className={className}
+        >
+          <ModalHeader toggle={this.toggleDeleteModal}>
+            Delete &quot;{label}&quot;
+          </ModalHeader>
           <ModalBody>
-          The item "{label}" will be deleted. Continue?
+            The item &quot;{label}&quot; will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button size="sm" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button className="pull-left" color="secondary" size="sm" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={this.delete}>
+              <i className="fa fa-trash-o" /> Delete
+            </Button>
+            <Button
+              className="pull-left"
+              color="secondary"
+              size="sm"
+              onClick={this.toggleDeleteModal}
+            >
+              Cancel
+            </Button>
           </ModalFooter>
-        </Modal>;
+        </Modal>
+      );
     }
-    let relationReference = {
-      type: "Temporal",
-      ref: this.props.match.params._id
+    const relationReference = {
+      type: 'Temporal',
+      ref: match.params._id,
     };
     let addRelation = [];
-    if (this.state.item!==null) {
-      addRelation = <AddRelation
-        reload={this.reload}
-        reference={relationReference}
-        item={this.state.item}
-        referencesLabels={this.state.referencesLabels}
-        referencesTypes={this.state.referencesTypes}
-        type="temporal"
-      />
+    if (item !== null) {
+      addRelation = (
+        <AddRelation
+          reload={this.reload}
+          reference={relationReference}
+          item={item}
+          referencesLabels={referencesLabels}
+          referencesTypes={referencesTypes}
+          type="temporal"
+        />
+      );
     }
-    return(
+    return (
       <div>
         {redirectElem}
         {redirectReload}
@@ -349,4 +484,17 @@ class Temporal extends Component {
     );
   }
 }
-export default Temporal = connect(mapStateToProps, [])(Temporal);
+
+Temporal.defaultProps = {
+  match: null,
+  temporalEntity: null,
+  entitiesLoaded: false,
+  className: '',
+};
+Temporal.propTypes = {
+  match: PropTypes.object,
+  temporalEntity: PropTypes.object,
+  entitiesLoaded: PropTypes.bool,
+  className: PropTypes.string,
+};
+export default compose(connect(mapStateToProps, []))(Temporal);

@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  UncontrolledButtonDropdown, DropdownMenu, DropdownItem, DropdownToggle,
+  UncontrolledButtonDropdown,
+  DropdownMenu,
+  DropdownItem,
+  DropdownToggle,
 } from 'reactstrap';
 
+import { useSelector } from 'react-redux';
+import axios from 'axios';
+import PropTypes from 'prop-types';
 import AddEventModal from './add-event';
 import AddOrganisationModal from './add-organisation';
 import AddPersonModal from './add-person';
@@ -10,36 +16,45 @@ import AddResourceModal from './add-resource';
 import AddTemporalModal from './add-temporal';
 import AddSpatialModal from './add-spatial';
 import DeleteMany from './delete-many';
-import {parseReferenceLabels,parseReferenceTypes} from '../../helpers/helpers';
-import {useSelector} from "react-redux";
+import { parseReferenceLabels, parseReferenceTypes } from '../../helpers';
 import Notification from '../notification';
-import axios from 'axios';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
 const BatchActions = (props) => {
-  const mainEntity = useSelector(state => {
-    if (props.type==="Resource") {
+  const {
+    type,
+    items,
+    removeSelected,
+    allChecked,
+    className: extraClassName,
+    selectAll,
+    deleteSelected,
+  } = props;
+
+  const mainEntity = useSelector((state) => {
+    if (type === 'Resource') {
       return state.resourceEntity;
     }
-    else if (props.type==="Person") {
+    if (type === 'Person') {
       return state.personEntity;
     }
-    else if (props.type==="Organisation") {
+    if (type === 'Organisation') {
       return state.organisationEntity;
     }
-    else if (props.type==="Event") {
+    if (type === 'Event') {
       return state.eventEntity;
     }
-    else if (props.type==="Temporal") {
+    if (type === 'Temporal') {
       return state.temporalEntity;
     }
-    else if (props.type==="Spatial") {
+    if (type === 'Spatial') {
       return state.spatialEntity;
     }
+    return false;
   });
-  const entitiesLoaded = useSelector(state => state.entitiesLoaded);
-  const [modalsVisible,setModalsVisible] = useState({
+  const entitiesLoaded = useSelector((state) => state.entitiesLoaded);
+  const [modalsVisible, setModalsVisible] = useState({
     eventModal: false,
     organisationModal: false,
     personModal: false,
@@ -48,230 +63,312 @@ const BatchActions = (props) => {
     spatialModal: false,
   });
   const [referencesLabels, setReferencesLabels] = useState([]);
-  const [referencesTypes, setReferencesTypes] = useState([]);
+  const [referencesTypes, setReferencesTypes] = useState(null);
   const [referencesLoaded, setReferencesLoaded] = useState(false);
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notificationContent, setNotificationContent] = useState([]);
   const [deleteManyVisible, setDeleteManyVisible] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-
   const toggleModal = (modal) => {
-    if (props.items.length===0) {
+    if (items.length === 0) {
       setNotificationVisible(true);
-      setNotificationContent(<div><i className="fa fa-exclamation-triangle" /> <span>Please select some items to continue</span></div>);
-      setTimeout(()=>{
+      setNotificationContent(
+        <div>
+          <i className="fa fa-exclamation-triangle" />{' '}
+          <span>Please select some items to continue</span>
+        </div>
+      );
+      setTimeout(() => {
         setNotificationVisible(false);
-      },2000);
+      }, 2000);
       return false;
     }
-    let newModalsVisible = {
+    const newModalsVisible = {
       eventModal: false,
       organisationModal: false,
       personModal: false,
       resourceModal: false,
       temporalModal: false,
       spatialModal: false,
-    }
+    };
     newModalsVisible[modal] = !newModalsVisible[modal];
     setModalsVisible(newModalsVisible);
-  }
+    return false;
+  };
 
   const toggleDeleteMany = () => {
-    if (props.items.length===0) {
+    if (items.length === 0) {
       setNotificationVisible(true);
-      setNotificationContent(<div><i className="fa fa-exclamation-triangle" /> <span>Please select some items to continue</span></div>);
-      setTimeout(()=>{
+      setNotificationContent(
+        <div>
+          <i className="fa fa-exclamation-triangle" />{' '}
+          <span>Please select some items to continue</span>
+        </div>
+      );
+      setTimeout(() => {
         setNotificationVisible(false);
-      },2000);
+      }, 2000);
       return false;
     }
     setDeleteManyVisible(!deleteManyVisible);
-  }
+    return false;
+  };
 
   const loadReferenceLabelsNTypes = () => {
-    let properties = mainEntity.properties;
-    let newReferencesLabels = parseReferenceLabels(properties);
-    let newReferencesTypes = parseReferenceTypes(properties);
+    const { properties } = mainEntity;
+    const newReferencesLabels = parseReferenceLabels(properties);
+    const newReferencesTypes = parseReferenceTypes(properties);
     setReferencesLabels(newReferencesLabels);
     setReferencesTypes(newReferencesTypes);
     setReferencesLoaded(true);
-  }
+  };
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!referencesLoaded && entitiesLoaded) {
       loadReferenceLabelsNTypes();
     }
   });
 
-  let eventVisible="", organisationVisible="", personVisible="", resourceVisible="", temporalVisible="", spatialVisible="";
+  let eventVisible = '';
+  let organisationVisible = '';
+  let personVisible = '';
+  let resourceVisible = '';
+  let temporalVisible = '';
+  let spatialVisible = '';
 
-  let eventModalHTML = <AddEventModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.eventModal}
-    removeSelected={props.removeSelected}
+  let eventModalHTML = (
+    <AddEventModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.eventModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  let organisationModalHTML = <AddOrganisationModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.organisationModal}
-    removeSelected={props.removeSelected}
+  let organisationModalHTML = (
+    <AddOrganisationModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.organisationModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  let personModalHTML = <AddPersonModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.personModal}
-    removeSelected={props.removeSelected}
+  let personModalHTML = (
+    <AddPersonModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.personModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  let resourceModalHTML = <AddResourceModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.resourceModal}
-    removeSelected={props.removeSelected}
+  let resourceModalHTML = (
+    <AddResourceModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.resourceModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  let temporalModalHTML = <AddTemporalModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.temporalModal}
-    removeSelected={props.removeSelected}
+  let temporalModalHTML = (
+    <AddTemporalModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.temporalModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  let spatialModalHTML = <AddSpatialModal
-    items={props.items}
-    type={props.type}
-    refTypes={referencesTypes}
-    toggleModal={toggleModal}
-    visible={modalsVisible.spatialModal}
-    removeSelected={props.removeSelected}
+  let spatialModalHTML = (
+    <AddSpatialModal
+      items={items}
+      type={type}
+      refTypes={referencesTypes}
+      toggleModal={toggleModal}
+      visible={modalsVisible.spatialModal}
+      removeSelected={removeSelected}
     />
+  );
 
-  if (referencesLabels.indexOf("Event")===-1) {
-    eventVisible = "hidden";
+  if (referencesLabels.indexOf('Event') === -1) {
+    eventVisible = 'hidden';
     eventModalHTML = [];
   }
-  if (referencesLabels.indexOf("Organisation")===-1) {
-    organisationVisible = "hidden";
+  if (referencesLabels.indexOf('Organisation') === -1) {
+    organisationVisible = 'hidden';
     organisationModalHTML = [];
   }
-  if (referencesLabels.indexOf("Person")===-1) {
-    personVisible = "hidden";
+  if (referencesLabels.indexOf('Person') === -1) {
+    personVisible = 'hidden';
     personModalHTML = [];
   }
-  if (referencesLabels.indexOf("Resource")===-1) {
-    resourceVisible = "hidden";
+  if (referencesLabels.indexOf('Resource') === -1) {
+    resourceVisible = 'hidden';
     resourceModalHTML = [];
   }
-  if (referencesLabels.indexOf("Temporal")===-1) {
-    temporalVisible = "hidden";
+  if (referencesLabels.indexOf('Temporal') === -1) {
+    temporalVisible = 'hidden';
     temporalModalHTML = [];
   }
-  if (referencesLabels.indexOf("Spatial")===-1) {
-    spatialVisible = "hidden";
+  if (referencesLabels.indexOf('Spatial') === -1) {
+    spatialVisible = 'hidden';
     spatialModalHTML = [];
   }
-  let notification = <Notification color="danger" visible={notificationVisible} content={notificationContent}/>
+  const notification = (
+    <Notification
+      color="danger"
+      visible={notificationVisible}
+      content={notificationContent}
+    />
+  );
 
-  let selectAllText = "Select all";
-  if (props.allChecked) {
-    selectAllText = "Deselect all";
+  let selectAllText = 'Select all';
+  if (allChecked) {
+    selectAllText = 'Deselect all';
   }
 
-  const updateStatus = async(status) => {
+  const updateStatus = async (status) => {
     if (updatingStatus) {
       return false;
     }
     setUpdatingStatus(true);
-    if (props.items.length===0) {
+    if (items.length === 0) {
       setNotificationVisible(true);
-      setNotificationContent(<div><i className="fa fa-exclamation-triangle" /> <span>Please select some items to continue</span></div>);
-      setTimeout(()=>{
+      setNotificationContent(
+        <div>
+          <i className="fa fa-exclamation-triangle" />{' '}
+          <span>Please select some items to continue</span>
+        </div>
+      );
+      setTimeout(() => {
         setNotificationVisible(false);
-      },2000);
+      }, 2000);
       return false;
     }
-    let path = "";
-    if (props.type==="Resource") {
-      path = APIPath+"resource-update-status";
+    let path = '';
+    if (type === 'Resource') {
+      path = `${APIPath}resource-update-status`;
     }
-    if (props.type==="Person") {
-      path = APIPath+"person-update-status";
+    if (type === 'Person') {
+      path = `${APIPath}person-update-status`;
     }
-    if (props.type==="Organisation") {
-      path = APIPath+"organisation-update-status";
+    if (type === 'Organisation') {
+      path = `${APIPath}organisation-update-status`;
     }
-    if (props.type==="Event") {
-      path = APIPath+"event-update-status";
+    if (type === 'Event') {
+      path = `${APIPath}event-update-status`;
     }
-    let _ids = props.items.map(i=>i._id);
-    let postData = {
-      _ids: _ids,
-      status: status
-    }
-    let update = await axios({
+    const _ids = items.map((i) => i._id);
+    const postData = {
+      _ids,
+      status,
+    };
+    const update = await axios({
       method: 'post',
       url: path,
       crossDomain: true,
-      data: postData
+      data: postData,
     })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-      console.log(error)
-    });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
     setUpdatingStatus(false);
     if (update.status) {
       setNotificationVisible(true);
       setNotificationContent(<div>Items status updated successfully</div>);
-      setTimeout(()=>{
+      setTimeout(() => {
         setNotificationVisible(false);
-      },2000);
+      }, 2000);
     }
-  }
+    return false;
+  };
 
   let updateStatusBtns = [];
-  if (props.type!=="Temporal" && props.type!=="Spatial") {
+  if (type !== 'Temporal' && type !== 'Spatial') {
     updateStatusBtns = [
-      <DropdownItem key={0} onClick={()=>updateStatus("public")}>Make public</DropdownItem>,
-      <DropdownItem key={1} onClick={()=>updateStatus("private")}>Make private</DropdownItem>,
-      <DropdownItem key={2} divider />
-    ]
+      <DropdownItem key={0} onClick={() => updateStatus('public')}>
+        Make public
+      </DropdownItem>,
+      <DropdownItem key={1} onClick={() => updateStatus('private')}>
+        Make private
+      </DropdownItem>,
+      <DropdownItem key={2} divider />,
+    ];
   }
+
   return (
     <div>
       {notification}
-      <UncontrolledButtonDropdown direction='down' className={"table-actions-dropdown "+props.className}>
+      <UncontrolledButtonDropdown
+        direction="down"
+        className={`table-actions-dropdown ${extraClassName}`}
+      >
         <DropdownToggle caret color="secondary" outline size="sm">
           actions
         </DropdownToggle>
         <DropdownMenu className="right">
-          <DropdownItem onClick={()=>props.selectAll()}>{selectAllText}</DropdownItem>
+          <DropdownItem onClick={() => selectAll()}>
+            {selectAllText}
+          </DropdownItem>
           <DropdownItem divider />
-          <DropdownItem header className="text-glue">Associate selected with:</DropdownItem>
-          <DropdownItem className={eventVisible} onClick={()=>toggleModal('eventModal')}>... event</DropdownItem>
-          <DropdownItem className={organisationVisible} onClick={()=>toggleModal('organisationModal')}>... organisation</DropdownItem>
-          <DropdownItem className={personVisible} onClick={()=>toggleModal('personModal')}>... person</DropdownItem>
-          <DropdownItem className={resourceVisible} onClick={()=>toggleModal('resourceModal')}>... resource</DropdownItem>
-          <DropdownItem className={temporalVisible} onClick={()=>toggleModal('temporalModal')}>... temporal</DropdownItem>
-          <DropdownItem className={spatialVisible} onClick={()=>toggleModal('spatialModal')}>... spatial</DropdownItem>
+          <DropdownItem header className="text-glue">
+            Associate selected with:
+          </DropdownItem>
+          <DropdownItem
+            className={eventVisible}
+            onClick={() => toggleModal('eventModal')}
+          >
+            ... event
+          </DropdownItem>
+          <DropdownItem
+            className={organisationVisible}
+            onClick={() => toggleModal('organisationModal')}
+          >
+            ... organisation
+          </DropdownItem>
+          <DropdownItem
+            className={personVisible}
+            onClick={() => toggleModal('personModal')}
+          >
+            ... person
+          </DropdownItem>
+          <DropdownItem
+            className={resourceVisible}
+            onClick={() => toggleModal('resourceModal')}
+          >
+            ... resource
+          </DropdownItem>
+          <DropdownItem
+            className={temporalVisible}
+            onClick={() => toggleModal('temporalModal')}
+          >
+            ... temporal
+          </DropdownItem>
+          <DropdownItem
+            className={spatialVisible}
+            onClick={() => toggleModal('spatialModal')}
+          >
+            ... spatial
+          </DropdownItem>
           <DropdownItem divider />
-          {updateStatusBtns }
-          <DropdownItem onClick={()=>toggleDeleteMany()}>Delete selected</DropdownItem>
+          {updateStatusBtns}
+          <DropdownItem onClick={() => toggleDeleteMany()}>
+            Delete selected
+          </DropdownItem>
         </DropdownMenu>
       </UncontrolledButtonDropdown>
 
@@ -285,12 +382,31 @@ const BatchActions = (props) => {
       <DeleteMany
         visible={deleteManyVisible}
         toggle={toggleDeleteMany}
-        items={props.items}
-        type={props.type}
-        deleteSelected={props.deleteSelected}
-        removeSelected={props.removeSelected}
+        items={items}
+        type={type}
+        deleteSelected={deleteSelected}
+        removeSelected={removeSelected}
       />
     </div>
-  )
-}
+  );
+};
+BatchActions.defaultProps = {
+  type: '',
+  items: [],
+  removeSelected: () => {},
+  allChecked: false,
+  className: '',
+  selectAll: () => {},
+  deleteSelected: () => {},
+};
+
+BatchActions.propTypes = {
+  type: PropTypes.string,
+  items: PropTypes.array,
+  removeSelected: PropTypes.func,
+  allChecked: PropTypes.bool,
+  className: PropTypes.string,
+  selectAll: PropTypes.func,
+  deleteSelected: PropTypes.func,
+};
 export default BatchActions;

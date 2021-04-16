@@ -1,28 +1,36 @@
-import React, { Component } from 'react';
-import { BrowserRouter as Router, Route, Switch , Redirect} from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  BrowserRouter as Router,
+  Route,
+  Switch,
+  Redirect,
+} from 'react-router-dom';
+import { loadProgressBar } from 'axios-progress-bar';
+import { useDispatch, useSelector } from 'react-redux';
+import axios from 'axios';
 
+// css
 import 'axios-progress-bar/dist/nprogress.css';
 import 'bootstrap/dist/css/bootstrap.css';
-import "./assets/scss/paper-dashboard.css";
-import "./assets/demo/demo.css";
+import './assets/scss/paper-dashboard.css';
+import './assets/demo/demo.css';
 import './assets/fonts/roboto/css/roboto.css';
 import './assets/fonts/font-awesome/css/font-awesome.min.css';
-import "./assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css";
+import './assets/fonts/pe-icon-7/css/pe-icon-7-stroke.css';
 import '../node_modules/leaflet/dist/leaflet.css';
 import './assets/react-vis/style.css';
 import './App.css';
-import {loadProgressBar} from 'axios-progress-bar';
 
 // routes
-import indexRoutes from "./routes/index";
-import Login from "./views/login";
-import Seed from "./views/seed";
+import indexRoutes from './routes/index';
+import Login from './views/login';
+import Seed from './views/seed';
 
 // layout components
-import Header from "./components/header";
-import Footer from "./components/footer";
-import Sidebar from "./components/sidebar";
-import {connect} from "react-redux";
+import Header from './components/header';
+import Footer from './components/footer';
+import Sidebar from './components/sidebar';
+
 import {
   getSystemTypes,
   getPeopleRoles,
@@ -34,171 +42,194 @@ import {
   checkSession,
   resetLoginRedirect,
   resetSeedRedirect,
-  getLanguageCodes
-} from "./redux/actions/main-actions";
+  getLanguageCodes,
+} from './redux/actions';
 
+const APIPath = process.env.REACT_APP_APIPATH;
+const basename = process.env.REACT_APP_BASENAME;
 // set default axios token;
-import axios from 'axios';
-let authToken = localStorage.getItem('token');
-if (typeof authToken!=="undefined" && authToken!==null) {
-  axios.defaults.headers.common['Authorization'] = 'Bearer '+authToken;
+const authToken = localStorage.getItem('token');
+if (typeof authToken !== 'undefined' && authToken !== null) {
+  axios.defaults.headers.common.Authorization = `Bearer ${authToken}`;
 }
 
-const mapStateToProps = state => {
-  return {
-    sessionActive: state.sessionActive,
-    loginRedirect: state.loginRedirect,
-    seedRedirect: state.seedRedirect,
-    settings: state.settings
-   };
-};
+function App() {
+  // redux store
+  const dispatch = useDispatch();
+  const sessionActive = useSelector((state) => state.sessionActive);
+  const loginRedirect = useSelector((state) => state.loginRedirect);
+  const seedRedirect = useSelector((state) => state.seedRedirect);
+  const settings = useSelector((state) => state.settings);
 
-function mapDispatchToProps(dispatch) {
-  return {
-    loadSettings: () => dispatch(loadSettings()),
-    getSystemTypes: () => dispatch(getSystemTypes()),
-    getPeopleRoles: () => dispatch(getPeopleRoles()),
-    getPersonTypes: () => dispatch(getPersonTypes()),
-    getOrganisationTypes: () => dispatch(getOrganisationTypes()),
-    getEventTypes: () => dispatch(getEventTypes()),
-    loadDefaultEntities: () => dispatch(loadDefaultEntities()),
-    checkSession: () => dispatch(checkSession()),
-    resetLoginRedirect: ()=>dispatch(resetLoginRedirect()),
-    resetSeedRedirect: ()=>dispatch(resetSeedRedirect()),
-    getLanguageCodes: ()=>dispatch(getLanguageCodes()),
-  }
-}
+  // state
+  const [sessionRedirect, setSessionRedirect] = useState(false);
 
-class App extends Component {
-  constructor(props){
-    super(props);
-    this.state = {
-      backgroundColor: "black",
-      activeColor: "info",
-      loginRedirect: false
-    }
+  const backgroundColor = 'black';
+  const activeColor = 'info';
 
-    this.openSidebar = this.openSidebar.bind(this);
-    this.parseRoutes = this.parseRoutes.bind(this);
-    this.parseChildrenRoutes = this.parseChildrenRoutes.bind(this);
-  }
-
-  openSidebar() {
+  const openSidebar = () => {
     if (window.innerWidth > 992) {
-      document.documentElement.classList.toggle("nav-open");
+      document.documentElement.classList.toggle('nav-open');
     }
-  }
+  };
 
-  parseRoutes() {
-    let routes = [];
-    for (let i=0; i<indexRoutes.length; i++) {
-      let route = indexRoutes[i];
-      let newRoute=[];
-      if (route.component!==null) {
-        newRoute = <Route path={route.path} key={i} component={route.component} />;
-      }
-      if (route.name==="Home") {
-        newRoute = <Route exact path={route.path} key={i} component={route.component} />;
-      }
-      routes.push(newRoute);
-      if (typeof route.children!=="undefined" && route.children.length>0) {
-        let childrenRoutes = this.parseChildrenRoutes(route.children, i);
-        routes.push(childrenRoutes);
-      }
-    }
-    let flattenedRoutes = [].concat.apply([], routes);
-    return flattenedRoutes;
-  }
-
-  parseChildrenRoutes(children, i) {
-    let routes = [];
-    for (let j=0;j<children.length; j++) {
-      let childRoute = children[j];
-      routes.push(<Route path={childRoute.path} key={i+"."+j} component={childRoute.component} />);
-      if (typeof childRoute.children!=="undefined" && childRoute.children.length>0) {
-        let childrenCRoutes = this.parseChildrenRoutes(childRoute.children,i+"."+j);
+  const parseChildrenRoutes = (children, i) => {
+    const routes = [];
+    for (let j = 0; j < children.length; j += 1) {
+      const childRoute = children[j];
+      routes.push(
+        <Route
+          path={childRoute.path}
+          key={`${i}.${j}`}
+          component={childRoute.component}
+        />
+      );
+      if (
+        typeof childRoute.children !== 'undefined' &&
+        childRoute.children.length > 0
+      ) {
+        const childrenCRoutes = parseChildrenRoutes(
+          childRoute.children,
+          `${i}.${j}`
+        );
         routes.push(childrenCRoutes);
       }
     }
     return routes;
-  }
+  };
 
-  componentDidMount() {
-    this.props.loadSettings();
-    this.props.checkSession();
-    this.props.getLanguageCodes();
-  }
+  const parseRoutes = () => {
+    const routes = [];
+    for (let i = 0; i < indexRoutes.length; i += 1) {
+      const route = indexRoutes[i];
+      let newRoute = [];
+      if (route.component !== null) {
+        newRoute = (
+          <Route path={route.path} key={i} component={route.component} />
+        );
+      }
+      if (route.name === 'Home') {
+        newRoute = (
+          <Route exact path={route.path} key={i} component={route.component} />
+        );
+      }
+      routes.push(newRoute);
+      if (typeof route.children !== 'undefined' && route.children.length > 0) {
+        const childrenRoutes = parseChildrenRoutes(route.children, i);
+        routes.push(childrenRoutes);
+      }
+    }
+    const flattenedRoutes = [...routes];
+    return flattenedRoutes;
+  };
 
-  componentDidUpdate(prevProps) {
-    if (!prevProps.sessionActive && this.props.sessionActive) {
-      this.openSidebar();
-      this.props.getSystemTypes();
-      this.props.getPeopleRoles();
-      this.props.getPersonTypes();
-      this.props.getOrganisationTypes();
-      this.props.getEventTypes();
-      this.props.loadDefaultEntities();
+  const checkAppSession = useCallback(() => {
+    const exec = async () => {
+      const token = await new Promise((resolve) => {
+        resolve(localStorage.getItem('token'));
+      });
+      const responseData = await axios({
+        method: 'post',
+        url: `${APIPath}admin-session`,
+        crossDomain: true,
+        data: { token },
+      })
+        .then((response) => response.data)
+        .catch((error) => {
+          console.log(error);
+        });
+      if (!responseData.status) {
+        await dispatch(checkSession());
+        setSessionRedirect(true);
+      }
+    };
+    exec();
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(loadSettings());
+    dispatch(checkSession());
+    dispatch(getLanguageCodes());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkAppSession();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [checkAppSession]);
+
+  useEffect(() => {
+    if (sessionActive) {
+      openSidebar();
       loadProgressBar();
+      dispatch(getSystemTypes());
+      dispatch(getPeopleRoles());
+      dispatch(getPersonTypes());
+      dispatch(getOrganisationTypes());
+      dispatch(getEventTypes());
+      dispatch(loadDefaultEntities());
     }
-    if (this.props.loginRedirect) {
-      this.props.resetLoginRedirect();
-    }
-    if (this.props.seedRedirect) {
-      this.props.resetSeedRedirect();
-    }
-  }
+  }, [sessionActive, dispatch]);
 
-  render() {
-    let settings = this.props.settings;
-    let routes = this.parseRoutes();
-    let loginRedirect = [];
-    let seedRedirect = [];
+  useEffect(() => {
+    if (loginRedirect) {
+      dispatch(resetLoginRedirect());
+    }
+  }, [loginRedirect, dispatch]);
 
-    if (this.props.loginRedirect) {
-      loginRedirect = <Redirect to='/' />
+  useEffect(() => {
+    if (seedRedirect) {
+      dispatch(resetSeedRedirect());
     }
-    if (this.props.seedRedirect) {
-      seedRedirect = <Redirect to='/' />
+  }, [seedRedirect, dispatch]);
+
+  useEffect(() => {
+    if (sessionRedirect) {
+      setSessionRedirect(false);
     }
-    let AppHTML = [];
-    if (typeof settings.seedingAllowed!=="undefined" && settings.seedingAllowed) {
-      AppHTML = <Router basename={process.env.REACT_APP_BASENAME}>
-        {seedRedirect}
+  }, [sessionRedirect]);
+
+  const routes = parseRoutes();
+  const loginRedirectElem = loginRedirect ? <Redirect to="/" /> : [];
+  const seedRedirectElem = seedRedirect ? <Redirect to="/" /> : [];
+  const sessionRedirectElem = sessionRedirect ? <Redirect to="/login" /> : [];
+  let appHTML = [];
+  if (
+    typeof settings.seedingAllowed !== 'undefined' &&
+    settings.seedingAllowed
+  ) {
+    appHTML = (
+      <Router basename={basename}>
+        {seedRedirectElem}
         <Seed />
       </Router>
-    }
-    else if (!this.props.sessionActive) {
-      AppHTML = <Login />
-    }
-    // note to handle session active but no login
-    else if (this.props.sessionActive) {
-      AppHTML = <Router basename={process.env.REACT_APP_BASENAME}>
+    );
+  } else if (!sessionActive) {
+    appHTML = <Login />;
+  } else if (sessionActive) {
+    appHTML = (
+      <Router basename={basename}>
         <div className="wrapper" id="main-wrapper">
-          {loginRedirect}
+          {loginRedirectElem}
+          {sessionRedirectElem}
           <Sidebar
-            {...this.props}
             routes={indexRoutes}
-            bgColor={this.state.backgroundColor}
-            activeColor={this.state.activeColor}
+            bgColor={backgroundColor}
+            activeColor={activeColor}
           />
           <div className="main-panel" id="main-panel">
-            <Header {...this.props} />
+            <Header />
             <div className="content" id="content-container">
-              <Switch>
-                {routes}
-              </Switch>
+              <Switch>{routes}</Switch>
             </div>
-            <Footer fluid extraClass="main-footer"/>
+            <Footer fluid extraClass="main-footer" />
           </div>
         </div>
       </Router>
-    }
-    return (
-      <div>
-        {AppHTML}
-      </div>
     );
   }
+  return <div>{appHTML}</div>;
 }
 
-export default App = connect(mapStateToProps, mapDispatchToProps)(App);
+export default App;

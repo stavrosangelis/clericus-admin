@@ -1,31 +1,38 @@
 import React, { Component } from 'react';
 import {
-  Card, CardTitle, CardBody,
-  Button, ButtonGroup,
-  Form, FormGroup, Label, Input,
+  Card,
+  CardTitle,
+  CardBody,
+  Button,
+  ButtonGroup,
+  Form,
+  FormGroup,
+  Label,
+  Input,
   Collapse,
 } from 'reactstrap';
 import Select from 'react-select';
+import PropTypes from 'prop-types';
 import RelatedEntitiesBlock from './related-entities-block';
 
 export default class ViewEvent extends Component {
   constructor(props) {
     super(props);
 
-    let item = this.props.item;
-    let status = item?.status || 'private';
-    let label = item?.label || '';
-    let description = item?.description || '';
-    let eventType = item?.eventType || '';
+    const { item } = this.props;
+    const status = item?.status || 'private';
+    const label = item?.label || '';
+    const description = item?.description || '';
+    const eventType = item?.eventType || '';
 
     this.state = {
       detailsOpen: true,
-      label: label,
-      description: description,
-      eventType: "",
+      label,
+      description,
+      eventType: '',
       initialEventType: eventType,
-      status: status,
-    }
+      status,
+    };
     this.eventTypesList = this.eventTypesList.bind(this);
     this.eventTypesListChildren = this.eventTypesListChildren.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
@@ -36,18 +43,42 @@ export default class ViewEvent extends Component {
     this.initialSelect2Value = this.initialSelect2Value.bind(this);
   }
 
+  componentDidMount() {
+    this.initialSelect2Value();
+  }
+
+  componentDidUpdate(prevProps) {
+    const { eventTypes } = this.props;
+    if (prevProps.eventTypes.length !== eventTypes.length) {
+      this.initialSelect2Value();
+    }
+  }
+
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+
+    this.setState({
+      [name]: value,
+    });
+  }
+
   eventTypesList(eventTypes) {
-    let options = [];
-    let defaultValue = {value: '', label: '--'};
+    const options = [];
+    const defaultValue = { value: '', label: '--' };
     options.push(defaultValue);
-    for (let i=0; i<eventTypes.length; i++) {
-      let eventType = eventTypes[i];
-      let option = {value: eventType._id, label: eventType.label};
+    for (let i = 0; i < eventTypes.length; i += 1) {
+      const eventType = eventTypes[i];
+      const option = { value: eventType._id, label: eventType.label };
       options.push(option);
-      if (eventType.children.length>0) {
-        let sep = "";
-        let childOptions = this.eventTypesListChildren(eventType.children,sep);
-        for (let k in childOptions) {
+      if (eventType.children.length > 0) {
+        const sep = '';
+        const childOptions = this.eventTypesListChildren(
+          eventType.children,
+          sep
+        );
+        for (let k = 0; k < childOptions.length; k += 1) {
           options.push(childOptions[k]);
         }
       }
@@ -55,17 +86,20 @@ export default class ViewEvent extends Component {
     return options;
   }
 
-  eventTypesListChildren(children, sep="") {
-    let options = [];
-    sep += "-";
-    for (let i=0;i<children.length; i++) {
-      let child = children[i];
-      let newLabel = `${sep} ${child.label}`;
-      let option = {value: child._id, label: newLabel};
+  eventTypesListChildren(children, sep = '') {
+    const options = [];
+    const newSep = `${sep}-`;
+    for (let i = 0; i < children.length; i += 1) {
+      const child = children[i];
+      const newLabel = `${sep} ${child.label}`;
+      const option = { value: child._id, label: newLabel };
       options.push(option);
-      if (child.children.length>0) {
-        let childOptions = this.eventTypesListChildren(child.children,sep);
-        for (let k in childOptions) {
+      if (child.children.length > 0) {
+        const childOptions = this.eventTypesListChildren(
+          child.children,
+          newSep
+        );
+        for (let k = 0; k < childOptions.length; k += 1) {
           options.push(childOptions[k]);
         }
       }
@@ -75,86 +109,73 @@ export default class ViewEvent extends Component {
 
   formSubmit(e) {
     e.preventDefault();
-    let data = {
-      label: this.state.label,
-      description: this.state.description,
-      eventType: this.state.eventType,
-      status: this.state.status,
-    }
-    this.props.update(data);
+    const { label, description, eventType, status } = this.state;
+    const { update } = this.props;
+    const data = {
+      label,
+      description,
+      eventType,
+      status,
+    };
+    update(data);
   }
 
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-
-    this.setState({
-      [name]: value
-    });
+  initialSelect2Value() {
+    const { eventTypes } = this.props;
+    const { initialEventType } = this.state;
+    const options = this.eventTypesList(eventTypes);
+    const initialItem = options.find((o) => o.value === initialEventType) || '';
+    this.setState({ eventType: initialItem });
   }
 
-  initialSelect2Value(){
-    let options = this.eventTypesList(this.props.eventTypes);
-    let initialItem = options.find(o=>o.value===this.state.initialEventType) || "";
-    this.setState({eventType:initialItem});
-  }
-
-  select2Change(selectedOption, element=null) {
-    if (element===null) {
+  select2Change(selectedOption, element = null) {
+    if (element === null) {
       return false;
     }
-    this.setState({
-      [element]: selectedOption
+    return this.setState({
+      [element]: selectedOption,
     });
   }
 
   toggleCollapse(name) {
-    let value = true;
-    if (this.state[name]==="undefined" || this.state[name]) {
-      value = false
-    }
+    const { [name]: value } = this.state;
     this.setState({
-      [name]: value
+      [name]: !value,
     });
   }
 
   updateStatus(value) {
-    this.setState({status:value});
-  }
-
-  componentDidMount() {
-    this.initialSelect2Value();
-  }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.eventTypes.length!==this.props.eventTypes.length) {
-      this.initialSelect2Value();
-    }
+    this.setState({ status: value });
   }
 
   render() {
-    let eventTypesList = this.eventTypesList(this.props.eventTypes);
+    const {
+      eventTypes: propsEventTypes,
+      errorVisible,
+      errorText,
+      updateBtn,
+      delete: propsDelete,
+      item,
+      reload,
+    } = this.props;
+    const { detailsOpen, status, label, description, eventType } = this.state;
+    const eventTypesList = this.eventTypesList(propsEventTypes);
 
-    let detailsOpenActive = " active";
-    if (!this.state.detailsOpen) {
-      detailsOpenActive = "";
-    }
+    const detailsOpenActive = detailsOpen ? ' active' : '';
 
-    let statusPublic = "secondary";
-    let statusPrivate = "secondary";
+    let statusPublic = 'secondary';
+    const statusPrivate = 'secondary';
     let publicOutline = true;
     let privateOutline = false;
-    if (this.state.status==="public") {
-      statusPublic = "success";
+    if (status === 'public') {
+      statusPublic = 'success';
       publicOutline = false;
       privateOutline = true;
     }
-    let errorContainerClass = " hidden";
-    if (this.props.errorVisible) {
-      errorContainerClass = "";
-    }
-    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
+    const errorContainerClass = errorVisible ? '' : ' hidden';
+    const errorContainer = (
+      <div className={`error-container${errorContainerClass}`}>{errorText}</div>
+    );
 
     return (
       <div className="row">
@@ -162,35 +183,93 @@ export default class ViewEvent extends Component {
           <div className="item-details">
             <Card>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'detailsOpen')}>Details <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={() => this.toggleCollapse('detailsOpen')}>
+                  Details{' '}
+                  <Button
+                    type="button"
+                    className="pull-right"
+                    color="secondary"
+                    outline
+                    size="xs"
+                  >
+                    <i
+                      className={`collapse-toggle fa fa-angle-left${detailsOpenActive}`}
+                    />
+                  </Button>
+                </CardTitle>
                 {errorContainer}
-                <Collapse isOpen={this.state.detailsOpen}>
+                <Collapse isOpen={detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
                     <div className="text-right">
                       <ButtonGroup>
-                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
-                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                        <Button
+                          size="sm"
+                          outline={publicOutline}
+                          color={statusPublic}
+                          onClick={() => this.updateStatus('public')}
+                        >
+                          Public
+                        </Button>
+                        <Button
+                          size="sm"
+                          outline={privateOutline}
+                          color={statusPrivate}
+                          onClick={() => this.updateStatus('private')}
+                        >
+                          Private
+                        </Button>
                       </ButtonGroup>
                     </div>
                     <FormGroup>
                       <Label>Label</Label>
-                      <Input type="text" name="label" placeholder="Label..." value={this.state.label} onChange={this.handleChange}/>
+                      <Input
+                        type="text"
+                        name="label"
+                        placeholder="Label..."
+                        value={label}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label for="description">Description</Label>
-                      <Input type="textarea" name="description" placeholder="Description..." value={this.state.description} onChange={this.handleChange}/>
+                      <Input
+                        type="textarea"
+                        name="description"
+                        placeholder="Description..."
+                        value={description}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label>Type of Event</Label>
                       <Select
-                        value={this.state.eventType}
-                        onChange={(selectedOption)=>this.select2Change(selectedOption, "eventType")}
+                        value={eventType}
+                        onChange={(selectedOption) =>
+                          this.select2Change(selectedOption, 'eventType')
+                        }
                         options={eventTypesList}
                       />
                     </FormGroup>
-                    <div className="text-right" style={{marginTop: "15px"}}>
-                      <Button color="info" outline size="sm" onClick={(e)=>this.formSubmit(e)}>{this.props.updateBtn}</Button>
-                      <Button color="danger" outline  size="sm" onClick={()=>this.props.delete()} className="pull-left"><span><i className="fa fa-trash-o" /> Delete</span></Button>
+                    <div className="text-right" style={{ marginTop: '15px' }}>
+                      <Button
+                        color="info"
+                        outline
+                        size="sm"
+                        onClick={(e) => this.formSubmit(e)}
+                      >
+                        {updateBtn}
+                      </Button>
+                      <Button
+                        color="danger"
+                        outline
+                        size="sm"
+                        onClick={() => propsDelete()}
+                        className="pull-left"
+                      >
+                        <span>
+                          <i className="fa fa-trash-o" /> Delete
+                        </span>
+                      </Button>
                     </div>
                   </Form>
                 </Collapse>
@@ -201,13 +280,34 @@ export default class ViewEvent extends Component {
         <div className="col-xs-12 col-sm-6">
           <div className="item-details">
             <RelatedEntitiesBlock
-              item={this.props.item}
+              item={item}
               itemType="Event"
-              reload={this.props.reload}
-              />
+              reload={reload}
+            />
           </div>
         </div>
       </div>
-    )
+    );
   }
 }
+
+ViewEvent.defaultProps = {
+  item: null,
+  eventTypes: [],
+  update: () => {},
+  delete: () => {},
+  reload: () => {},
+  updateBtn: null,
+  errorVisible: false,
+  errorText: [],
+};
+ViewEvent.propTypes = {
+  item: PropTypes.object,
+  eventTypes: PropTypes.array,
+  update: PropTypes.func,
+  delete: PropTypes.func,
+  reload: PropTypes.func,
+  updateBtn: PropTypes.object,
+  errorVisible: PropTypes.bool,
+  errorText: PropTypes.array,
+};

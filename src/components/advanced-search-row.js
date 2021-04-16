@@ -1,66 +1,101 @@
-import React, {Component} from 'react';
-import {
-  Button,
-  Input
-} from 'reactstrap';
+import React, { Component } from 'react';
+import { Button, Input } from 'reactstrap';
+import PropTypes from 'prop-types';
+
 export default class AdvancedSearchFormRow extends Component {
   constructor(props) {
     super(props);
-    let searchSelect = null;
-    if (typeof this.props.searchElements!=="undefined") {
-      searchSelect = this.props.searchElements[0].element;
-    }
-    this.state = {
-      searchInput: '',
-      searchSelect: searchSelect,
-    }
-
     this.handleChange = this.handleChange.bind(this);
   }
 
   handleChange(e) {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
     this.setState({
-      [name]: value
+      [name]: value,
     });
   }
 
   render() {
-    let button = <Button size="sm" color="secondary" outline type="button" onClick={this.props.addAdvancedSearchRow}>
-      <i className="fa fa-plus" />
-    </Button>
-    if (!this.props.default) {
-      button = <Button size="sm" color="secondary" outline type="button" onClick={()=>this.props.removeAdvancedSearchRow(this.props.rowId)}>
-        <i className="fa fa-minus" />
+    const {
+      addAdvancedSearchRow,
+      default: isDefault,
+      removeAdvancedSearchRow,
+      rowId,
+      searchSelect,
+      handleAdvancedSearchChange,
+      availableElements,
+      searchInput,
+    } = this.props;
+    let button = (
+      <Button
+        size="sm"
+        color="secondary"
+        outline
+        type="button"
+        onClick={addAdvancedSearchRow}
+      >
+        <i className="fa fa-plus" />
       </Button>
+    );
+    if (!isDefault) {
+      button = (
+        <Button
+          size="sm"
+          color="secondary"
+          outline
+          type="button"
+          onClick={() => removeAdvancedSearchRow(rowId)}
+        >
+          <i className="fa fa-minus" />
+        </Button>
+      );
     }
-
-    return(
+    return (
       <div className="advanced-search-row">
         <div className="advanced-search-select">
           <Input
             type="select"
             name="select"
-            value={this.props.searchSelect}
-            onChange={(e)=>this.props.handleAdvancedSearchChange(e,this.props.rowId)}>
-            {this.props.availableElements}
+            value={searchSelect}
+            onChange={(e) => handleAdvancedSearchChange(e, rowId)}
+          >
+            {availableElements}
           </Input>
         </div>
         <div className="advanced-search-input">
           <Input
             type="text"
             name="input"
-            value={this.props.searchInput}
-            onChange={(e)=>this.props.handleAdvancedSearchChange(e,this.props.rowId)}
+            value={searchInput}
+            onChange={(e) => handleAdvancedSearchChange(e, rowId)}
           />
         </div>
-        <div className="advanced-search-button">
-          {button}
-        </div>
+        <div className="advanced-search-button">{button}</div>
       </div>
-
     );
   }
 }
+
+AdvancedSearchFormRow.defaultProps = {
+  addAdvancedSearchRow: () => {},
+  removeAdvancedSearchRow: () => {},
+  handleAdvancedSearchChange: () => {},
+  default: false,
+  rowId: '',
+  searchSelect: '',
+  availableElements: [],
+  searchInput: '',
+};
+
+AdvancedSearchFormRow.propTypes = {
+  addAdvancedSearchRow: PropTypes.func,
+  removeAdvancedSearchRow: PropTypes.func,
+  handleAdvancedSearchChange: PropTypes.func,
+  default: PropTypes.bool,
+  rowId: PropTypes.string,
+  searchSelect: PropTypes.string,
+  availableElements: PropTypes.array,
+  searchInput: PropTypes.string,
+};

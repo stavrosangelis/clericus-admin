@@ -1,952 +1,1068 @@
-import React, { Component } from 'react';
+import React, { useCallback, useEffect, useReducer, useRef } from 'react';
+import axios from 'axios';
+import {
+  Spinner,
+  Button,
+  Label,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  InputGroup,
+  InputGroupAddon,
+} from 'reactstrap';
+import PropTypes from 'prop-types';
+import Breadcrumbs from '../../components/breadcrumbs';
 import Draggable from '../../components/draggable';
 import '../../assets/sa-dnd/sa-dnd.css';
-import {
-  Spinner, Button,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Input, InputGroup, InputGroupAddon,
-} from 'reactstrap';
-import {Breadcrumbs} from '../../components/breadcrumbs';
-
-import axios from 'axios';
 import ParseClassPieceToolbox from './right-sidebar-toolbox';
 import ContextualMenu from '../../components/parse-class-piece-contextual-menu';
-import {stringDimensionToInteger, capitalizeOnlyFirst} from '../../helpers/helpers';
+import { stringDimensionToInteger, capitalizeOnlyFirst } from '../../helpers';
+
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export default class ParseClassPieceThumbnails extends Component {
-  constructor(props) {
-    super(props);
+const ParseClassPieceThumbnails = (props) => {
+  // props
+  const { match } = props;
+  const fileName = match.params?.fileName || '';
 
-    this.state = {
-      initialLoad: true,
-      loading: true,
-      organisationTypes: [],
-      peopleRoles: [],
-      fileInfo: [],
-      file: [],
-      faces: [],
-      texts: [],
-      zoom: 100,
-      settingsUpdate: false,
-      selectionsActive: true,
+  // state
+  const defaultState = {
+    initialLoad: true,
+    loading: true,
+    organisationTypes: [],
+    peopleRoles: [],
+    fileInfo: [],
+    file: [],
+    faces: [],
+    texts: [],
+    zoom: 100,
+    settingsUpdate: false,
+    selectionsActive: true,
 
-      storeSelectionsStatus: false,
-      storeSelectionsBtn: <span><i className="fa fa-save"></i> Store selections</span>,
+    storeSelectionsStatus: false,
+    storeSelectionsBtn: (
+      <span>
+        <i className="fa fa-save" /> Store selections
+      </span>
+    ),
 
-      saveThumbnailsStatus: false,
-      saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>,
+    saveThumbnailsStatus: false,
+    saveThumbnailsBtn: (
+      <span>
+        <i className="fa fa-save" /> Extract thumbnails
+      </span>
+    ),
 
-      linkingActive: false,
-      linkingSelectionActive: false,
-      selectionFaces: null,
-      selectionText: [],
-      saveSelectedModal: false,
+    linkingActive: false,
+    linkingSelectionActive: false,
+    selectionFaces: null,
+    selectionText: [],
+    saveSelectedModal: false,
 
-      linkingSelection: false,
-      linkinSelectionRect: {top:0, left:0, width:0, height:0, transform: 'translate: (0,0)'},
+    linkingSelection: false,
+    linkinSelectionRect: {
+      top: 0,
+      left: 0,
+      width: 0,
+      height: 0,
+      transform: 'translate: (0,0)',
+    },
 
-      draggableText: '',
-      dragover: false,
-      draggedElem: null,
-      draggedIndex: null,
-      inputhonorificprefix: [""],
-      inputfirstname: '',
-      inputmiddlename: '',
-      inputlastname: '',
-      inputdiocese: '',
-      inputdioceseType: 'Diocese',
-      inputtype: 'student',
+    draggableText: '',
+    dragover: false,
+    draggedElem: null,
+    draggedIndex: null,
+    inputhonorificprefix: [''],
+    inputfirstname: '',
+    inputmiddlename: '',
+    inputlastname: '',
+    inputdiocese: '',
+    inputdioceseType: 'Diocese',
+    inputtype: 'student',
 
-      updatePersonStatus: false,
-      updatePersonBtn: <span><i className="fa fa-save"></i> Update person</span>,
+    updatePersonStatus: false,
+    updatePersonBtn: (
+      <span>
+        <i className="fa fa-save" /> Update person
+      </span>
+    ),
 
-      storeLinkingBtn: <span><i className="fa fa-save"></i> Store updates</span>,
-      storeLinkingStatus: false,
+    storeLinkingBtn: (
+      <span>
+        <i className="fa fa-save" /> Store updates
+      </span>
+    ),
+    storeLinkingStatus: false,
 
-      // contextual menu
-      contextualMenuVisible: false,
-      contextualMenuPosition: [],
-      contextualMenuTargetFace: false,
-      selectedNode: [],
-      selectedNodeKey: [],
+    // contextual menu
+    contextualMenuVisible: false,
+    contextualMenuPosition: [],
+    contextualMenuTargetFace: false,
+    selectedNode: [],
+    selectedNodeKey: [],
 
-      // errorModal
-      errorModalVisible: false,
-      errorModalText: []
-    }
-    this.loadFile = this.loadFile.bind(this);
-    this.loadFaces = this.loadFaces.bind(this);
-    this.loadSettings = this.loadSettings.bind(this);
-    this.loadTaxonomyTypes = this.loadTaxonomyTypes.bind(this);
-    this.loadText = this.loadText.bind(this);
-    this.updateFaces = this.updateFaces.bind(this);
-    this.resizeFace = this.resizeFace.bind(this);
-    this.dragFace = this.dragFace.bind(this);
-    this.saveFacesThumbnails = this.saveFacesThumbnails.bind(this);
+    // errorModal
+    errorModalVisible: false,
+    errorModalText: [],
+  };
+  const [state, setState] = useReducer(
+    (exState, newState) => ({ ...exState, ...newState }),
+    defaultState
+  );
 
-    this.updateSettings = this.updateSettings.bind(this);
-    this.updateZoom = this.updateZoom.bind(this);
-    this.toggleSelections = this.toggleSelections.bind(this);
-    this.toggleLinking = this.toggleLinking.bind(this);
+  // refs
+  const itemPreview = useRef(null);
 
-    this.addNewSelection = this.addNewSelection.bind(this);
-    this.removeSelection = this.removeSelection.bind(this);
-
-    // linking
-    this.startSelection = this.startSelection.bind(this);
-    this.endSelection = this.endSelection.bind(this);
-    this.closeSelectedModal = this.closeSelectedModal.bind(this);
-    this.selectFace = this.selectFace.bind(this);
-    this.selectText = this.selectText.bind(this);
-
-    this.linkingSelectionStart = this.linkingSelectionStart.bind(this);
-    this.linkingSelectionEnd = this.linkingSelectionEnd.bind(this);
-    this.linkingSelectionMove = this.linkingSelectionMove.bind(this);
-    this.getFaceInSelection = this.getFaceInSelection.bind(this);
-    this.getTextsSelection = this.getTextsSelection.bind(this);
-    this.startDragText = this.startDragText.bind(this);
-    this.dragStopText = this.dragStopText.bind(this);
-    this.dragOverText = this.dragOverText.bind(this);
-    this.dragEnterText = this.dragEnterText.bind(this);
-    this.dragLeaveText = this.dragLeaveText.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.handleMultipleChange = this.handleMultipleChange.bind(this);
-
-    this.updatePersonModal = this.updatePersonModal.bind(this);
-    this.storeLinking = this.storeLinking.bind(this);
-
-    this.handleContextMenu = this.handleContextMenu.bind(this);
-    this.handleClick = this.handleClick.bind(this);
-    this.handleScroll = this.handleScroll.bind(this);
-
-
-    this.toggleErrorModal = this.toggleErrorModal.bind(this);
-    this.matchTexts = this.matchTexts.bind(this);
-    this.itemPreview = React.createRef();
-
-    this.removeHP = this.removeHP.bind(this);
-    this.addHP = this.addHP.bind(this);
-  }
-
-  loadFile = async() => {
-    let fileName = this.props.match.params.fileName;
-    let file = await axios({
-      method: 'get',
-      url: APIPath+'list-class-piece?file='+fileName,
-      crossDomain: true,
-    })
-	  .then(function (response) {
-      return response.data.data[0];
-	  })
-	  .catch(function (error) {
-	  });
-    let fileOutput = <img src={file.compressed} alt={file.name}
-      draggable="false" onDragStart={(e) => { e.preventDefault() }} />;
-    this.setState({
-      fileInfo: file,
-      file: fileOutput,
-    });
-    this.loadFaces();
-    this.loadText();
-    this.loadSettings();
-  }
-
-  loadFaces = async() => {
-    let facesFile = this.state.fileInfo.faces;
+  const loadFaces = useCallback(async () => {
+    const facesFile = state.fileInfo.faces;
     let facesData = await axios({
       method: 'get',
       url: facesFile,
       crossDomain: true,
     })
-	  .then(function (response) {
-      let responseData = response.data;
-      return responseData;
-	  })
-	  .catch(function (error) {
-	  });
-    if(typeof facesData==="string") {
-      facesData = JSON.parse(facesData)
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (typeof facesData === 'string') {
+      facesData = JSON.parse(facesData);
     }
     let hasThumbnailCount = 0;
-    for (let i=0; i<facesData.length; i++) {
-      let face = facesData[i];
-      if (typeof face.thumbnail!=="undefined") {
-        hasThumbnailCount++;
+    for (let i = 0; i < facesData.length; i += 1) {
+      const face = facesData[i];
+      if (typeof face.thumbnail !== 'undefined') {
+        hasThumbnailCount += 1;
       }
     }
-    let selectionsActive = true;
-    let linkingActive = false;
-    if (hasThumbnailCount===facesData.length) {
-      selectionsActive = false;
-      linkingActive = true;
-    }
-    this.setState({
+    const selectionsActive = hasThumbnailCount !== facesData.length;
+    const linkingActive = hasThumbnailCount === facesData.length;
+    setState({
       faces: facesData,
-      selectionsActive: selectionsActive,
-      linkingActive: linkingActive,
+      selectionsActive,
+      linkingActive,
     });
-  }
+  }, [state]);
 
-  loadText = async () => {
-    let textFile = this.state.fileInfo.text;
-    let texts = await axios({
+  const loadText = useCallback(async () => {
+    const textFile = state.fileInfo.text;
+    const textData = await axios({
       method: 'get',
       url: textFile,
       crossDomain: true,
     })
-	  .then(function (response) {
-      let textData = response.data.lines;
-      let words = [];
-      for (let key in textData) {
-        let line = textData[key];
-        if (typeof line.words!=="undefined") {
-          for (let wordKey in line.words) {
-            let word = line.words[wordKey];
-            words.push(word);
-          }
+      .then((response) => response.data.lines)
+      .catch((error) => {
+        console.log(error);
+      });
+    const texts = [];
+    for (let i = 0; i < textData.length; i += 1) {
+      const line = textData[i];
+      if (typeof line.words !== 'undefined') {
+        for (let j = 0; j < line.words.length; j += 1) {
+          const word = line.words[j];
+          texts.push(word);
         }
       }
-      return words;
-	  })
-	  .catch(function (error) {
-	  });
-    this.setState({
-      texts: texts,
-      loading: false
+    }
+    setState({
+      texts,
+      loading: false,
     });
-  }
+  }, [state.fileInfo]);
 
-  loadSettings = () => {
+  const loadSettings = useCallback(() => {
     let settings = [];
-    if (sessionStorage.getItem("settings")!==null && sessionStorage.getItem("settings")!=='') {
+    if (
+      sessionStorage.getItem('settings') !== null &&
+      sessionStorage.getItem('settings') !== ''
+    ) {
       settings = JSON.parse(sessionStorage.getItem('settings'));
     }
-    let newZoom = settings.zoom || 100;
-    this.setState({
-      zoom: parseInt(newZoom,10),
-    })
-  }
+    const newZoom = settings.zoom || 100;
+    setState({
+      zoom: Number(newZoom),
+    });
+  }, []);
 
-  loadTaxonomyTypes = async() => {
-    let organisationTypes = await axios({
+  const loadFile = useCallback(async () => {
+    const file = await axios({
       method: 'get',
-      url: APIPath+"taxonomy",
+      url: `${APIPath}list-class-piece?file=${fileName}`,
       crossDomain: true,
-      params: {systemType: "organisationTypes"}
     })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    let peopleRoles = await axios({
+      .then((response) => response.data.data[0])
+      .catch((error) => {
+        console.log(error);
+      });
+    const fileOutput = (
+      <img
+        src={file.compressed}
+        alt={file.name}
+        draggable="false"
+        onDragStart={(e) => {
+          e.preventDefault();
+        }}
+      />
+    );
+    setState({
+      fileInfo: file,
+      file: fileOutput,
+    });
+    loadFaces();
+    loadText();
+    loadSettings();
+  }, [fileName, loadFaces, loadText, loadSettings]);
+
+  const loadTaxonomyTypes = async () => {
+    const organisationTypes = await axios({
       method: 'get',
-      url: APIPath+"taxonomy",
+      url: `${APIPath}taxonomy`,
       crossDomain: true,
-      params: {systemType: "peopleRoles"}
+      params: { systemType: 'organisationTypes' },
     })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    this.setState({
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    const peopleRoles = await axios({
+      method: 'get',
+      url: `${APIPath}taxonomy`,
+      crossDomain: true,
+      params: { systemType: 'peopleRoles' },
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    setState({
       organisationTypes: organisationTypes.taxonomyterms,
-      peopleRoles: peopleRoles.taxonomyterms
-    })
-  }
+      peopleRoles: peopleRoles.taxonomyterms,
+    });
+  };
 
-  updateFaces = async() => {
-    if (this.state.storeSelectionsStatus) {
+  const updateFaces = async () => {
+    if (state.storeSelectionsStatus) {
       return false;
     }
-    this.setState({
+    setState({
       storeSelectionsStatus: true,
-      storeSelectionsBtn: <span><i className="fa fa-save"></i> Storing selections... <Spinner size="sm" color="secondary" /></span>
-    })
-    let fileName = this.props.match.params.fileName;
-    let postData = {
+      storeSelectionsBtn: (
+        <span>
+          <i className="fa fa-save" /> Storing selections...{' '}
+          <Spinner size="sm" color="secondary" />
+        </span>
+      ),
+    });
+    const postData = {
       file: fileName,
-      faces: JSON.stringify(this.state.faces)
+      faces: JSON.stringify(state.faces),
     };
-    let update = await axios({
+    const update = await axios({
       method: 'post',
-      url: APIPath+'update-class-piece-faces?file='+fileName,
+      url: `${APIPath}update-class-piece-faces?file=${fileName}`,
       crossDomain: true,
       data: postData,
     })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-	  });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
     let stateUpdate = {};
     if (update.status) {
       stateUpdate = {
         storeSelectionsStatus: false,
-        storeSelectionsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+        storeSelectionsBtn: (
+          <span>
+            <i className="fa fa-save" /> Success
+            <i className="fa fa-check" />
+          </span>
+        ),
       };
-    }
-    else {
+    } else {
       stateUpdate = {
         storeSelectionsStatus: false,
-        storeSelectionsBtn: <span><i className="fa fa-save"></i> Error <i className="fa fa-times"></i></span>
+        storeSelectionsBtn: (
+          <span>
+            <i className="fa fa-save" /> Error
+            <i className="fa fa-times" />
+          </span>
+        ),
       };
     }
-    this.setState(stateUpdate);
-    let context = this;
-    setTimeout(()=>{
-      context.setState({
-        storeSelectionsBtn: <span><i className="fa fa-save"></i> Store selections</span>
+    setState(stateUpdate);
+    setTimeout(() => {
+      setState({
+        storeSelectionsBtn: (
+          <span>
+            <i className="fa fa-save" /> Store selections
+          </span>
+        ),
       });
-    },2000);
-  }
+    }, 2000);
+    return false;
+  };
 
-  dragFace = (d, i) => {
-    let faces = this.state.faces;
-    let currentFace = faces[i];
-    let width = d.width;
-    let height = d.height;
-    let leftX = d.left;
-    let topY = d.top;
-    let calcFaceRectangle = {
-      width: width,
-      height: height,
+  const dragFace = (d, i) => {
+    const faces = Object.assign([], state.faces);
+    const currentFace = faces[i];
+    const { width, height } = d;
+    const leftX = d.left;
+    const topY = d.top;
+    const calcFaceRectangle = {
+      width,
+      height,
       left: leftX,
       top: topY,
-    }
-    let newFace = Object.assign({}, currentFace);
+    };
+    const newFace = { ...currentFace };
     newFace.faceRectangle = calcFaceRectangle;
     faces[i] = newFace;
-    this.setState({
-      faces: faces
-    })
-  }
+    setState({
+      faces,
+    });
+    return false;
+  };
 
-  resizeFace = (d, i) => {
-    let faces = this.state.faces;
-    let currentFace = faces[i];
-    let width = d.width;
-    let height = d.height;
-    let leftX = d.left;
-    let topY = d.top;
-    let calcFaceRectangle = {
-      width: width,
-      height: height,
+  const resizeFace = (d, i) => {
+    const faces = Object.assign([], state.faces);
+    const currentFace = faces[i];
+    const { width, height } = d;
+    const leftX = d.left;
+    const topY = d.top;
+    const calcFaceRectangle = {
+      width,
+      height,
       left: leftX,
       top: topY,
-    }
-
-    let rotate = d.degree;
-    let newFace = Object.assign({}, currentFace);
+    };
+    const rotate = d.degree;
+    const newFace = { ...currentFace };
     newFace.faceRectangle = calcFaceRectangle;
     newFace.rotate = rotate;
     faces[i] = newFace;
-    this.setState({
-      faces: faces
-    })
-  }
+    setState({
+      faces,
+    });
+    return false;
+  };
 
-  updateSettings = () => {
-    let newZoom = this.state.zoom;
+  const updateSettings = () => {
+    const newZoom = state.zoom;
     let settings = {};
-    if (sessionStorage.getItem("settings")!==null) {
+    if (sessionStorage.getItem('settings') !== null) {
       settings = JSON.parse(sessionStorage.getItem('settings'));
     }
-    settings = {zoom: newZoom};
-    let storedSettings = JSON.stringify(settings);
-    sessionStorage.setItem("settings", storedSettings);
-  }
+    settings = { zoom: newZoom };
+    const storedSettings = JSON.stringify(settings);
+    sessionStorage.setItem('settings', storedSettings);
+  };
 
-  updateZoom = (value) => {
-    this.setState({
+  const updateZoom = (value) => {
+    setState({
       zoom: value,
       settingsUpdate: true,
     });
-  }
+  };
 
-  toggleSelections = () => {
-    let value = true;
-    if (this.state.selectionsActive) {
-      value = false;
-    }
-    this.setState({
-      selectionsActive: value
-    })
+  const toggleSelections = () => {
+    const value = !state.selectionsActive;
+    setState({
+      selectionsActive: value,
+    });
     if (value) {
-      this.setState({
-        linkingActive: false
-      })
+      setState({
+        linkingActive: false,
+      });
     }
-  }
+  };
 
-  toggleLinking = () => {
-    let value = true;
-    if (this.state.linkingActive) {
-      value = false;
-    }
-    this.setState({
-      linkingActive: value
-    })
+  const toggleLinking = () => {
+    const value = !state.linkingActive;
+    setState({
+      linkingActive: value,
+    });
     if (value) {
-      this.setState({
-        selectionsActive: false
-      })
+      setState({
+        selectionsActive: false,
+      });
     }
-  }
+  };
 
-  saveFacesThumbnails = async () => {
-    if (this.state.saveThumbnailsStatus) {
+  const saveFacesThumbnails = async () => {
+    if (state.saveThumbnailsStatus) {
       return false;
     }
-    this.setState({
+    setState({
       saveThumbnailsStatus: true,
-      saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extracting thumbnails... <Spinner size="sm" color="secondary" /></span>
+      saveThumbnailsBtn: (
+        <span>
+          <i className="fa fa-save" /> Extracting thumbnails...{' '}
+          <Spinner size="sm" color="secondary" />
+        </span>
+      ),
     });
-    let fileName = this.props.match.params.fileName;
-    let update = await axios({
+    const update = await axios({
       method: 'get',
-      url: APIPath+'meta-parse-class-piece?file='+fileName,
+      url: `${APIPath}meta-parse-class-piece?file=${fileName}`,
       crossDomain: true,
     })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-	  });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
     let updateState = {};
     if (update.status) {
       updateState = {
         saveThumbnailsStatus: false,
-        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
+        saveThumbnailsBtn: (
+          <span>
+            <i className="fa fa-save" /> Success <i className="fa fa-check" />
+          </span>
+        ),
       };
-    }
-    else {
+    } else {
       updateState = {
         saveThumbnailsStatus: false,
-        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Error <i className="fa fa-times"></i></span>
+        saveThumbnailsBtn: (
+          <span>
+            <i className="fa fa-save" /> Error <i className="fa fa-times" />
+          </span>
+        ),
       };
     }
-    this.setState(updateState);
-    let context = this;
-    setTimeout(()=>{
-      context.setState({
-        saveThumbnailsBtn: <span><i className="fa fa-save"></i> Extract thumbnails</span>
+    setState(updateState);
+    setTimeout(() => {
+      setState({
+        saveThumbnailsBtn: (
+          <span>
+            <i className="fa fa-save" /> Extract thumbnails
+          </span>
+        ),
       });
-      context.loadFaces();
-    },2000);
-  }
+      loadFaces();
+    }, 2000);
+    return false;
+  };
 
   // linking
-  startSelection = (e) => {
+  const startSelection = useCallback((e) => {
     if (e.metaKey || e.ctrlKey) {
-      this.setState({
-        linkingSelectionActive: true
-      })
-    }
-  }
-
-  endSelection = (e) => {
-    if (e.key==="Control" || e.key==="Meta") {
-      let saveSelectedModal = false;
-      if (this.state.selectionFaces!==null || this.state.selectionText.length>0) {
-        saveSelectedModal = true;
-      }
-      this.setState({
-        linkingSelectionActive: false,
-        saveSelectedModal: saveSelectedModal
+      setState({
+        linkingSelectionActive: true,
       });
     }
-  }
+  }, []);
 
-  closeSelectedModal = () => {
-    this.setState({
+  const endSelection = useCallback(
+    (e) => {
+      if (e.key === 'Control' || e.key === 'Meta') {
+        let saveSelectedModal = false;
+        if (state.selectionFaces !== null || state.selectionText.length > 0) {
+          saveSelectedModal = true;
+        }
+        setState({
+          linkingSelectionActive: false,
+          saveSelectedModal,
+        });
+      }
+    },
+    [state.selectionFaces, state.selectionText]
+  );
+
+  const closeSelectedModal = () => {
+    setState({
       selectionFaces: null,
       selectionText: [],
       draggableText: '',
-      inputhonorificprefix: [""],
+      inputhonorificprefix: [''],
       inputfirstname: '',
       inputmiddlename: '',
       inputlastname: '',
       inputdiocese: '',
       inputdioceseType: 'Diocese',
       inputtype: 'student',
-      saveSelectedModal: false
+      saveSelectedModal: false,
     });
-  }
+  };
 
-  selectFace = (i)=>  {
-    if (this.state.linkingSelectionActive) {
-      let selectedFaces = this.state.selectionFaces;
-      if (selectedFaces!==i) {
+  const selectFace = (i) => {
+    if (state.linkingSelectionActive) {
+      let { selectedFaces } = state.selectionFaces;
+      if (selectedFaces !== i) {
         selectedFaces = i;
+      } else {
+        selectedFaces = null;
       }
-      else {
-        selectedFaces = null
-      }
-      this.setState({
-        selectionFaces: selectedFaces
-      })
-    }
-  }
-
-  selectText = (i)=>  {
-    if (this.state.linkingSelectionActive) {
-      let selectedText = this.state.selectionText;
-      if (selectedText.indexOf(i)===-1) {
-        selectedText.push(i);
-      }
-      else {
-        selectedText.splice(i,1);
-      }
-      this.setState({
-        selectionText: selectedText
-      })
-    }
-  }
-
-  linkingSelectionStart = (e) => {
-    let windowOffset = window.pageYOffset;
-    if (!this.state.linkingActive || this.state.linkingSelectionActive) {
-      return false;
-    }
-    if (e.target.closest(".classpiece-container")) {
-      let parent = document.getElementById("classpiece-container");
-      let rect = [];
-      let boundingRect = parent.getBoundingClientRect();
-      rect.top = ((e.pageY - windowOffset - boundingRect.y)*100)/parseInt(this.state.zoom,10);
-      rect.left = ((e.pageX - boundingRect.x)*100)/parseInt(this.state.zoom,10);
-      this.setState({
-        linkingSelection: true,
-        linkinSelectionRect: rect,
-      })
+      setState({
+        selectionFaces: selectedFaces,
+      });
     }
   };
 
-  linkingSelectionMove = (e) => {
-    if (this.state.linkingActive && this.state.linkingSelection) {
-      if (e.target.closest(".classpiece-container")) {
-        let windowOffset = window.pageYOffset;
-        let stateRect = this.state.linkinSelectionRect;
-        let rect = {top:stateRect.top, left:stateRect.left, width:0, height:0, transform: 'translate(0,0)'}
-        // new mouse position
-        let parent = document.getElementById("classpiece-container");
-        let boundingRect = parent.getBoundingClientRect();
-        let mouseTop = ((e.pageY - windowOffset - boundingRect.y)*100)/parseInt(this.state.zoom,10);
-        let mouseLeft = ((e.pageX - boundingRect.x)*100)/parseInt(this.state.zoom,10);
+  const selectText = (i) => {
+    if (state.linkingSelectionActive) {
+      const selectedText = state.selectionText;
+      if (selectedText.indexOf(i) === -1) {
+        selectedText.push(i);
+      } else {
+        selectedText.splice(i, 1);
+      }
+      setState({
+        selectionText: selectedText,
+      });
+    }
+  };
 
-        let width = mouseLeft - stateRect.left ;
-        let height = mouseTop - stateRect.top;
-        //console.log(width, height);
-        rect.width = Math.abs(width);
-        rect.height = Math.abs(height);
-        if (width<0 || height<0) {
-          let transform = '';
-          if (width<0 && height>=0) {
-            transform = 'translate('+width+'px,0px)';
-          }
-          if (width>=0 && height<0) {
-            transform = 'translate(0px,'+height+'px)';
-          }
-          if (width<0 && height<0) {
-            transform = 'translate('+width+'px,'+height+'px)';
-          }
-          rect.transform = transform;
-        }
-
-        this.setState({
+  const linkingSelectionStart = useCallback(
+    (e) => {
+      const windowOffset = window.pageYOffset;
+      if (!state.linkingActive || state.linkingSelectionActive) {
+        return false;
+      }
+      if (e.target.closest('.classpiece-container')) {
+        const parent = document.getElementById('classpiece-container');
+        const rect = [];
+        const boundingRect = parent.getBoundingClientRect();
+        rect.top =
+          ((e.pageY - windowOffset - boundingRect.y) * 100) /
+          parseInt(state.zoom, 10);
+        rect.left =
+          ((e.pageX - boundingRect.x) * 100) / parseInt(state.zoom, 10);
+        setState({
+          linkingSelection: true,
           linkinSelectionRect: rect,
-        })
+        });
+      }
+      return false;
+    },
+    [state.linkingActive, state.linkingSelectionActive, state.zoom]
+  );
+
+  const linkingSelectionMove = useCallback(
+    (e) => {
+      if (state.linkingActive && state.linkingSelection) {
+        if (e.target.closest('.classpiece-container')) {
+          const windowOffset = window.pageYOffset;
+          const stateRect = state.linkinSelectionRect;
+          const rect = {
+            top: stateRect.top,
+            left: stateRect.left,
+            width: 0,
+            height: 0,
+            transform: 'translate(0,0)',
+          };
+          // new mouse position
+          const parent = document.getElementById('classpiece-container');
+          const boundingRect = parent.getBoundingClientRect();
+          const mouseTop =
+            ((e.pageY - windowOffset - boundingRect.y) * 100) /
+            parseInt(state.zoom, 10);
+          const mouseLeft =
+            ((e.pageX - boundingRect.x) * 100) / parseInt(state.zoom, 10);
+
+          const width = mouseLeft - stateRect.left;
+          const height = mouseTop - stateRect.top;
+
+          rect.width = Math.abs(width);
+          rect.height = Math.abs(height);
+          if (width < 0 || height < 0) {
+            let transform = '';
+            if (width < 0 && height >= 0) {
+              transform = `translate(${width}px,0px)`;
+            }
+            if (width >= 0 && height < 0) {
+              transform = `translate(0px,${height}px)`;
+            }
+            if (width < 0 && height < 0) {
+              transform = `translate(${width}px,${height}px)`;
+            }
+            rect.transform = transform;
+          }
+
+          setState({
+            linkinSelectionRect: rect,
+          });
+        }
+      }
+    },
+    [
+      state.linkingActive,
+      state.linkingSelection,
+      state.linkinSelectionRect,
+      state.zoom,
+    ]
+  );
+
+  const getFaceInSelection = useCallback(() => {
+    const selection = state.linkinSelectionRect;
+    const selectedFaces = [];
+    for (let i = 0; i < state.faces.length; i += 1) {
+      const linkingFaceBox = state.faces[i];
+      const { faceRectangle } = linkingFaceBox;
+
+      // create css shape
+      const width = stringDimensionToInteger(faceRectangle.width);
+      const height = stringDimensionToInteger(faceRectangle.height);
+      const { left, top } = faceRectangle;
+      const right = left + width;
+      const bottom = top + height;
+
+      // normal selection
+      const selectionWidth = selection.width;
+      const selectionHeight = selection.height;
+
+      let selectionLeft = selection.left;
+      let selectionRight = selection.left + selectionWidth;
+      let selectionTop = selection.top;
+      let selectionBottom = selection.top + selectionHeight;
+
+      // negative selection
+      if (typeof selection.transform !== 'undefined') {
+        let selectionTransform = selection.transform;
+        selectionTransform = selectionTransform.replace('translate(', '');
+        selectionTransform = selectionTransform.replace(')', '');
+        selectionTransform = selectionTransform.replace(/px/g, '');
+        const selectionTransformArr = selectionTransform.split(',');
+        if (selectionTransformArr[0] < 0) {
+          selectionRight = selectionLeft;
+          selectionLeft = selection.left - selectionWidth;
+        }
+        if (selectionTransformArr[1] < 0) {
+          selectionBottom = selectionTop;
+          selectionTop = selection.top - selectionHeight;
+        }
       }
 
+      if (
+        left >= selectionLeft &&
+        top >= selectionTop &&
+        right <= selectionRight &&
+        bottom <= selectionBottom
+      ) {
+        selectedFaces.push(i);
+      }
     }
-  }
+    const selectedFace = selectedFaces[0];
+    return selectedFace;
+  }, [state.faces, state.linkinSelectionRect]);
 
-  linkingSelectionEnd = async () => {
-    if (this.state.linkingSelectionActive) {
+  const getTextsSelection = useCallback(() => {
+    const selection = state.linkinSelectionRect;
+    const selectedTexts = [];
+    for (let j = 0; j < state.texts.length; j += 1) {
+      const linkingTextBox = state.texts[j];
+      const { boundingBox } = linkingTextBox;
+
+      // create css shape
+      const left = boundingBox[0];
+      const right = boundingBox[2];
+      const top = boundingBox[1];
+      const bottom = boundingBox[5];
+
+      // normal selection
+      const selectionWidth = selection.width;
+      const selectionHeight = selection.height;
+
+      let selectionLeft = selection.left;
+      let selectionRight = selection.left + selectionWidth;
+      let selectionTop = selection.top;
+      let selectionBottom = selection.top + selectionHeight;
+
+      // negative selection
+      if (typeof selection.transform !== 'undefined') {
+        let selectionTransform = selection.transform;
+        selectionTransform = selectionTransform.replace('translate(', '');
+        selectionTransform = selectionTransform.replace(')', '');
+        selectionTransform = selectionTransform.replace(/px/g, '');
+        const selectionTransformArr = selectionTransform.split(',');
+        if (selectionTransformArr[0] < 0) {
+          selectionRight = selectionLeft;
+          selectionLeft = selection.left - selectionWidth;
+        }
+        if (selectionTransformArr[1] < 0) {
+          selectionBottom = selectionTop;
+          selectionTop = selection.top - selectionHeight;
+        }
+      }
+
+      if (
+        left >= selectionLeft &&
+        top >= selectionTop &&
+        right <= selectionRight &&
+        bottom <= selectionBottom
+      ) {
+        selectedTexts.push(j);
+      }
+    }
+    return selectedTexts;
+  }, [state.linkinSelectionRect, state.texts]);
+
+  const toggleErrorModal = useCallback(
+    (value = null, text = null) => {
+      let visible = !state.errorModalVisible;
+      if (value !== null) {
+        visible = value;
+      }
+      setState({
+        errorModalVisible: visible,
+        errorModalText: text,
+      });
+    },
+    [state.errorModalVisible]
+  );
+
+  const matchTexts = async (texts) => {
+    const dbTexts = await axios({
+      method: 'post',
+      url: `${APIPath}query-texts`,
+      crossDomain: true,
+      data: { texts },
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    return dbTexts;
+  };
+
+  const linkingSelectionEnd = useCallback(async () => {
+    if (state.linkingSelectionActive) {
       return false;
     }
-    if (typeof this.state.linkinSelectionRect.width==="undefined" || this.state.linkinSelectionRect.width<40 || this.state.linkinSelectionRect.height<40) {
-      this.setState({
+    if (
+      typeof state.linkinSelectionRect.width === 'undefined' ||
+      state.linkinSelectionRect.width < 40 ||
+      state.linkinSelectionRect.height < 40
+    ) {
+      setState({
         linkingSelection: false,
-        linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'},
-      })
+        linkinSelectionRect: {
+          top: 0,
+          left: 0,
+          width: 0,
+          height: 0,
+          transform: 'translate(0,0)',
+        },
+      });
       return false;
     }
-    if (this.state.linkingActive && this.state.linkingSelection) {
-      let selectedFace = this.getFaceInSelection();
-      let face = this.state.faces[selectedFace];
-      if (typeof face==="undefined") {
-        let errorModalText = <div>Please make certain that a person's thumbnail is part of your selection.</div>
-        this.toggleErrorModal(true, errorModalText);
-        this.setState({
+    if (state.linkingActive && state.linkingSelection) {
+      const selectedFace = getFaceInSelection();
+      const face = state.faces[selectedFace];
+      if (typeof face === 'undefined') {
+        const errorModalText = (
+          <div>
+            Please make certain that a person&apos;s thumbnail is part of your
+            selection.
+          </div>
+        );
+        toggleErrorModal(true, errorModalText);
+        setState({
           linkingSelection: false,
-          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'}
-        })
+          linkinSelectionRect: {
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            transform: 'translate(0,0)',
+          },
+        });
         return false;
       }
 
       // check if thumbnail exists
-      if (typeof face.thumbnail==="undefined") {
-        let errorModalText = <div>Please return to the <b>Selections</b> step and click on <b>Extract thumbnails</b> to continue.</div>
-        this.toggleErrorModal(true, errorModalText);
-        this.setState({
+      if (typeof face.thumbnail === 'undefined') {
+        const errorModalText = (
+          <div>
+            Please return to the <b>Selections</b> step and click on{' '}
+            <b>Extract thumbnails</b> to continue.
+          </div>
+        );
+        toggleErrorModal(true, errorModalText);
+        setState({
           linkingSelection: false,
-          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'}
-        })
+          linkinSelectionRect: {
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            transform: 'translate(0,0)',
+          },
+        });
         return false;
       }
 
-      let selectedText = this.getTextsSelection();
+      const selectedText = getTextsSelection();
       let saveSelectedModal = false;
 
-      if (typeof selectedFace!=="undefined") {
-        if (selectedFace!==null || selectedText.length>0) {
+      if (typeof selectedFace !== 'undefined') {
+        if (selectedFace !== null || selectedText.length > 0) {
           saveSelectedModal = true;
         }
 
-        let stateFaces = this.state.faces;
-        let selectedFaceData = stateFaces[selectedFace];
-        let inputhonorificprefix = [""];
+        const stateFaces = state.faces;
+        const selectedFaceData = stateFaces[selectedFace];
+        let inputhonorificprefix = [''];
         let inputfirstname = '';
         let inputmiddlename = '';
         let inputlastname = '';
         let inputdiocese = '';
         let inputdioceseType = 'Diocese';
         let inputtype = 'student';
-        if (typeof selectedFaceData.honorificPrefix!=="undefined") {
-          if (typeof selectedFaceData.honorificPrefix==="string") {
-            selectedFaceData.honorificPrefix = [selectedFaceData.honorificPrefix];
+        if (typeof selectedFaceData.honorificPrefix !== 'undefined') {
+          if (typeof selectedFaceData.honorificPrefix === 'string') {
+            selectedFaceData.honorificPrefix = [
+              selectedFaceData.honorificPrefix,
+            ];
           }
           inputhonorificprefix = selectedFaceData.honorificPrefix;
         }
-        if (typeof selectedFaceData.firstName!=="undefined") {
+        if (typeof selectedFaceData.firstName !== 'undefined') {
           inputfirstname = selectedFaceData.firstName;
         }
-        if (typeof selectedFaceData.middleName!=="undefined") {
+        if (typeof selectedFaceData.middleName !== 'undefined') {
           inputmiddlename = selectedFaceData.middleName;
         }
-        if (typeof selectedFaceData.lastName!=="undefined") {
+        if (typeof selectedFaceData.lastName !== 'undefined') {
           inputlastname = selectedFaceData.lastName;
         }
-        if (typeof selectedFaceData.diocese!=="undefined") {
+        if (typeof selectedFaceData.diocese !== 'undefined') {
           inputdiocese = selectedFaceData.diocese;
         }
-        if (typeof selectedFaceData.dioceseType!=="undefined" && selectedFaceData.dioceseType!=="") {
+        if (
+          typeof selectedFaceData.dioceseType !== 'undefined' &&
+          selectedFaceData.dioceseType !== ''
+        ) {
           inputdioceseType = selectedFaceData.dioceseType;
         }
-        if (typeof selectedFaceData.type!=="undefined" && selectedFaceData.type!=="") {
+        if (
+          typeof selectedFaceData.type !== 'undefined' &&
+          selectedFaceData.type !== ''
+        ) {
           inputtype = selectedFaceData.type;
         }
-        if (inputhonorificprefix[0]==="" && inputfirstname==="" && inputmiddlename==="" && inputlastname==="" && inputdiocese==="") {
-          let texts = selectedText.map(i=> this.state.texts[i]);
-          let words = texts.map(item=>item.text);
-          let matchedTexts = await this.matchTexts(words);
-          for (let i=0; i<matchedTexts.length; i++) {
-            let match = matchedTexts[i];
-            if (match.type!==null && match.count>0) {
-              if (match.type==="firstName") {
-                inputfirstname += (match.word)+" ";
+        if (
+          inputhonorificprefix[0] === '' &&
+          inputfirstname === '' &&
+          inputmiddlename === '' &&
+          inputlastname === '' &&
+          inputdiocese === ''
+        ) {
+          const texts = selectedText.map((i) => state.texts[i]);
+          const words = texts.map((item) => item.text);
+          const matchedTexts = await matchTexts(words);
+          for (let i = 0; i < matchedTexts.length; i += 1) {
+            const matchedText = matchedTexts[i];
+            if (matchedText.type !== null && matchedText.count > 0) {
+              if (matchedText.type === 'firstName') {
+                inputfirstname += `${matchedText.word} `;
               }
-              if (match.type==="middleName") {
-                inputmiddlename += (match.word)+" ";
+              if (matchedText.type === 'middleName') {
+                inputmiddlename += `${matchedText.word} `;
               }
-              if (match.type==="lastName") {
-                inputlastname += (match.word)+" ";
+              if (matchedText.type === 'lastName') {
+                inputlastname += `${matchedText.word} `;
               }
-              if (match.type==="diocese") {
-                inputdiocese += (match.word)+" ";
+              if (matchedText.type === 'diocese') {
+                inputdiocese += `${matchedText.word} `;
               }
             }
           }
-          //inputhonorificprefix = inputhonorificprefix.trim();
+          // inputhonorificprefix = inputhonorificprefix.trim();
           inputfirstname = inputfirstname.trim();
           inputmiddlename = inputmiddlename.trim();
           inputlastname = inputlastname.trim();
           inputdiocese = inputdiocese.trim();
         }
-        this.setState({
+        setState({
           selectionFaces: selectedFace,
           selectionText: selectedText,
-          saveSelectedModal: saveSelectedModal,
+          saveSelectedModal,
           linkingSelection: false,
-          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'},
-          inputhonorificprefix: inputhonorificprefix,
-          inputfirstname: inputfirstname,
-          inputmiddlename: inputmiddlename,
-          inputlastname: inputlastname,
-          inputdiocese: inputdiocese,
-          inputdioceseType: inputdioceseType,
-          inputtype: inputtype,
-        }, ()=> {
-          // preview selection
-          let context = this;
-          setTimeout(()=> {
-            let rectangle = selectedFaceData.faceRectangle;
-            let left = stringDimensionToInteger(rectangle.left);
-            let width = stringDimensionToInteger(rectangle.width);
-            let top = rectangle.top;
-            let previewWindow = context.itemPreview.current;
-            let box = previewWindow.getBoundingClientRect();
-            let boxWidth = box.width;
-            let margin = (boxWidth - width)/2;
-            left = left - margin;
-            previewWindow.scrollTo(left, top);
-          },500);
-
+          linkinSelectionRect: {
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            transform: 'translate(0,0)',
+          },
+          inputhonorificprefix,
+          inputfirstname,
+          inputmiddlename,
+          inputlastname,
+          inputdiocese,
+          inputdioceseType,
+          inputtype,
+        });
+        setTimeout(() => {
+          const rectangle = selectedFaceData.faceRectangle;
+          let left = stringDimensionToInteger(rectangle.left);
+          const width = stringDimensionToInteger(rectangle.width);
+          const { top } = rectangle;
+          const previewWindow = itemPreview.current;
+          const box = previewWindow.getBoundingClientRect();
+          const boxWidth = box.width;
+          const margin = (boxWidth - width) / 2;
+          left -= margin;
+          previewWindow.scrollTo(left, top);
+        }, 500);
+      } else {
+        setState({
+          linkingSelection: false,
+          linkinSelectionRect: {
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            transform: 'translate(0,0)',
+          },
         });
       }
-      else {
-        this.setState({
-          linkingSelection: false,
-          linkinSelectionRect: {top:0, left:0, width:0, height:0,transform: 'translate(0,0)'},
-        })
-      }
-
     }
+    return false;
+  }, [getFaceInSelection, getTextsSelection, state, toggleErrorModal]);
+
+  const startDragText = (e) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('text/html', e.target.id);
+    e.dataTransfer.dropEffect = 'move';
+    setState({
+      draggableText: e.target.textContent,
+    });
   };
 
-  matchTexts = async(texts) => {
-    let dbTexts = await axios({
-      method: 'post',
-      url: APIPath+'query-texts',
-      crossDomain: true,
-      data: {texts: texts}
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    return dbTexts;
-  }
-
-  getFaceInSelection = () => {
-    let selection = this.state.linkinSelectionRect;
-    let selectedFaces = [];
-    for (let i=0; i<this.state.faces.length; i++) {
-      let linkingFaceBox = this.state.faces[i];
-      let faceRectangle = linkingFaceBox.faceRectangle;
-
-      // create css shape
-      let width = stringDimensionToInteger(faceRectangle.width);
-      let height = stringDimensionToInteger(faceRectangle.height);
-      let left = faceRectangle.left;
-      let top = faceRectangle.top;
-      let right = left+width;
-      let bottom = top+height;
-
-      // normal selection
-      let selectionWidth = selection.width;
-      let selectionHeight = selection.height;
-
-      let selectionLeft = selection.left;
-      let selectionRight = selection.left + selectionWidth;
-      let selectionTop = selection.top;
-      let selectionBottom = selection.top + selectionHeight;
-
-      // negative selection
-      if (typeof selection.transform!=="undefined") {
-        let selectionTransform = selection.transform;
-        selectionTransform = selectionTransform.replace('translate(','');
-        selectionTransform = selectionTransform.replace(')','');
-        selectionTransform = selectionTransform.replace(/px/g,'');
-        let selectionTransformArr = selectionTransform.split(",");
-        if (selectionTransformArr[0]<0) {
-          selectionRight = selectionLeft;
-          selectionLeft = selection.left - selectionWidth;
-        }
-        if (selectionTransformArr[1]<0) {
-          selectionBottom = selectionTop;
-          selectionTop = selection.top - selectionHeight;
-        }
-      }
-
-
-      if (left>=selectionLeft && top>=selectionTop && right<=selectionRight && bottom<=selectionBottom) {
-        selectedFaces.push(i);
-      }
-    }
-    let selectedFace = selectedFaces[0];
-    return selectedFace;
-  }
-
-  getTextsSelection = () => {
-    let selection = this.state.linkinSelectionRect;
-    let selectedTexts = [];
-    for (let j=0; j<this.state.texts.length; j++) {
-      let linkingTextBox = this.state.texts[j];
-      let boundingBox = linkingTextBox.boundingBox;
-
-      // create css shape
-      let left = boundingBox[0];
-      let right = boundingBox[2];
-      let top = boundingBox[1];
-      let bottom = boundingBox[5];
-
-      // normal selection
-      let selectionWidth = selection.width;
-      let selectionHeight = selection.height;
-
-      let selectionLeft = selection.left;
-      let selectionRight = selection.left + selectionWidth;
-      let selectionTop = selection.top;
-      let selectionBottom = selection.top + selectionHeight;
-
-      // negative selection
-      if (typeof selection.transform!=="undefined") {
-        let selectionTransform = selection.transform;
-        selectionTransform = selectionTransform.replace('translate(','');
-        selectionTransform = selectionTransform.replace(')','');
-        selectionTransform = selectionTransform.replace(/px/g,'');
-        let selectionTransformArr = selectionTransform.split(",");
-        if (selectionTransformArr[0]<0) {
-          selectionRight = selectionLeft;
-          selectionLeft = selection.left - selectionWidth;
-        }
-        if (selectionTransformArr[1]<0) {
-          selectionBottom = selectionTop;
-          selectionTop = selection.top - selectionHeight;
-        }
-      }
-
-      if (left>=selectionLeft && top>=selectionTop && right<=selectionRight && bottom<=selectionBottom) {
-        selectedTexts.push(j);
-      }
-    }
-    return selectedTexts;
-  }
-
-  startDragText = (e) => {
-    e.stopPropagation();
-    e.dataTransfer.setData("text/html", e.target.id);
-    e.dataTransfer.dropEffect = "move";
-    this.setState({
-      draggableText: e.target.textContent
-    })
-  }
-
-  dragStopText = (e,i=null) => {
+  const dragStopText = (e, i = null) => {
     e.preventDefault();
     e.stopPropagation();
-    let target = e.target.getAttribute("data-target");
-    if (i===null) {
-      let targetText = this.state[target];
+    const target = e.target.getAttribute('data-target');
+    if (i === null) {
+      const targetText = state[target];
       let space = '';
-      if (targetText!=='') {
+      if (targetText !== '') {
         space = ' ';
       }
-      let newTargetText = targetText+space+this.state.draggableText;
+      let newTargetText = targetText + space + state.draggableText;
       newTargetText = capitalizeOnlyFirst(newTargetText);
-      this.setState({
+      setState({
         [target]: newTargetText,
-        draggedElem:null,
-        draggedIndex:null,
-      })
-    }
-    else {
-      let targetText = this.state[target][i];
+        draggedElem: null,
+        draggedIndex: null,
+      });
+    } else {
+      const targetText = state[target][i];
       let space = '';
-      if (targetText!=='') {
+      if (targetText !== '') {
         space = ' ';
       }
-      let newTargetText = targetText+space+this.state.draggableText;
+      let newTargetText = targetText + space + state.draggableText;
       newTargetText = capitalizeOnlyFirst(newTargetText);
 
-      let elem = this.state[target];
+      const elem = state[target];
       elem[i] = newTargetText;
-      this.setState({
+      setState({
         [target]: elem,
-        draggedElem:null,
-        draggedIndex:null,
-      })
+        draggedElem: null,
+        draggedIndex: null,
+      });
     }
     return false;
-  }
+  };
 
-  dragOverText = (e) => {
+  const dragOverText = (e) => {
     e.stopPropagation();
     e.preventDefault();
     return false;
-  }
+  };
 
-  dragEnterText = (e) => {
+  const dragEnterText = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    let target = e.target.getAttribute("data-target");
-    let index = e.target.getAttribute("data-index");
-    this.setState({
+    const target = e.target.getAttribute('data-target');
+    const index = e.target.getAttribute('data-index');
+    setState({
       dragover: true,
-      draggedElem:target,
-      draggedIndex:index,
+      draggedElem: target,
+      draggedIndex: index,
     });
-  }
+  };
 
-  dragLeaveText = (e) => {
-    this.setState({
+  const dragLeaveText = (e) => {
+    setState({
       dragover: false,
-      draggedElem:null,
-      draggedIndex:null
+      draggedElem: null,
+      draggedIndex: null,
     });
     e.preventDefault();
     return false;
-  }
+  };
 
-  handleChange = (e) => {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-
-    this.setState({
-      [name]: value
+  const handleChange = (e) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    setState({
+      [name]: value,
     });
-  }
+  };
 
-  handleMultipleChange = (e, i) => {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let elem = this.state[name];
+  const handleMultipleChange = (e, i) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    const elem = state[name];
     elem[i] = value;
-    this.setState({
-      [name]: elem
+    setState({
+      [name]: elem,
     });
-  }
+  };
 
-  updatePersonModal = (e) => {
+  const updatePersonModal = (e) => {
     e.preventDefault();
-    if (this.state.updatePersonStatus) {
+    if (state.updatePersonStatus) {
       return false;
     }
-    this.setState({
+    setState({
       updatePersonStatus: true,
-      updatePersonBtn: <span><i className="fa fa-save"></i> Updating person... <Spinner size="sm" color="light" /></span>
+      updatePersonBtn: (
+        <span>
+          <i className="fa fa-save" /> Updating person...{' '}
+          <Spinner size="sm" color="light" />
+        </span>
+      ),
     });
-    let faces = Object.assign([{}],this.state.faces);
-    let selectedFaceIndex = this.state.selectionFaces;
+    const faces = { ...state.faces };
+    const selectedFaceIndex = state.selectionFaces;
 
-    let selectedPerson = faces[selectedFaceIndex];
-    selectedPerson.honorificPrefix = this.state.inputhonorificprefix;
-    selectedPerson.firstName = this.state.inputfirstname;
-    selectedPerson.middleName = this.state.inputmiddlename;
-    selectedPerson.lastName = this.state.inputlastname;
-    selectedPerson.diocese = this.state.inputdiocese;
-    selectedPerson.dioceseType = this.state.inputdioceseType;
-    selectedPerson.type = this.state.inputtype;
+    const selectedPerson = faces[selectedFaceIndex];
+    selectedPerson.honorificPrefix = state.inputhonorificprefix;
+    selectedPerson.firstName = state.inputfirstname;
+    selectedPerson.middleName = state.inputmiddlename;
+    selectedPerson.lastName = state.inputlastname;
+    selectedPerson.diocese = state.inputdiocese;
+    selectedPerson.dioceseType = state.inputdioceseType;
+    selectedPerson.type = state.inputtype;
 
-    if (typeof selectedPerson.dioceseType==="undefined" || selectedPerson.dioceseType==="") {
-      selectedPerson.dioceseType = "diocese";
+    if (
+      typeof selectedPerson.dioceseType === 'undefined' ||
+      selectedPerson.dioceseType === ''
+    ) {
+      selectedPerson.dioceseType = 'diocese';
     }
-    if (selectedPerson.type==="") {
-      selectedPerson.type = "student";
+    if (selectedPerson.type === '') {
+      selectedPerson.type = 'student';
     }
     faces[selectedFaceIndex] = selectedPerson;
-    this.setState({
-      faces: faces,
+    setState({
+      faces,
       saveSelectedModal: false,
       updatePersonStatus: false,
-      updatePersonBtn: <span><i className="fa fa-save"></i> Update person</span>,
+      updatePersonBtn: (
+        <span>
+          <i className="fa fa-save" /> Update person
+        </span>
+      ),
       draggableText: '',
       inputhonorificprefix: [],
       inputfirstname: '',
@@ -956,624 +1072,769 @@ export default class ParseClassPieceThumbnails extends Component {
       inputdioceseType: '',
       inputtype: 'student',
     });
-  }
+    return false;
+  };
 
-  storeLinking = async () => {
-    if (this.state.storeLinkingStatus) {
+  const storeLinking = async () => {
+    if (state.storeLinkingStatus) {
       return false;
     }
-    this.setState({
+    setState({
       storeLinkingStatus: true,
-      storeLinkingBtn: <span><i className="fa fa-save"></i> Storing updates... <Spinner size="sm" color="secondary" /></span>
+      storeLinkingBtn: (
+        <span>
+          <i className="fa fa-save" /> Storing updates...{' '}
+          <Spinner size="sm" color="secondary" />
+        </span>
+      ),
     });
-    let fileName = this.props.match.params.fileName;
-    let postData = {
+    const postData = {
       file: fileName,
-      faces: JSON.stringify(this.state.faces)
+      faces: JSON.stringify(state.faces),
     };
-    let post = await axios({
-        method: 'post',
-        url: APIPath+'update-class-piece-faces?file='+fileName,
-        crossDomain: true,
-        data: postData,
-      })
-  	  .then(function (response) {
-        return response.data;
-  	  })
-  	  .catch(function (error) {
-  	  });
-    if (post.status) {
-      this.setState({
-        storeLinkingStatus: false,
-        storeLinkingBtn: <span><i className="fa fa-save"></i> Success <i className="fa fa-check"></i></span>
-      });
-
-      let context = this;
-      setTimeout(function() {
-        context.setState({
-          storeLinkingBtn: <span><i className="fa fa-save"></i> Store updates</span>
-        });
-      },2000)
-    }
-  }
-
-  addNewSelection = () => {
-    if (this.state.contextualMenuTargetFace) {
-      return false;
-    }
-    else {
-      let containerPosition = this.state.selectedNode.getBoundingClientRect();
-      let faces = this.state.faces;
-      let mousePosition = this.state.contextualMenuPosition;
-      let zoom = parseInt(this.state.zoom,10);
-      let mouseLeft = ((parseInt(mousePosition.left,10)-containerPosition.left)*100)/zoom;
-      let mouseTop = ((parseInt(mousePosition.top,10)-containerPosition.top)*100)/zoom;
-      let leftX = mouseLeft;
-      let topY = mouseTop;
-      let newFace = {};
-      newFace.faceRectangle = {
-        width: 100,
-        height: 100,
-        left: leftX,
-        top: topY
-      }
-
-      faces.push(newFace);
-      this.setState({
-        faces: faces
-      });
-    }
-  }
-
-  removeSelection = () => {
-    if (!this.state.contextualMenuTargetFace) {
-      return false;
-    }
-    let targetNode = this.state.selectedNode;
-    let index = parseInt(targetNode.getAttribute("data-key"),10);
-    let faces = this.state.faces;
-    let newFaces = faces.filter(i => i !== faces[index])
-    let context = this;
-    this.setState({
-      faces: []
+    const post = await axios({
+      method: 'post',
+      url: `${APIPath}update-class-piece-faces?file=${fileName}`,
+      crossDomain: true,
+      data: postData,
     })
-    setTimeout(function() {
-      context.setState({
-        faces: newFaces
-      })
-    },10)
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (post.status) {
+      setState({
+        storeLinkingStatus: false,
+        storeLinkingBtn: (
+          <span>
+            <i className="fa fa-save" /> Success <i className="fa fa-check" />
+          </span>
+        ),
+      });
+      setTimeout(() => {
+        setState({
+          storeLinkingBtn: (
+            <span>
+              <i className="fa fa-save" /> Store updates
+            </span>
+          ),
+        });
+      }, 2000);
+    }
+    return false;
+  };
 
-  }
+  const addNewSelection = () => {
+    if (state.contextualMenuTargetFace) {
+      return false;
+    }
+    const containerPosition = state.selectedNode.getBoundingClientRect();
+    const faces = { ...state.faces };
+    const mousePosition = state.contextualMenuPosition;
+    const zoom = parseInt(state.zoom, 10);
+    const mouseLeft =
+      ((parseInt(mousePosition.left, 10) - containerPosition.left) * 100) /
+      zoom;
+    const mouseTop =
+      ((parseInt(mousePosition.top, 10) - containerPosition.top) * 100) / zoom;
+    const leftX = mouseLeft;
+    const topY = mouseTop;
+    const newFace = {};
+    newFace.faceRectangle = {
+      width: 100,
+      height: 100,
+      left: leftX,
+      top: topY,
+    };
+    faces.push(newFace);
+    setState({
+      faces,
+    });
+    return false;
+  };
 
-  handleContextMenu = (e) => {
+  const removeSelection = () => {
+    if (!state.contextualMenuTargetFace) {
+      return false;
+    }
+    const targetNode = state.selectedNode;
+    const index = parseInt(targetNode.getAttribute('data-key'), 10);
+    const { faces } = state;
+    const newFaces = faces.filter((i) => i !== faces[index]);
+    setState({
+      faces: [],
+    });
+    setState({
+      faces: newFaces,
+    });
+    return false;
+  };
+
+  const handleContextMenu = (e) => {
     e.preventDefault();
 
     let contextualMenuTargetFace = false;
-    if (typeof e.target.classes!=="undefined") {
-      let nodeClasses = e.target.attributes.class.nodeValue;
-      let nodeClassesArr = nodeClasses.split(" ");
-      if (nodeClassesArr.indexOf("facebox")>-1) {
-        contextualMenuTargetFace = true
+    if (typeof e.target.classes !== 'undefined') {
+      const nodeClasses = e.target.attributes.class.nodeValue;
+      const nodeClassesArr = nodeClasses.split(' ');
+      if (nodeClassesArr.indexOf('facebox') > -1) {
+        contextualMenuTargetFace = true;
       }
     }
 
     let clickX = e.clientX;
     let clickY = e.clientY;
-    let screenW = window.innerWidth;
-    let screenH = window.innerHeight;
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
 
-    let contextMenuHeight = 232;
-    let contextMenuWidth = 180;
+    const contextMenuHeight = 232;
+    const contextMenuWidth = 180;
 
-    if ((parseFloat(clickY,10)+contextMenuHeight)>parseFloat(screenH,10)) {
-      clickY = parseFloat(clickY,10)-contextMenuHeight;
+    if (parseFloat(clickY, 10) + contextMenuHeight > parseFloat(screenH, 10)) {
+      clickY = parseFloat(clickY, 10) - contextMenuHeight;
     }
 
-    if ((parseFloat(clickX,10)+contextMenuWidth)>parseFloat(screenW,10)) {
-      clickX = parseFloat(clickX,10)-contextMenuWidth;
+    if (parseFloat(clickX, 10) + contextMenuWidth > parseFloat(screenW, 10)) {
+      clickX = parseFloat(clickX, 10) - contextMenuWidth;
     }
-    let newPosition = {
+    const newPosition = {
       left: clickX,
-      top: clickY
-    }
-    this.setState({
+      top: clickY,
+    };
+    setState({
       contextualMenuVisible: true,
       contextualMenuPosition: newPosition,
-      contextualMenuTargetFace: contextualMenuTargetFace,
-      selectedNode: e.target
+      contextualMenuTargetFace,
+      selectedNode: e.target,
     });
-  }
+  };
 
-  handleClick = () => {
-    if (this.state.contextualMenuVisible) {
-      this.setState({
-        contextualMenuVisible: false
+  const handleClick = useCallback(() => {
+    if (state.contextualMenuVisible) {
+      setState({
+        contextualMenuVisible: false,
       });
     }
-  }
+  }, [state.contextualMenuVisible]);
 
-  handleScroll = () => {
-    if (this.state.contextualMenuVisible) {
-      this.setState({
-        contextualMenuVisible: false
+  const handleScroll = useCallback(() => {
+    if (state.contextualMenuVisible) {
+      setState({
+        contextualMenuVisible: false,
       });
     }
-  }
+  }, [state.contextualMenuVisible]);
 
-  toggleErrorModal = (value=null, text=null) => {
-    let visible = !this.state.errorModalVisible;
-    if (value!==null) {
-      visible = value;
-    }
-    this.setState({
-      errorModalVisible: visible,
-      errorModalText: text
-    })
-  }
-
-  removeHP = (i) => {
-    let hps = this.state.inputhonorificprefix;
-    hps.splice(i,1);
-    this.setState({
-      inputhonorificprefix: hps
+  const removeHP = (i) => {
+    const hps = state.inputhonorificprefix;
+    hps.splice(i, 1);
+    setState({
+      inputhonorificprefix: hps,
     });
-  }
+  };
 
-  addHP = () => {
-    let hps = this.state.inputhonorificprefix;
-    hps.push("");
-    this.setState({
-      inputhonorificprefix: hps
+  const addHP = () => {
+    const hps = state.inputhonorificprefix;
+    hps.push('');
+    setState({
+      inputhonorificprefix: hps,
     });
-  }
+  };
 
-  componentDidMount() {
-    this.loadTaxonomyTypes();
-    this.loadFile();
-    window.addEventListener('keydown', this.startSelection);
-    window.addEventListener('keyup', this.endSelection);
+  useEffect(() => {
+    loadTaxonomyTypes();
+    loadFile();
+  }, [loadFile]);
+
+  useEffect(() => {
+    loadFile();
+  }, [loadFile, fileName]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', startSelection);
+    window.addEventListener('keyup', endSelection);
 
     // drag selection
-    window.addEventListener('mousedown', this.linkingSelectionStart);
-    window.addEventListener('mouseup', this.linkingSelectionEnd);
-    window.addEventListener('mousemove', this.linkingSelectionMove);
+    window.addEventListener('mousedown', linkingSelectionStart);
+    window.addEventListener('mouseup', linkingSelectionEnd);
+    window.addEventListener('mousemove', linkingSelectionMove);
 
     // contextual menu
-    document.addEventListener('click', this.handleClick);
-    document.addEventListener('scroll', this.handleScroll);
-  }
+    document.addEventListener('click', handleClick);
+    document.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('keydown', startSelection);
+      window.removeEventListener('keyup', endSelection);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevProps.match.params.fileName!==this.props.match.params.fileName) {
-      this.loadFile();
-    }
-  }
+      // drag selection
+      window.removeEventListener('mousedown', linkingSelectionStart);
+      window.removeEventListener('mouseup', linkingSelectionEnd);
+      window.removeEventListener('mousemove', linkingSelectionMove);
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.startSelection);
-    window.removeEventListener('keyup', this.endSelection);
+      // contextual menu
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('scroll', handleScroll);
+    };
+  }, [
+    startSelection,
+    endSelection,
+    linkingSelectionStart,
+    linkingSelectionEnd,
+    linkingSelectionMove,
+    handleClick,
+    handleScroll,
+  ]);
 
-    // drag selection
-    window.removeEventListener('mousedown', this.linkingSelectionStart);
-    window.removeEventListener('mouseup', this.linkingSelectionEnd);
-    window.removeEventListener('mousemove', this.linkingSelectionMove);
-
-    // contextual menu
-    document.removeEventListener('click', this.handleClick);
-    document.removeEventListener('scroll', this.handleScroll);
-  }
-
-  render() {
-    let content = <div className="row">
+  let content = (
+    <div className="row">
       <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
+        <div style={{ padding: '40pt', textAlign: 'center' }}>
           <Spinner type="grow" color="info" /> <i>loading...</i>
         </div>
       </div>
     </div>
-    if (!this.state.loading) {
-      let scaleNum = parseInt(this.state.zoom,10)/100;
-      let transform = {transform: "scale("+scaleNum+","+scaleNum+")"};
+  );
+  if (!state.loading) {
+    const scaleNum = parseInt(state.zoom, 10) / 100;
+    const transform = { transform: `scale(${scaleNum},${scaleNum})` };
 
-      // selections
-      let selectionsVisible = " hidden";
-      if (this.state.selectionsActive) {
-        selectionsVisible = "";
+    // selections
+    const selectionsVisible = state.selectionsActive ? '' : ' hidden';
+    const selectionsFaceBoxes = [];
+    for (let sf = 0; sf < state.faces.length; sf += 1) {
+      const face = state.faces[sf];
+      const rectangle = face.faceRectangle;
+      let rotate = 0;
+      if (typeof face.rotate !== 'undefined') {
+        rotate = face.rotate;
       }
-      let selectionsFaceBoxes = [];
-      for (let sf=0; sf<this.state.faces.length; sf++) {
-        let face = this.state.faces[sf];
-        let rectangle = face.faceRectangle;
-        let rotate = 0;
-        if (typeof face.rotate!=="undefined") {
-          rotate = face.rotate;
-        }
-        let hasThumbnailClass = "";
-        if (typeof face.thumbnail!=="undefined") {
-          hasThumbnailClass = " has-thumbnail";
-        }
-        let widthInt = rectangle.width;
-        if (typeof widthInt==="string") {
-          widthInt = widthInt.replace("px", "");
-          widthInt = parseInt(widthInt,10);
-        }
-        let heightInt = rectangle.height;
-        if (typeof heightInt==="string") {
-          heightInt = heightInt.replace("px", "");
-          heightInt = parseInt(heightInt,10);
-        }
-        let newBox = <Draggable
-          draggable={true}
-          resizable={true}
-          rotate={true}
+      const hasThumbnailClass =
+        typeof face.thumbnail !== 'undefined' ? ' has-thumbnail' : '';
+      let widthInt = rectangle.width;
+      if (typeof widthInt === 'string') {
+        widthInt = widthInt.replace('px', '');
+        widthInt = parseInt(widthInt, 10);
+      }
+      let heightInt = rectangle.height;
+      if (typeof heightInt === 'string') {
+        heightInt = heightInt.replace('px', '');
+        heightInt = parseInt(heightInt, 10);
+      }
+      const newBox = (
+        <Draggable
+          draggable
+          resizable
+          rotate
           parentConstrain={false}
           parentId="classpiece-container"
           key={sf}
           index={sf}
-          className={"facebox"+hasThumbnailClass}
-          left={rectangle.left+"px"}
-          top={rectangle.top+"px"}
+          className={`facebox${hasThumbnailClass}`}
+          left={`${rectangle.left}px`}
+          top={`${rectangle.top}px`}
           width={widthInt}
           height={heightInt}
           degree={rotate}
-          onDragStop={this.dragFace}
-          onResizeStop={this.resizeFace}
-          ></Draggable>
-        selectionsFaceBoxes.push(newBox);
+          onDragStop={dragFace}
+          onResizeStop={resizeFace}
+        />
+      );
+      selectionsFaceBoxes.push(newBox);
+    }
+
+    const selectionsTextBoxes = [];
+    for (let st = 0; st < state.texts.length; st += 1) {
+      const text = state.texts[st];
+      const { boundingBox } = text;
+
+      const textLeft = boundingBox[0];
+      const textTop = boundingBox[1];
+      const textWidth = boundingBox[2] - boundingBox[0];
+      const textHeight = boundingBox[5] - boundingBox[1];
+      // create css shape
+      const boxStyle = {
+        left: textLeft,
+        top: textTop,
+        width: textWidth,
+        height: textHeight,
+      };
+      const newTextBox = <div key={st} className="textbox" style={boxStyle} />;
+      selectionsTextBoxes.push(newTextBox);
+    }
+
+    // linking
+    const linkingFaceBoxesOutput = [];
+    for (let lf = 0; lf < state.faces.length; lf += 1) {
+      const linkingFaceBox = state.faces[lf];
+      const rectangle = linkingFaceBox.faceRectangle;
+
+      // create css shape
+
+      let rotate = 0;
+      if (typeof linkingFaceBox.rotate !== 'undefined') {
+        rotate = linkingFaceBox.rotate;
       }
-
-      let selectionsTextBoxes = [];
-      for (let st=0; st<this.state.texts.length; st++) {
-        let text = this.state.texts[st];
-        let boundingBox = text.boundingBox;
-
-        let textLeft = boundingBox[0];
-        let textTop = boundingBox[1];
-        let textWidth = boundingBox[2]-boundingBox[0];
-        let textHeight = boundingBox[5] - boundingBox[1];
-        // create css shape
-        let boxStyle = {
-          left: textLeft,
-          top: textTop,
-          width: textWidth,
-          height: textHeight,
-        }
-        let newTextBox = <div key={st} className="textbox" style={boxStyle}></div>;
-        selectionsTextBoxes.push(newTextBox);
+      const defaultValues = {
+        left: rectangle.left,
+        top: rectangle.top,
+        width: rectangle.width,
+        height: rectangle.height,
+      };
+      if (rotate !== 0) {
+        defaultValues.transform = `rotate(${rotate}deg)`;
       }
+      const activeLinkingFacebox =
+        Number(state.selectionFaces) === lf ? ' active' : '';
+      const hasDataClass =
+        typeof linkingFaceBox.firstName !== 'undefined' ? ' has-data' : '';
 
-      // linking
-      let linkingFaceBoxesOutput = [];
-      for (let lf=0; lf<this.state.faces.length; lf++) {
-        let linkingFaceBox = this.state.faces[lf];
-        let rectangle = linkingFaceBox.faceRectangle;
-
-        // create css shape
-
-        let rotate = 0;
-        if (typeof linkingFaceBox.rotate!=="undefined") {
-          rotate = linkingFaceBox.rotate;
-        }
-        let defaultValues = {
-          left: rectangle.left,
-          top: rectangle.top,
-          width: rectangle.width,
-          height: rectangle.height,
-        }
-        if (rotate!==0) {
-          defaultValues.transform = "rotate("+rotate+"deg)";
-        }
-        let activeLinkingFacebox = "";
-        if (parseInt(this.state.selectionFaces,10)===lf) {
-          activeLinkingFacebox = " active";
-        }
-        let hasDataClass = "";
-        if (typeof linkingFaceBox.firstName!=="undefined") {
-          hasDataClass = " has-data";
-        }
-
-        let newLinkingFaceBox = <div
+      const newLinkingFaceBox = (
+        <div
           draggable="false"
           style={defaultValues}
           key={lf}
-          className={"facebox"+activeLinkingFacebox+hasDataClass}
-          onClick={() => this.selectFace(lf)}
-          ></div>
-        linkingFaceBoxesOutput.push(newLinkingFaceBox);
-      }
-      let linkingVisible = " hidden";
-      if (this.state.linkingActive) {
-        linkingVisible = "";
-      }
+          className={`facebox${activeLinkingFacebox}${hasDataClass}`}
+          onClick={() => selectFace(lf)}
+          onKeyDown={() => false}
+          role="textbox"
+          tabIndex={0}
+          aria-label="link"
+        />
+      );
+      linkingFaceBoxesOutput.push(newLinkingFaceBox);
+    }
+    let linkingVisible = ' hidden';
+    if (state.linkingActive) {
+      linkingVisible = '';
+    }
+    const linkingTextBoxesOutput = [];
+    for (let lt = 0; lt < state.texts.length; lt += 1) {
+      const linkingTextBox = state.texts[lt];
+      const { boundingBox } = linkingTextBox;
 
+      const textLeft = boundingBox[0];
+      const textTop = boundingBox[1];
+      const textWidth = boundingBox[2] - boundingBox[0];
+      const textHeight = boundingBox[5] - boundingBox[1];
+      // create css shape
+      const boxStyle = {
+        left: textLeft,
+        top: textTop,
+        width: textWidth,
+        height: textHeight,
+      };
 
-      let linkingTextBoxesOutput = [];
-      for (let lt=0; lt<this.state.texts.length; lt++) {
-        let linkingTextBox = this.state.texts[lt];
-        let boundingBox = linkingTextBox.boundingBox;
-
-        let textLeft = boundingBox[0];
-        let textTop = boundingBox[1];
-        let textWidth = boundingBox[2]-boundingBox[0];
-        let textHeight = boundingBox[5] - boundingBox[1];
-        // create css shape
-        let boxStyle = {
-          left: textLeft,
-          top: textTop,
-          width: textWidth,
-          height: textHeight,
-        }
-
-        let activeLinkingTextbox = "";
-        if (this.state.selectionText.indexOf(lt)>-1) {
-          activeLinkingTextbox = " active";
-        }
-        let newTextBox = <div
+      const activeLinkingTextbox =
+        state.selectionText.indexOf(lt) > -1 ? ' active' : '';
+      const newTextBox = (
+        <div
           draggable="false"
           key={lt}
-          className={"textbox"+activeLinkingTextbox}
-          onClick={() => this.selectText(lt)}
+          className={`textbox${activeLinkingTextbox}`}
+          onClick={() => selectText(lt)}
           style={boxStyle}
-          ></div>;
-        linkingTextBoxesOutput.push(newTextBox);
-      }
-      let linkingSelectionClass="";
-      if (this.state.linkingSelection) {
-        linkingSelectionClass = " active";
-      }
-      let linkingSelection = <div style={this.state.linkinSelectionRect} className={"linking-selection"+linkingSelectionClass}></div>
+          onKeyDown={() => false}
+          role="textbox"
+          tabIndex={0}
+          aria-label="link text"
+        />
+      );
+      linkingTextBoxesOutput.push(newTextBox);
+    }
+    const linkingSelectionClass = state.linkingSelection ? ' active' : '';
+    const linkingSelection = (
+      <div
+        style={state.linkinSelectionRect}
+        className={`linking-selection${linkingSelectionClass}`}
+      />
+    );
 
-      content = <div
+    content = (
+      <div
         className="classpiece-container"
         style={transform}
         id="classpiece-container"
-        onContextMenu={this.handleContextMenu}
-        >
+        onContextMenu={handleContextMenu}
+      >
         {linkingSelection}
-        {this.state.file}
-        <div className={"face-boxes-container"+selectionsVisible}>{selectionsFaceBoxes}</div>
-        <div className={"text-boxes-container"+selectionsVisible}>{selectionsTextBoxes}</div>
-        <div className={"linking-boxes-container"+linkingVisible}>{linkingFaceBoxesOutput}</div>
-        <div className={"linking-text-container"+linkingVisible}>{linkingTextBoxesOutput}</div>
-      </div>
-    }
-
-    let firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="", dioceseTypeActive="",typeActive="";
-    if (this.state.draggedElem==="inputfirstname") {
-      firstNameActive = "active";
-    }
-    if (this.state.draggedElem==="inputmiddlename") {
-      middleNameActive = "active";
-    }
-    if (this.state.draggedElem==="inputlastname") {
-      lastNameActive = "active";
-    }
-    if (this.state.draggedElem==="inputdiocese") {
-      dioceseActive = "active";
-    }
-
-    let selectedThumbnail = "";
-    if (this.state.selectionFaces!==null) {
-      let selectedFace = this.state.faces[this.state.selectionFaces];
-      if (typeof selectedFace!=="undefined") {
-        if (typeof selectedFace.thumbnail!=="undefined") {
-          let thumbnail = selectedFace.thumbnail;
-          selectedThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnail.path} />
-        }
-      }
-    }
-
-    let thumbnailText = this.state.selectionText.map((textItem, i)=> {
-      let textChunk = this.state.texts[textItem].text;
-      let textBox = <div
-        draggable="true"
-        onDragStart={this.startDragText.bind(this)}
-        key={i}
-        className="thumbnail-textbox">{textChunk}</div>
-      return textBox;
-    });
-
-    let fileName = this.props.match.params.fileName;
-    let heading = "Identify people";
-    let breadcrumbsItems = [
-      {label: "Parse Class Pieces", icon: "pe-7s-tools", active: false, path: "/parse-class-pieces"},
-      {label: "Class Piece \""+fileName+"\"", icon: "", active: false, path: "/parse-class-piece/"+fileName},
-      {label: heading, icon: "", active: true, path: ""}
-    ];
-
-    let errorModal = <Modal isOpen={this.state.errorModalVisible} toggle={()=>this.toggleErrorModal(!this.state.errorModalVisible,null)}>
-        <ModalHeader toggle={()=>this.toggleErrorModal(false,[])}>Error</ModalHeader>
-        <ModalBody>
-          {this.state.errorModalText}
-        </ModalBody>
-        <ModalFooter>
-          <Button type="button" color="secondary" onClick={()=>this.toggleErrorModal(false,[])}>Close</Button>
-        </ModalFooter>
-    </Modal>
-
-    let honorificPrefixInputs = this.state.inputhonorificprefix.map((h,i)=>{
-      let honorificPrefixActive = "";
-      if (this.state.draggedElem==="inputhonorificprefix" && parseInt(this.state.draggedIndex,10)===i) {
-        honorificPrefixActive = "active";
-      }
-      let item = <InputGroup key={i}>
-        <Input className={honorificPrefixActive} type="text" name="inputhonorificprefix" id="honorificPrefix" placeholder="Person honorific prefix..."
-        data-target="inputhonorificprefix" data-index={i} value={this.state.inputhonorificprefix[i]}
-        onDrop={(e)=>this.dragStopText(e,i)}
-        onDragEnter={this.dragEnterText}
-        onDragOver={this.dragOverText}
-        onDragLeave={this.dragLeaveText}
-         onChange={(e)=>this.handleMultipleChange(e,i)}/>
-          <InputGroupAddon addonType="append">
-            <Button type="button" color="info" outline onClick={()=>this.removeHP(i)}><b><i className="fa fa-minus" /></b></Button>
-          </InputGroupAddon>
-      </InputGroup>
-      if (i===0) {
-        item = <Input className={honorificPrefixActive} data-index={i} style={{marginBottom: "5px"}} key={i} type="text" name="inputhonorificprefix" id="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.inputhonorificprefix[i]}
-        data-target={"inputhonorificprefix"} onDrop={(e)=>this.dragStopText(e,i)}
-        onDragEnter={this.dragEnterText}
-        onDragOver={this.dragOverText}
-        onDragLeave={this.dragLeaveText} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
-      }
-      return item;
-    });
-
-    let organisationTypesOptions = [];
-    let peopleRolesOptions = [];
-    if (this.state.organisationTypes.length>0) {
-      organisationTypesOptions = this.state.organisationTypes.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
-    }
-    if (this.state.peopleRoles.length>0) {
-     peopleRolesOptions = this.state.peopleRoles.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
-   }
-
-    return (
-      <div id="classpiece-content-wrapper">
-        <Breadcrumbs items={breadcrumbsItems} />
-        <div className="row">
-          <div className="col-12">
-            <h2>{heading}</h2>
-          </div>
+        {state.file}
+        <div className={`face-boxes-container${selectionsVisible}`}>
+          {selectionsFaceBoxes}
         </div>
-        <div className="row">
-          <div className="col-12">
-            <div className="classpiece-wrapper" id="classpiece-wrapper">
-              {content}
-            </div>
-          </div>
+        <div className={`text-boxes-container${selectionsVisible}`}>
+          {selectionsTextBoxes}
         </div>
-        <div className="sidebar-toolbox">
-          <ParseClassPieceToolbox
-            updateFaces={this.updateFaces}
-            zoom={this.state.zoom}
-            updateZoom={this.updateZoom}
-            updateSettings={this.updateSettings}
-            toggleSelections={this.toggleSelections}
-            selectionsActive={this.state.selectionsActive}
-            storeSelectionsBtn={this.state.storeSelectionsBtn}
-            saveFacesThumbnails={this.saveFacesThumbnails}
-            saveThumbnailsBtn={this.state.saveThumbnailsBtn}
-            toggleLinking={this.toggleLinking}
-            linkingActive={this.state.linkingActive}
-            storeLinkingBtn={this.state.storeLinkingBtn}
-            storeLinking={this.storeLinking}
-            />
+        <div className={`linking-boxes-container${linkingVisible}`}>
+          {linkingFaceBoxesOutput}
         </div>
-
-        <Modal isOpen={this.state.saveSelectedModal} toggle={this.closeSelectedModal} className={this.props.className} size="lg">
-          <form onSubmit={this.updatePersonModal}>
-            <ModalHeader toggle={this.closeSelectedModal}>Update person</ModalHeader>
-            <ModalBody>
-              <div className="row">
-                <div className="col-xs-12 col-sm-6 col-md-4">
-                  <div className="selected-item-thumbnail">
-                    {selectedThumbnail}
-                  </div>
-                  <div style={{marginTop: "20px"}}>
-                    <b>Preview</b>
-                  </div>
-                  <div className="preview-window" ref={this.itemPreview}>
-                    {this.state.file}
-                  </div>
-                </div>
-                <div className="col-xs-12 col-sm-6 col-md-8">
-                  <div className="form-group">
-                    <label>Honorific Prefix</label>
-                    {honorificPrefixInputs}
-                    <div className="text-right">
-                      <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP()}>Add new <i className="fa fa-plus" /></Button>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <input
-                      className={"form-control "+firstNameActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputfirstname}
-                      data-target="inputfirstname"
-                      onDrop={this.dragStopText.bind(this)}
-                      onDragEnter={this.dragEnterText.bind(this)}
-                      onDragOver={this.dragOverText.bind(this)}
-                      onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" name="inputfirstname" />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Middle Name</label>
-                    <input
-                      className={"form-control "+middleNameActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputmiddlename}
-                      data-target="inputmiddlename"
-                      onDrop={this.dragStopText.bind(this)}
-                      onDragEnter={this.dragEnterText.bind(this)}
-                      onDragOver={this.dragOverText.bind(this)}
-                      onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" name="inputmiddlename" />
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <input
-                      className={"form-control "+lastNameActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputlastname}
-                      data-target="inputlastname"
-                      onDrop={this.dragStopText.bind(this)}
-                      onDragEnter={this.dragEnterText.bind(this)}
-                      onDragOver={this.dragOverText.bind(this)}
-                      onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" name="inputlastname" />
-                  </div>
-                  <div className="form-group">
-                    <label>Diocese | Order</label>
-                    <input
-                      className={"form-control "+dioceseActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputdiocese}
-                      data-target="inputdiocese"
-                      onDrop={this.dragStopText.bind(this)}
-                      onDragEnter={this.dragEnterText.bind(this)}
-                      onDragOver={this.dragOverText.bind(this)}
-                      onDragLeave={this.dragLeaveText.bind(this)}
-                      type="text" name="inputdiocese" />
-                    <select
-                      style={{marginTop: "5px"}}
-                      className={"form-control "+dioceseTypeActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputdioceseType}
-                      name="inputdioceseType">{organisationTypesOptions}</select>
-                  </div>
-                  <div className="form-group">
-                    <label>Type</label>
-                    <select name="inputtype" className={"form-control "+typeActive}
-                      onChange={this.handleChange}
-                      value={this.state.inputtype}>{peopleRolesOptions}</select>
-                  </div>
-                  {thumbnailText}
-                </div>
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              <Button color="primary" type="submit">{this.state.updatePersonBtn}</Button>
-              <Button type="button" color="secondary" onClick={this.closeSelectedModal}>Cancel</Button>
-            </ModalFooter>
-          </form>
-        </Modal>
-        <ContextualMenu
-          visible={this.state.contextualMenuVisible}
-          position={this.state.contextualMenuPosition}
-          targetFace={this.state.contextualMenuTargetFace}
-          selectedNode={this.state.selectedNode}
-          selectionsActive={this.state.selectionsActive}
-          linkingActive={this.state.linkingActive}
-          updateFaces={this.updateFaces}
-          saveFacesThumbnails={this.saveFacesThumbnails}
-          storeLinking={this.storeLinking}
-          addNewSelection={this.addNewSelection}
-          removeSelection={this.removeSelection}
-          />
-          {errorModal}
+        <div className={`linking-text-container${linkingVisible}`}>
+          {linkingTextBoxesOutput}
+        </div>
       </div>
     );
   }
-}
+
+  const firstNameActive =
+    state.draggedElem === 'inputfirstname' ? ' active' : '';
+  const middleNameActive =
+    state.draggedElem === 'inputmiddlename' ? ' active' : '';
+  const lastNameActive = state.draggedElem === 'inputlastname' ? ' active' : '';
+  const dioceseActive = state.draggedElem === 'inputdiocese' ? ' active' : '';
+
+  let selectedThumbnail = '';
+  if (state.selectionFaces !== null) {
+    const selectedFace = state.faces[state.selectionFaces];
+    if (typeof selectedFace !== 'undefined') {
+      if (typeof selectedFace.thumbnail !== 'undefined') {
+        const { thumbnail } = selectedFace;
+        selectedThumbnail = (
+          <img
+            className="selected-face-thumbnail img-responsive img-thumbnail"
+            alt="thumbnail"
+            src={thumbnail.path}
+          />
+        );
+      }
+    }
+  }
+
+  const thumbnailText = state.selectionText.map((textItem, i) => {
+    const textChunk = state.texts[textItem].text;
+    const key = `a${i}`;
+    const textBox = (
+      <div
+        draggable="true"
+        onDragStart={() => startDragText()}
+        key={key}
+        className="thumbnail-textbox"
+      >
+        {textChunk}
+      </div>
+    );
+    return textBox;
+  });
+
+  const heading = 'Identify people';
+  const breadcrumbsItems = [
+    {
+      label: 'Parse Class Pieces',
+      icon: 'pe-7s-tools',
+      active: false,
+      path: '/parse-class-pieces',
+    },
+    {
+      label: `Class Piece "${fileName}"`,
+      icon: '',
+      active: false,
+      path: `/parse-class-piece/${fileName}`,
+    },
+    { label: heading, icon: '', active: true, path: '' },
+  ];
+
+  const errorModal = (
+    <Modal
+      isOpen={state.errorModalVisible}
+      toggle={() => toggleErrorModal(!state.errorModalVisible, null)}
+    >
+      <ModalHeader toggle={() => toggleErrorModal(false, [])}>
+        Error
+      </ModalHeader>
+      <ModalBody>{state.errorModalText}</ModalBody>
+      <ModalFooter>
+        <Button
+          type="button"
+          color="secondary"
+          onClick={() => toggleErrorModal(false, [])}
+        >
+          Close
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+
+  const honorificPrefixInputs = state.inputhonorificprefix.map((h, i) => {
+    let honorificPrefixActive = '';
+    if (
+      state.draggedElem === 'inputhonorificprefix' &&
+      parseInt(state.draggedIndex, 10) === i
+    ) {
+      honorificPrefixActive = 'active';
+    }
+    const key = `b${i}`;
+    let item = (
+      <InputGroup key={key}>
+        <Input
+          className={honorificPrefixActive}
+          type="text"
+          name="inputhonorificprefix"
+          id="honorificPrefix"
+          placeholder="Person honorific prefix..."
+          data-target="inputhonorificprefix"
+          data-index={i}
+          value={state.inputhonorificprefix[i]}
+          onDrop={(e) => dragStopText(e, i)}
+          onDragEnter={dragEnterText}
+          onDragOver={dragOverText}
+          onDragLeave={dragLeaveText}
+          onChange={(e) => handleMultipleChange(e, i)}
+        />
+        <InputGroupAddon addonType="append">
+          <Button
+            type="button"
+            color="info"
+            outline
+            onClick={() => removeHP(i)}
+          >
+            <b>
+              <i className="fa fa-minus" />
+            </b>
+          </Button>
+        </InputGroupAddon>
+      </InputGroup>
+    );
+    if (i === 0) {
+      item = (
+        <Input
+          className={honorificPrefixActive}
+          data-index={i}
+          style={{ marginBottom: '5px' }}
+          key={key}
+          type="text"
+          name="inputhonorificprefix"
+          id="honorificPrefix"
+          placeholder="Person honorific prefix..."
+          value={state.inputhonorificprefix[i]}
+          data-target="inputhonorificprefix"
+          onDrop={(e) => dragStopText(e, i)}
+          onDragEnter={dragEnterText}
+          onDragOver={dragOverText}
+          onDragLeave={dragLeaveText}
+          onChange={(e) => handleMultipleChange(e, i)}
+        />
+      );
+    }
+    return item;
+  });
+
+  let organisationTypesOptions = [];
+  let peopleRolesOptions = [];
+  if (state.organisationTypes.length > 0) {
+    organisationTypesOptions = state.organisationTypes.map((o, i) => {
+      const key = `c${i}`;
+      return (
+        <option value={o.labelId} key={key}>
+          {o.label}
+        </option>
+      );
+    });
+  }
+  if (state.peopleRoles.length > 0) {
+    peopleRolesOptions = state.peopleRoles.map((o, i) => {
+      const key = `d${i}`;
+      return (
+        <option value={o.labelId} key={key}>
+          {o.label}
+        </option>
+      );
+    });
+  }
+
+  return (
+    <div id="classpiece-content-wrapper">
+      <Breadcrumbs items={breadcrumbsItems} />
+      <div className="row">
+        <div className="col-12">
+          <h2>{heading}</h2>
+        </div>
+      </div>
+      <div className="row">
+        <div className="col-12">
+          <div className="classpiece-wrapper" id="classpiece-wrapper">
+            {content}
+          </div>
+        </div>
+      </div>
+      <div className="sidebar-toolbox">
+        <ParseClassPieceToolbox
+          updateFaces={updateFaces}
+          zoom={state.zoom}
+          updateZoom={updateZoom}
+          updateSettings={updateSettings}
+          toggleSelections={toggleSelections}
+          selectionsActive={state.selectionsActive}
+          storeSelectionsBtn={state.storeSelectionsBtn}
+          saveFacesThumbnails={saveFacesThumbnails}
+          saveThumbnailsBtn={state.saveThumbnailsBtn}
+          toggleLinking={toggleLinking}
+          linkingActive={state.linkingActive}
+          storeLinkingBtn={state.storeLinkingBtn}
+          storeLinking={storeLinking}
+        />
+      </div>
+
+      <Modal
+        isOpen={state.saveSelectedModal}
+        toggle={closeSelectedModal}
+        size="lg"
+      >
+        <form onSubmit={updatePersonModal}>
+          <ModalHeader toggle={closeSelectedModal}>Update person</ModalHeader>
+          <ModalBody>
+            <div className="row">
+              <div className="col-xs-12 col-sm-6 col-md-4">
+                <div className="selected-item-thumbnail">
+                  {selectedThumbnail}
+                </div>
+                <div style={{ marginTop: '20px' }}>
+                  <b>Preview</b>
+                </div>
+                <div className="preview-window" ref={itemPreview}>
+                  {state.file}
+                </div>
+              </div>
+              <div className="col-xs-12 col-sm-6 col-md-8">
+                <div className="form-group">
+                  <Label>Honorific Prefix</Label>
+                  {honorificPrefixInputs}
+                  <div className="text-right">
+                    <Button
+                      type="button"
+                      color="info"
+                      outline
+                      size="xs"
+                      onClick={() => addHP()}
+                    >
+                      Add new <i className="fa fa-plus" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <Label>First Name</Label>
+                  <input
+                    className={`form-control ${firstNameActive}`}
+                    onChange={handleChange}
+                    value={state.inputfirstname}
+                    data-target="inputfirstname"
+                    onDrop={dragStopText.bind(this)}
+                    onDragEnter={dragEnterText.bind(this)}
+                    onDragOver={dragOverText.bind(this)}
+                    onDragLeave={dragLeaveText.bind(this)}
+                    type="text"
+                    name="inputfirstname"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <Label>Middle Name</Label>
+                  <input
+                    className={`form-control ${middleNameActive}`}
+                    onChange={handleChange}
+                    value={state.inputmiddlename}
+                    data-target="inputmiddlename"
+                    onDrop={dragStopText.bind(this)}
+                    onDragEnter={dragEnterText.bind(this)}
+                    onDragOver={dragOverText.bind(this)}
+                    onDragLeave={dragLeaveText.bind(this)}
+                    type="text"
+                    name="inputmiddlename"
+                  />
+                </div>
+                <div className="form-group">
+                  <Label>Last Name</Label>
+                  <input
+                    className={`form-control ${lastNameActive}`}
+                    onChange={handleChange}
+                    value={state.inputlastname}
+                    data-target="inputlastname"
+                    onDrop={dragStopText.bind(this)}
+                    onDragEnter={dragEnterText.bind(this)}
+                    onDragOver={dragOverText.bind(this)}
+                    onDragLeave={dragLeaveText.bind(this)}
+                    type="text"
+                    name="inputlastname"
+                  />
+                </div>
+                <div className="form-group">
+                  <Label>Diocese | Order</Label>
+                  <input
+                    className={`form-control ${dioceseActive}`}
+                    onChange={handleChange}
+                    value={state.inputdiocese}
+                    data-target="inputdiocese"
+                    onDrop={dragStopText.bind(this)}
+                    onDragEnter={dragEnterText.bind(this)}
+                    onDragOver={dragOverText.bind(this)}
+                    onDragLeave={dragLeaveText.bind(this)}
+                    type="text"
+                    name="inputdiocese"
+                  />
+                  <select
+                    style={{ marginTop: '5px' }}
+                    className="form-control"
+                    onChange={handleChange}
+                    value={state.inputdioceseType}
+                    name="inputdioceseType"
+                  >
+                    {organisationTypesOptions}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <Label>Type</Label>
+                  <select
+                    name="inputtype"
+                    className="form-control"
+                    onChange={handleChange}
+                    value={state.inputtype}
+                  >
+                    {peopleRolesOptions}
+                  </select>
+                </div>
+                {thumbnailText}
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" type="submit">
+              {state.updatePersonBtn}
+            </Button>
+            <Button
+              type="button"
+              color="secondary"
+              onClick={closeSelectedModal}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+      <ContextualMenu
+        visible={state.contextualMenuVisible}
+        position={state.contextualMenuPosition}
+        targetFace={state.contextualMenuTargetFace}
+        selectedNode={state.selectedNode}
+        selectionsActive={state.selectionsActive}
+        linkingActive={state.linkingActive}
+        updateFaces={updateFaces}
+        saveFacesThumbnails={saveFacesThumbnails}
+        storeLinking={storeLinking}
+        addNewSelection={addNewSelection}
+        removeSelection={removeSelection}
+      />
+      {errorModal}
+    </div>
+  );
+};
+
+ParseClassPieceThumbnails.defaultProps = {
+  match: {},
+};
+
+ParseClassPieceThumbnails.propTypes = {
+  match: PropTypes.shape({
+    params: PropTypes.shape({
+      fileName: PropTypes.string,
+    }),
+  }),
+};
+
+export default ParseClassPieceThumbnails;

@@ -2,50 +2,50 @@ import React, { Component } from 'react';
 import {
   Spinner,
   Button,
-  Modal, ModalHeader, ModalBody, ModalFooter
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from 'reactstrap';
-import {Breadcrumbs} from '../components/breadcrumbs';
-
 import axios from 'axios';
+import { Redirect } from 'react-router-dom';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+import Breadcrumbs from '../components/breadcrumbs';
 
 import ViewOrganisation from '../components/view-organisation';
 import AddRelation from '../components/add-relations';
 
-import {Redirect} from 'react-router-dom';
-
-import {parseReferenceLabels,parseReferenceTypes} from '../helpers/helpers';
-
-import {connect} from "react-redux";
+import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const mapStateToProps = state => {
-  return {
-    entitiesLoaded: state.entitiesLoaded,
-    organisationEntity: state.organisationEntity,
-    organisationTypes: state.organisationTypes,
-   };
-};
+const mapStateToProps = (state) => ({
+  entitiesLoaded: state.entitiesLoaded,
+  organisationEntity: state.organisationEntity,
+  organisationTypes: state.organisationTypes,
+});
 
 class Organisation extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      reload: false,
       loading: true,
-      organisation:null,
+      organisation: null,
       redirect: false,
       redirectReload: false,
       deleteModal: false,
       updating: false,
-      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
       errorVisible: false,
       errorText: [],
       closeUploadModal: false,
-
-      addReferencesVisible: true,
-      referencesLoaded: false,
       referencesLabels: [],
       referencesTypes: {
         event: [],
@@ -53,10 +53,12 @@ class Organisation extends Component {
         person: [],
         resource: [],
       },
-    }
+    };
     this.load = this.load.bind(this);
+    this.toggleRedirect = this.toggleRedirect.bind(this);
+    this.toggleRedirectReload = this.toggleRedirectReload.bind(this);
+    this.toggleUploadModal = this.toggleUploadModal.bind(this);
     this.loadReferenceLabelsNTypes = this.loadReferenceLabelsNTypes.bind(this);
-    //this.loadOrganisationTypes = this.loadOrganisationTypes.bind(this);
     this.uploadResponse = this.uploadResponse.bind(this);
     this.update = this.update.bind(this);
     this.validateOrganisation = this.validateOrganisation.bind(this);
@@ -65,300 +67,402 @@ class Organisation extends Component {
     this.reload = this.reload.bind(this);
   }
 
+  componentDidMount() {
+    this.load();
+  }
+
+  componentDidUpdate(prevProps) {
+    const { match, entitiesLoaded } = this.props;
+    const {
+      loading,
+      reload,
+      redirect,
+      redirectReload,
+      closeUploadModal,
+      referencesLoaded,
+    } = this.state;
+    if (prevProps.match.params._id !== match.params._id) {
+      this.load();
+    }
+    if (loading) {
+      this.load();
+    }
+    if (reload) {
+      this.load();
+    }
+    if (redirect) {
+      this.toggleRedirect(false);
+    }
+    if (redirectReload) {
+      this.toggleRedirectReload(false);
+    }
+    if (closeUploadModal) {
+      this.toggleUploadModal(false);
+    }
+    if (entitiesLoaded && !referencesLoaded) {
+      this.loadReferenceLabelsNTypes();
+    }
+  }
+
+  toggleRedirect(value = null) {
+    const { redirect } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirect;
+    }
+    this.setState({
+      redirect: valueCopy,
+    });
+  }
+
+  toggleRedirectReload(value = null) {
+    const { redirectReload } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirectReload;
+    }
+    this.setState({
+      redirectReload: valueCopy,
+    });
+  }
+
+  toggleUploadModal(value = null) {
+    const { closeUploadModal } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !closeUploadModal;
+    }
+    this.setState({
+      closeUploadModal: valueCopy,
+    });
+  }
+
   async load() {
-    let _id = this.props.match.params._id;
-    if (_id==="new") {
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id === 'new') {
       this.setState({
         loading: false,
-        addReferencesVisible: false
       });
       return false;
     }
 
-    let params = {
-      _id:_id
-    }
-    let organisation = await axios({
+    const params = {
+      _id,
+    };
+    const organisation = await axios({
       method: 'get',
-      url: APIPath+'organisation',
+      url: `${APIPath}organisation`,
       crossDomain: true,
-      params: params
+      params,
     })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-      console.log(error)
-	  });
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
     this.setState({
       loading: false,
       reload: false,
-      organisation: organisation
+      organisation,
     });
-
+    return false;
   }
 
   loadReferenceLabelsNTypes() {
-    let properties = this.props.organisationEntity.properties;
-    let referencesLabels = parseReferenceLabels(properties);
-    let referencesTypes = parseReferenceTypes(properties);
+    const { organisationEntity } = this.props;
+    const { properties } = organisationEntity;
+    const referencesLabels = parseReferenceLabels(properties);
+    const referencesTypes = parseReferenceTypes(properties);
     this.setState({
-      referencesLabels: referencesLabels,
-      referencesTypes: referencesTypes,
+      referencesLabels,
+      referencesTypes,
       referencesLoaded: true,
-    })
+    });
   }
 
   uploadResponse(data) {
+    const { newId, organisation } = this.state;
     if (data.status) {
-      if (this.state.newId===null) {
+      if (newId === null) {
         this.setState({
           newId: data.data._id,
           redirectReload: true,
           errorVisible: false,
-          errorText: []
-        })
+          errorText: [],
+        });
       }
-      if (typeof this.state.organisation._id!=="undefined") {
+      if (typeof organisation._id !== 'undefined') {
         this.setState({
-          closeUploadModal: true
-        })
+          closeUploadModal: true,
+        });
       }
-    }
-    else {
-      let errorText = [];
-      if (typeof data.error!=="undefined" && data.error.length>0) {
-        let i=0;
-        for (let key in data.error) {
-          errorText.push(<div key={i}>{data.error[key]}</div>);
-          i++;
+    } else {
+      const errorText = [];
+      if (typeof data.error !== 'undefined' && data.error.length > 0) {
+        for (let i = 0; i < data.error.length; i += 1) {
+          errorText.push(<div key={i}>{data.error[i]}</div>);
         }
       }
 
       this.setState({
         errorVisible: true,
-        errorText: errorText
-      })
-    }
-  }
-
-  update(newData) {
-    if (this.state.updating) {
-      return false;
-    }
-    this.setState({
-      updating: true,
-      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
-    })
-    let postData = Object.assign({}, newData);
-    let _id = this.props.match.params._id;
-    if (_id!=="new") {
-      postData._id = _id;
-    }
-    let isValid = this.validateOrganisation(postData);
-    if (isValid) {
-      let context = this;
-      axios({
-        method: 'put',
-        url: APIPath+'organisation',
-        crossDomain: true,
-        data: postData
-      })
-      .then(function (response) {
-        let responseData = response.data.data;
-        let newState = {
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-          reload: true
-        };
-        if (_id==="new") {
-          newState.redirectReload = true;
-          newState.newId = responseData.data._id;
-        }
-        context.setState(newState);
-
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Update</span>
-          });
-        },2000);
-      })
-      .catch(function (error) {
+        errorText,
       });
     }
   }
 
+  async update(newData) {
+    const { updating } = this.state;
+    if (updating) {
+      return false;
+    }
+    this.setState({
+      updating: true,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner color="info" size="sm" />
+        </span>
+      ),
+    });
+    const postData = { ...newData };
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id !== 'new') {
+      postData._id = _id;
+    }
+    const isValid = this.validateOrganisation(postData);
+    if (isValid) {
+      const context = this;
+      axios({
+        method: 'put',
+        url: `${APIPath}organisation`,
+        crossDomain: true,
+        data: postData,
+      })
+        .then((response) => {
+          const responseData = response.data.data;
+          const newState = {
+            updating: false,
+            updateBtn: (
+              <span>
+                <i className="fa fa-save" /> Update success{' '}
+                <i className="fa fa-check" />
+              </span>
+            ),
+            reload: true,
+          };
+          if (_id === 'new') {
+            newState.redirectReload = true;
+            newState.newId = responseData.data._id;
+          }
+          context.setState(newState);
+
+          setTimeout(() => {
+            context.setState({
+              updateBtn: (
+                <span>
+                  <i className="fa fa-save" /> Update
+                </span>
+              ),
+            });
+          }, 2000);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
+    return false;
+  }
+
   validateOrganisation(postData) {
-    if (postData.label.length<2) {
+    if (postData.label.length < 2) {
       this.setState({
         updating: false,
         errorVisible: true,
-        errorText: <div>The organisation <b>label</b> must contain at least two (2) characters</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        errorText: (
+          <div>
+            The organisation <b>label</b> must contain at least two (2)
+            characters
+          </div>
+        ),
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
     this.setState({
       updating: false,
       errorVisible: false,
-      errorText: []
-    })
+      errorText: [],
+    });
     return true;
   }
 
   toggleDeleteModal() {
+    const { deleteModal } = this.state;
     this.setState({
-      deleteModal: !this.state.deleteModal
-    })
+      deleteModal: !deleteModal,
+    });
   }
 
   async delete() {
-    let _id = this.props.match.params._id;
-    let params = {_id: _id};
-    let responseData = await axios({
+    const { match } = this.props;
+    const { _id } = match.params;
+    const params = { _id };
+    const responseData = await axios({
       method: 'delete',
-      url: APIPath+'organisation',
+      url: `${APIPath}organisation`,
       crossDomain: true,
-      params: params
+      params,
     })
-	  .then(function (response) {
-      return response.data.data;
-
-	  })
-	  .catch(function (error) {
-      console.log(error);
-    });
-    if (responseData.summary.counters._stats.nodesDeleted===1) {
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (responseData.summary.counters._stats.nodesDeleted === 1) {
       this.setState({
-        redirect: true
+        redirect: true,
       });
     }
   }
 
   reload() {
     this.setState({
-      reload: true
-    })
-  }
-
-  componentDidMount() {
-    //this.loadOrganisationTypes();
-    this.load();
-  }
-
-  componentDidUpdate(prevProps) {
-    if(prevProps.match.params._id!==this.props.match.params._id){
-      this.load();
-    }
-    if (this.state.loading) {
-      this.load();
-    }
-    if (this.state.reload) {
-      this.load();
-    }
-    if (this.state.redirect) {
-      this.setState({
-        redirect: false
-      })
-    }
-    if (this.state.redirectReload) {
-      this.setState({
-        redirectReload: false
-      })
-    }
-    if (this.state.closeUploadModal) {
-      this.setState({
-        closeUploadModal: false
-      })
-    }
-    if (this.props.entitiesLoaded && !this.state.referencesLoaded) {
-      this.loadReferenceLabelsNTypes();
-    }
+      reload: true,
+    });
   }
 
   render() {
+    const {
+      organisation,
+      loading,
+      errorText,
+      errorVisible,
+      updateBtn,
+      redirect,
+      newId,
+      className,
+      referencesLabels,
+      referencesTypes,
+      closeUploadModal,
+      deleteModal: stateDeleteModal,
+      redirectReload: stateRedirectReload,
+    } = this.state;
+    const { match, organisationTypes } = this.props;
     let label = '';
-    if (this.state.organisation!==null && typeof this.state.organisation.label!=="undefined") {
-      label = this.state.organisation.label;
+    if (organisation !== null && typeof organisation.label !== 'undefined') {
+      label = organisation.label;
     }
 
     let heading = label;
-    if (this.props.match.params._id==="new") {
-      heading = "Add new organisation";
+    if (match.params._id === 'new') {
+      heading = 'Add new organisation';
     }
-    let breadcrumbsItems = [
-      {label: "Organisations", icon: "pe-7s-culture", active: false, path: "/organisations"},
-      {label: heading, icon: "", active: true, path: ""}
+    const breadcrumbsItems = [
+      {
+        label: 'Organisations',
+        icon: 'pe-7s-culture',
+        active: false,
+        path: '/organisations',
+      },
+      { label: heading, icon: '', active: true, path: '' },
     ];
 
     let redirectElem = [];
     let redirectReload = [];
     let deleteModal = [];
 
-    let content = <div className="row">
-      <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
-          <Spinner type="grow" color="info" /> <i>loading...</i>
+    let content = (
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </div>
         </div>
       </div>
-    </div>
+    );
 
-    if (!this.state.loading) {
-      content = <div className="items-container">
+    if (!loading) {
+      content = (
+        <div className="items-container">
           <ViewOrganisation
-            closeUploadModal={this.state.closeUploadModal}
+            closeUploadModal={closeUploadModal}
             delete={this.toggleDeleteModal}
-            errorText={this.state.errorText}
-            errorVisible={this.state.errorVisible}
-            organisation={this.state.organisation}
-            organisationTypes={this.props.organisationTypes}
+            errorText={errorText}
+            errorVisible={errorVisible}
+            organisation={organisation}
+            organisationTypes={organisationTypes}
             reload={this.reload}
             update={this.update}
-            updateBtn={this.state.updateBtn}
+            updateBtn={updateBtn}
             uploadResponse={this.uploadResponse}
-            />
-      </div>
+          />
+        </div>
+      );
 
-      if (this.state.redirect) {
+      if (redirect) {
         redirectElem = <Redirect to="/organisations" />;
       }
-      if (this.state.redirectReload) {
-        redirectReload = <Redirect to={"/organisation/"+this.state.newId} />;
+      if (stateRedirectReload) {
+        redirectReload = <Redirect to={`/organisation/${newId}`} />;
       }
 
-      deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal} className={this.props.className}>
-          <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
+      deleteModal = (
+        <Modal
+          isOpen={stateDeleteModal}
+          toggle={this.toggleDeleteModal}
+          className={className}
+        >
+          <ModalHeader toggle={this.toggleDeleteModal}>
+            Delete &quot;{label}&quot;
+          </ModalHeader>
           <ModalBody>
-          The organisation "{label}" will be deleted. Continue?
+            The organisation &quot;{label}&quot; will be deleted. Continue?
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button size="sm" color="danger" outline onClick={this.delete}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button size="sm" className="pull-left" color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button size="sm" color="danger" outline onClick={this.delete}>
+              <i className="fa fa-trash-o" /> Delete
+            </Button>
+            <Button
+              size="sm"
+              className="pull-left"
+              color="secondary"
+              onClick={this.toggleDeleteModal}
+            >
+              Cancel
+            </Button>
           </ModalFooter>
-        </Modal>;
+        </Modal>
+      );
     }
 
-    let relationReference = {
-      type: "Organisation",
-      ref: this.props.match.params._id
+    const relationReference = {
+      type: 'Organisation',
+      ref: match.params._id,
     };
     let addRelation = [];
-    if (this.state.item!==null) {
-      addRelation = <AddRelation
-        reload={this.reload}
-        reference={relationReference}
-        item={this.state.organisation}
-        referencesLabels={this.state.referencesLabels}
-        referencesTypes={this.state.referencesTypes}
-        type="organisation"
-      />
-
+    if (organisation !== null) {
+      addRelation = (
+        <AddRelation
+          reload={this.reload}
+          reference={relationReference}
+          item={organisation}
+          referencesLabels={referencesLabels}
+          referencesTypes={referencesTypes}
+          type="organisation"
+        />
+      );
     }
-    return(
+    return (
       <div>
-      {redirectElem}
-      {redirectReload}
-      <Breadcrumbs items={breadcrumbsItems} />
+        {redirectElem}
+        {redirectReload}
+        <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>
@@ -371,4 +475,18 @@ class Organisation extends Component {
     );
   }
 }
-export default Organisation = connect(mapStateToProps, [])(Organisation);
+
+Organisation.defaultProps = {
+  match: null,
+  entitiesLoaded: false,
+  organisationEntity: null,
+  organisationTypes: [],
+};
+Organisation.propTypes = {
+  match: PropTypes.object,
+  entitiesLoaded: PropTypes.bool,
+  organisationEntity: PropTypes.object,
+  organisationTypes: PropTypes.array,
+};
+
+export default compose(connect(mapStateToProps, []))(Organisation);

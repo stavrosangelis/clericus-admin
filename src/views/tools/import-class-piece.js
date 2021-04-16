@@ -1,14 +1,24 @@
 import React, { Component } from 'react';
 import {
-  Spinner,Collapse, Button,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Input, InputGroup, InputGroupAddon,
+  Spinner,
+  Collapse,
+  Button,
+  Label,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  InputGroup,
+  InputGroupAddon,
 } from 'reactstrap';
 import axios from 'axios';
+import { Redirect } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import ImportToDBToolbox from './right-sidebar-import-to-db';
-import {Breadcrumbs} from '../../components/breadcrumbs';
-import {getThumbnailURL,capitalizeOnlyFirst} from '../../helpers/helpers';
-import { Redirect} from 'react-router-dom';
+import Breadcrumbs from '../../components/breadcrumbs';
+import { getThumbnailURL, capitalizeOnlyFirst } from '../../helpers';
+
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ImportClassPieceToDB extends Component {
@@ -17,7 +27,6 @@ export default class ImportClassPieceToDB extends Component {
 
     this.state = {
       loading: true,
-      compact: false,
       data: [],
       loadedFaces: [],
       dbClasspiece: null,
@@ -29,7 +38,7 @@ export default class ImportClassPieceToDB extends Component {
       selectAllStatus: true,
       selectedPerson: [],
       selectedPersonIndex: null,
-      selectedDuplicate:[],
+      selectedDuplicate: [],
       duplicateModal: false,
       duplicateImageOver: false,
 
@@ -59,7 +68,8 @@ export default class ImportClassPieceToDB extends Component {
       reImportModalOpen: false,
       draggedElem: null,
       draggedIndex: null,
-    }
+    };
+    this.updateImported = this.updateImported.bind(this);
     this.loadStatus = this.loadStatus.bind(this);
     this.toggleRelations = this.toggleRelations.bind(this);
     this.actionsToggle = this.actionsToggle.bind(this);
@@ -89,307 +99,364 @@ export default class ImportClassPieceToDB extends Component {
     this.addHP = this.addHP.bind(this);
   }
 
+  componentDidMount() {
+    this.loadStatus();
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const { imported } = this.state;
+    if (!prevState.imported && imported) {
+      this.updateImported(false);
+    }
+  }
+
+  handleChange = (e) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    this.setState({
+      [name]: value,
+    });
+  };
+
+  handleMultipleChange = (e, i) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    const { [name]: elem } = this.state;
+    elem[i] = value;
+    this.setState({
+      [name]: elem,
+    });
+  };
+
+  addHP = (name) => {
+    if (name === null) {
+      return false;
+    }
+    const { [name]: hps } = this.state;
+    hps.push('');
+    this.setState({
+      inputhonorificprefix: hps,
+    });
+    return false;
+  };
+
+  removeHP = (i, name = null) => {
+    if (name === null) {
+      return false;
+    }
+    const { [name]: hps } = this.state;
+    hps.splice(i, 1);
+    this.setState({
+      inputhonorificprefix: hps,
+    });
+    return false;
+  };
+
   toggleRelations = (i) => {
-    let collapseRelations = this.state.collapseRelations;
+    const { collapseRelations } = this.state;
     let collapseRelation = collapseRelations[i];
     collapseRelation = !collapseRelation;
     collapseRelations[i] = collapseRelation;
     this.setState({
-      collapseRelations: collapseRelations
-    })
-  }
+      collapseRelations,
+    });
+  };
 
   actionsToggle = () => {
+    const { actionsOpen } = this.state;
     this.setState({
-      actionsOpen: !this.state.actionsOpen
+      actionsOpen: !actionsOpen,
     });
-  }
+  };
 
-  loadStatus = async() => {
-    let file = this.props.match.params.fileName;
-    let context = this;
-    let responseData = await axios({
-        method: 'get',
-        url: APIPath+'prepare-classpiece-ingestion?file='+file,
-        crossDomain: true,
-      })
-    .then(function (response) {
-      return response.data.data;
+  loadStatus = async () => {
+    const { match } = this.props;
+    const file = match.params.fileName;
+    const context = this;
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}prepare-classpiece-ingestion?file=${file}`,
+      crossDomain: true,
     })
-    .catch(function (error) {
-    });
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
 
-    let collapseRelations = [];
+    const collapseRelations = [];
     collapseRelations.push(false);
 
-    let newData = [];
-    let newClassPiece = responseData.classpiece;
+    const newData = [];
+    const newClassPiece = responseData.classpiece;
     newClassPiece.checked = true;
-    newData.classpiece=newClassPiece;
-    let newFaces = [];
-    for (let i=0;i<responseData.faces.length;i++) {
-      let face = responseData.faces[i];
+    newData.classpiece = newClassPiece;
+    const newFaces = [];
+    for (let i = 0; i < responseData.faces.length; i += 1) {
+      const face = responseData.faces[i];
       face.checked = true;
       newFaces.push(face);
       collapseRelations.push(false);
     }
     newData.faces = newFaces;
-    let stateUpdate = {
+    const stateUpdate = {
       loading: false,
       data: newData,
       loadedFaces: newFaces,
       dbClasspiece: responseData.db_classpiece,
-      collapseRelations: collapseRelations
-    }
+      collapseRelations,
+    };
 
-    if (responseData.db_classpiece!==null && responseData.db_classpiece!==0 && responseData.db_classpiece!=="0") {
+    if (
+      responseData.db_classpiece !== null &&
+      responseData.db_classpiece !== 0 &&
+      responseData.db_classpiece !== '0'
+    ) {
       stateUpdate.importSelectedBtn = <span>Re-import selected</span>;
     }
     context.setState(stateUpdate);
-  }
+  };
 
   identifyDuplicates = async () => {
-    if (this.state.identifyDuplicatesStatus) {
+    const { identifyDuplicatesStatus, loadedFaces, data } = this.state;
+    if (identifyDuplicatesStatus) {
       return false;
     }
     this.setState({
-      identifyDuplicatesBtn: <span><i>Identifying...</i> <Spinner color="secondary" size="sm" /></span>,
-      identifyDuplicatesStatus: true
+      identifyDuplicatesBtn: (
+        <span>
+          <i>Identifying...</i> <Spinner color="secondary" size="sm" />
+        </span>
+      ),
+      identifyDuplicatesStatus: true,
     });
-    let newFaces = await axios({
+    const newFaces = await axios({
       method: 'put',
-      url: APIPath+'prepare-classpiece-identify-duplicates',
+      url: `${APIPath}prepare-classpiece-identify-duplicates`,
       crossDomain: true,
-      data: {faces: JSON.stringify(this.state.loadedFaces)},
+      data: { faces: JSON.stringify(loadedFaces) },
     })
-	  .then(function (response) {
-      return JSON.parse(response.data.data);
-	  })
-	  .catch(function (error) {
-	  });
-    let stateData = Object.assign({}, this.state.data);
+      .then((response) => JSON.parse(response.data.data))
+      .catch((error) => {
+        console.log(error);
+      });
+    const stateData = { ...data };
     stateData.faces = newFaces;
     this.setState({
       data: stateData,
       identifyDuplicatesStatus: false,
-      identifyDuplicatesBtn: <span>Identification complete <i className="fa fa-check"></i></span>
+      identifyDuplicatesBtn: (
+        <span>
+          Identification complete <i className="fa fa-check" />
+        </span>
+      ),
     });
 
-    let context = this;
-    setTimeout(function() {
+    const context = this;
+    setTimeout(() => {
       context.setState({
-        identifyDuplicatesBtn: <span>Identify possible duplicates</span>
+        identifyDuplicatesBtn: <span>Identify possible duplicates</span>,
       });
-    },2000)
-  }
+    }, 2000);
+    return false;
+  };
 
   selectAll = () => {
+    const { selectAllStatus: stateSelectAllStatus, stateData } = this.state;
     let selectAllBtn = <span>Select All</span>;
-    let selectAllStatus = !this.state.selectAllStatus;
+    const selectAllStatus = !stateSelectAllStatus;
     if (selectAllStatus) {
       selectAllBtn = <span>Deselect All</span>;
     }
-    let stateData = this.state.data;
-    let classPiece = stateData.classpiece;
+    const classPiece = stateData.classpiece;
     classPiece.checked = selectAllStatus;
 
-    let newFaces = [];
-    let faces = stateData.faces;
-    for (let i=0;i<faces.length; i++) {
-      let face = faces[i];
+    const newFaces = [];
+    const { faces } = stateData;
+    for (let i = 0; i < faces.length; i += 1) {
+      const face = faces[i];
       face.checked = selectAllStatus;
       newFaces.push(face);
     }
     stateData.faces = newFaces;
     this.setState({
-      selectAllStatus: !this.state.selectAllStatus,
-      selectAllBtn: selectAllBtn,
-      data: stateData
-    })
-  }
+      selectAllStatus: !stateSelectAllStatus,
+      selectAllBtn,
+      data: stateData,
+    });
+  };
 
   toggleSelected = (i, type) => {
-    let stateData = this.state.data;
+    const { data: stateData } = this.state;
     let stateDataType = stateData[type];
-    if (type==="faces") {
-      i = i-1;
-      let item = stateDataType[i];
+    if (type === 'faces') {
+      const item = stateDataType[i];
       item.checked = !item.checked;
       stateDataType[i] = item;
-    }
-    else {
-      let item = stateDataType;
+    } else {
+      const item = stateDataType;
       item.checked = !item.checked;
       stateDataType = item;
     }
 
     stateData[type] = stateDataType;
     this.setState({
-      data: stateData
+      data: stateData,
     });
-  }
+  };
 
   toggleDuplicateModal = () => {
+    const { duplicateModal } = this.state;
     this.setState({
-      duplicateModal: !this.state.duplicateModal
-    })
-  }
-
-  handleChange = (e) => {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    this.setState({
-      [name]: value
+      duplicateModal: !duplicateModal,
     });
-  }
-
-  handleMultipleChange = (e, i) => {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let elem = this.state[name];
-    elem[i] = value;
-    this.setState({
-      [name]: elem
-    });
-  }
+  };
 
   startDragText = (e) => {
     e.stopPropagation();
-    e.dataTransfer.setData("text/html", e.target.id);
-    e.dataTransfer.dropEffect = "move";
+    e.dataTransfer.setData('text/html', e.target.id);
+    e.dataTransfer.dropEffect = 'move';
     this.setState({
-      draggableText: e.target.textContent
-    })
-  }
+      draggableText: e.target.textContent,
+    });
+  };
 
   startDragImage = (thumbnail, e) => {
     e.stopPropagation();
-    e.dataTransfer.setData("text/html", e.target.id);
-    e.dataTransfer.dropEffect = "move";
+    e.dataTransfer.setData('text/html', e.target.id);
+    e.dataTransfer.dropEffect = 'move';
     this.setState({
-      draggableImage: thumbnail
-    })
-  }
+      draggableImage: thumbnail,
+    });
+  };
 
-  dragStopText = (e,i=null) => {
+  dragStopText = (e, i = null) => {
     e.preventDefault();
     e.stopPropagation();
-    let target = e.target.getAttribute("data-target");
-    if (i===null) {
-      let targetText = this.state[target];
+    const target = e.target.getAttribute('data-target');
+    if (i === null) {
+      const { [target]: targetText } = this.state;
+      const { draggableText } = this.state;
       let space = '';
-      if (targetText!=='') {
+      if (targetText !== '') {
         space = ' ';
       }
-      let newTargetText = targetText+space+this.state.draggableText;
+      let newTargetText = targetText + space + draggableText;
       newTargetText = capitalizeOnlyFirst(newTargetText);
       this.setState({
         [target]: newTargetText,
-        draggedElem:null,
-        draggedIndex:null,
-      })
-    }
-    else {
-      let targetText = this.state[target][i];
+        draggedElem: null,
+        draggedIndex: null,
+      });
+    } else {
+      const { [target]: stateTarget } = this.state;
+      const targetText = stateTarget[i];
+      const { draggableText } = this.state;
       let space = '';
-      if (targetText!=='') {
+      if (targetText !== '') {
         space = ' ';
       }
-      let newTargetText = targetText+space+this.state.draggableText;
+      let newTargetText = targetText + space + draggableText;
       newTargetText = capitalizeOnlyFirst(newTargetText);
 
-      let elem = this.state[target];
+      const { [target]: elem } = this.state;
       elem[i] = newTargetText;
       this.setState({
         [target]: elem,
-        draggedElem:null,
-        draggedIndex:null,
-      })
+        draggedElem: null,
+        draggedIndex: null,
+      });
     }
     return false;
-  }
+  };
 
   dragStopImage = (e) => {
-    let target = e.target.getAttribute("data-target");
+    const target = e.target.getAttribute('data-target');
+    const { draggableImage } = this.state;
     this.setState({
-      [target]: this.state.draggableImage,
-      duplicateImageOver: false
-    })
+      [target]: draggableImage,
+      duplicateImageOver: false,
+    });
     e.preventDefault();
     e.stopPropagation();
     return false;
-  }
+  };
 
   dragOverText = (e) => {
     e.stopPropagation();
     e.preventDefault();
     return false;
-  }
+  };
 
   dragEnterText = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    let target = e.target.getAttribute("data-target");
-    let index = e.target.getAttribute("data-index");
-    if (target==="inputthumbnail" && !this.state.duplicateImageOver) {
+    const { duplicateImageOver } = this.state;
+    const target = e.target.getAttribute('data-target');
+    const index = e.target.getAttribute('data-index');
+    if (target === 'inputthumbnail' && !duplicateImageOver) {
       this.setState({
         duplicateImageOver: true,
       });
-    }
-    else {
+    } else {
       this.setState({
-        dragover: true,
-        draggedElem:target,
-        draggedIndex:index,
+        draggedElem: target,
+        draggedIndex: index,
       });
     }
-  }
+  };
 
   dragLeaveText = (e) => {
-    if (this.state.duplicateImageOver) {
+    const { duplicateImageOver } = this.state;
+    if (duplicateImageOver) {
       this.setState({
-        duplicateImageOver: false
+        duplicateImageOver: false,
       });
-    }
-    else {
+    } else {
       this.setState({
-        dragover: false,
-        draggedElem:null,
-        draggedIndex:null,
+        draggedElem: null,
+        draggedIndex: null,
       });
     }
     e.preventDefault();
     return false;
-  }
+  };
 
   selectPossibleDuplicate = (i, fm) => {
-    let srcPerson = Object.assign({}, this.state.data.faces[i]);
-    let possibleDuplicate = srcPerson.matches[fm];
-    let honorificPrefix = '', firstName = '', middleName = '', lastName = '', diocese = '', dioceseType = '', type = '', thumbnail = '';
-    if (typeof srcPerson.honorificPrefix!=="undefined") {
+    const { data } = this.state;
+    const srcPerson = { ...data.faces[i] };
+    const possibleDuplicate = srcPerson.matches[fm];
+    let honorificPrefix = '';
+    let firstName = '';
+    let middleName = '';
+    let lastName = '';
+    let diocese = '';
+    let dioceseType = '';
+    let type = '';
+    let thumbnail = '';
+    if (typeof srcPerson.honorificPrefix !== 'undefined') {
       honorificPrefix = Object.assign([{}], srcPerson.honorificPrefix);
     }
-    if (typeof srcPerson.firstName!=="undefined") {
+    if (typeof srcPerson.firstName !== 'undefined') {
       firstName = srcPerson.firstName;
     }
-    if (typeof srcPerson.middleName!=="undefined") {
+    if (typeof srcPerson.middleName !== 'undefined') {
       middleName = srcPerson.middleName;
     }
-    if (typeof srcPerson.lastName!=="undefined") {
+    if (typeof srcPerson.lastName !== 'undefined') {
       lastName = srcPerson.lastName;
     }
-    if (typeof srcPerson.diocese!=="undefined") {
+    if (typeof srcPerson.diocese !== 'undefined') {
       diocese = srcPerson.diocese;
     }
-    if (typeof srcPerson.dioceseType!=="undefined") {
+    if (typeof srcPerson.dioceseType !== 'undefined') {
       dioceseType = srcPerson.dioceseType;
     }
-    if (typeof srcPerson.type!=="undefined") {
+    if (typeof srcPerson.type !== 'undefined') {
       type = srcPerson.type;
     }
-    if (typeof srcPerson.thumbnail!=="undefined") {
+    if (typeof srcPerson.thumbnail !== 'undefined') {
       thumbnail = srcPerson.thumbnail;
     }
     this.setState({
@@ -405,12 +472,13 @@ export default class ImportClassPieceToDB extends Component {
       selectedPerson: srcPerson,
       selectedPersonIndex: i,
       selectedDuplicate: possibleDuplicate,
-      duplicateModal: true
+      duplicateModal: true,
     });
-  }
+  };
 
   copyRight = () => {
-    let srcPerson = Object.assign({}, this.state.selectedPerson);
+    const { selectedPerson } = this.state;
+    const srcPerson = { ...selectedPerson };
     let honorificPrefix = '';
     let firstName = '';
     let middleName = '';
@@ -419,28 +487,28 @@ export default class ImportClassPieceToDB extends Component {
     let dioceseType = '';
     let type = '';
     let thumbnail = '';
-    if (typeof srcPerson.honorificPrefix!=="undefined") {
+    if (typeof srcPerson.honorificPrefix !== 'undefined') {
       honorificPrefix = srcPerson.honorificPrefix;
     }
-    if (typeof srcPerson.firstName!=="undefined") {
+    if (typeof srcPerson.firstName !== 'undefined') {
       firstName = srcPerson.firstName;
     }
-    if (typeof srcPerson.middleName!=="undefined") {
+    if (typeof srcPerson.middleName !== 'undefined') {
       middleName = srcPerson.middleName;
     }
-    if (typeof srcPerson.lastName!=="undefined") {
+    if (typeof srcPerson.lastName !== 'undefined') {
       lastName = srcPerson.lastName;
     }
-    if (typeof srcPerson.diocese!=="undefined") {
+    if (typeof srcPerson.diocese !== 'undefined') {
       diocese = srcPerson.diocese;
     }
-    if (typeof srcPerson.dioceseType!=="undefined") {
+    if (typeof srcPerson.dioceseType !== 'undefined') {
       dioceseType = srcPerson.dioceseType;
     }
-    if (typeof srcPerson.type!=="undefined") {
+    if (typeof srcPerson.type !== 'undefined') {
       type = srcPerson.type;
     }
-    if (typeof srcPerson.thumbnail!=="undefined") {
+    if (typeof srcPerson.thumbnail !== 'undefined') {
       thumbnail = srcPerson.thumbnail;
     }
     this.setState({
@@ -454,10 +522,11 @@ export default class ImportClassPieceToDB extends Component {
       inputtype: type,
       input_id: '',
     });
-  }
+  };
 
   copyLeft = () => {
-    let srcPerson = Object.assign({}, this.state.selectedDuplicate);
+    const { selectedDuplicate } = this.state;
+    const srcPerson = { ...selectedDuplicate };
     let honorificPrefix = '';
     let firstName = '';
     let middleName = '';
@@ -466,33 +535,42 @@ export default class ImportClassPieceToDB extends Component {
     let dioceseType = '';
     let type = '';
     let _id = '';
-    let thumbnail = {};
-    if (typeof srcPerson.honorificPrefix!=="undefined") {
+    const thumbnail = {};
+    if (typeof srcPerson.honorificPrefix !== 'undefined') {
       honorificPrefix = srcPerson.honorificPrefix;
     }
-    if (typeof srcPerson.firstName!=="undefined") {
+    if (typeof srcPerson.firstName !== 'undefined') {
       firstName = srcPerson.firstName;
     }
-    if (typeof srcPerson.middleName!=="undefined") {
+    if (typeof srcPerson.middleName !== 'undefined') {
       middleName = srcPerson.middleName;
     }
-    if (typeof srcPerson.lastName!=="undefined") {
+    if (typeof srcPerson.lastName !== 'undefined') {
       lastName = srcPerson.lastName;
     }
     // get diocese
-    if (srcPerson.organisations.find(d=>d.term.label==="hasAffiliation")!=="undefined") {
-      let srcPersonDiocese = srcPerson.organisations.find(d=>d.term.label==="hasAffiliation");
+    if (
+      srcPerson.organisations.find((d) => d.term.label === 'hasAffiliation') !==
+      'undefined'
+    ) {
+      const srcPersonDiocese = srcPerson.organisations.find(
+        (d) => d.term.label === 'hasAffiliation'
+      );
       diocese = srcPersonDiocese.ref.label;
       dioceseType = srcPersonDiocese.ref.organisationType;
     }
     // get type
-    if (srcPerson.resources.find(r=>r.term.label==="isDepictedOn")!=="undefined") {
-      type = srcPerson.resources.find(r=>r.term.label==="isDepictedOn").role;
+    if (
+      srcPerson.resources.find((r) => r.term.label === 'isDepictedOn') !==
+      'undefined'
+    ) {
+      type = srcPerson.resources.find((r) => r.term.label === 'isDepictedOn')
+        .role;
     }
-    if (typeof srcPerson.resources!=="undefined") {
+    if (typeof srcPerson.resources !== 'undefined') {
       thumbnail.src = getThumbnailURL(srcPerson);
     }
-    if (typeof srcPerson._id!=="undefined") {
+    if (typeof srcPerson._id !== 'undefined') {
       _id = srcPerson._id;
     }
     this.setState({
@@ -506,23 +584,29 @@ export default class ImportClassPieceToDB extends Component {
       inputtype: type,
       input_id: _id,
     });
-  }
+  };
 
   mergePerson = (e) => {
     e.preventDefault();
-    let data = Object.assign({},this.state.data);
-    let faces = data.faces;
-    let newPerson = Object.assign({},this.state.selectedPerson);
-    let personIndex = this.state.selectedPersonIndex;
-    let newId = this.state.selectedDuplicate._id;
-    let inputthumbnail = this.state.inputthumbnail;
-    let inputhonorificprefix = this.state.inputhonorificprefix;
-    let inputfirstname = this.state.inputfirstname;
-    let inputmiddlename = this.state.inputmiddlename;
-    let inputlastname = this.state.inputlastname;
-    let inputdiocese = this.state.inputdiocese;
-    let inputdioceseType = this.state.inputdioceseType;
-    let inputtype = this.state.inputtype;
+    const {
+      data: stateData,
+      selectedPerson,
+      selectedPersonIndex,
+      selectedDuplicate,
+      inputthumbnail,
+      inputhonorificprefix,
+      inputfirstname,
+      inputmiddlename,
+      inputlastname,
+      inputdiocese,
+      inputdioceseType,
+      inputtype,
+    } = this.state;
+    const data = { ...stateData };
+    const { faces } = data;
+    const newPerson = { ...selectedPerson };
+    const personIndex = selectedPersonIndex;
+    const newId = selectedDuplicate._id;
 
     newPerson.thumbnail = inputthumbnail;
     newPerson.honorificPrefix = inputhonorificprefix;
@@ -536,33 +620,31 @@ export default class ImportClassPieceToDB extends Component {
     faces[personIndex] = newPerson;
     data.faces = faces;
     this.setState({
-      data: data,
-      duplicateModal: false
-    })
-  }
+      data,
+      duplicateModal: false,
+    });
+  };
 
   undoMerge = async () => {
-    let stateIndex = this.state.selectedPersonIndex;
-    let file = this.props.match.params.fileName;
-    let responseData = await axios({
-        method: 'get',
-        url: APIPath+'prepare-classpiece-ingestion?file='+file,
-        crossDomain: true,
-      })
-    .then(function (response) {
-      return response.data.data;
+    const { selectedPersonIndex: stateIndex, data: stateData } = this.state;
+    const { match } = this.props;
+    const file = match.params.fileName;
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}prepare-classpiece-ingestion?file=${file}`,
+      crossDomain: true,
     })
-    .catch(function (error) {
-    });
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    const stateFaces = stateData.faces;
 
-    let stateData = this.state.data;
-    let stateFaces = this.state.data.faces;
+    const stateFace = stateFaces[stateIndex];
+    const stateFaceMatches = stateFace.matches;
+    const stateFaceChecked = stateFace.checked;
 
-    let stateFace = stateFaces[stateIndex];
-    let stateFaceMatches = stateFace.matches;
-    let stateFaceChecked = stateFace.checked;
-
-    let undoFace = responseData.faces[stateIndex];
+    const undoFace = responseData.faces[stateIndex];
     undoFace.matches = stateFaceMatches;
     undoFace.checked = stateFaceChecked;
     stateFaces[stateIndex] = undoFace;
@@ -570,24 +652,26 @@ export default class ImportClassPieceToDB extends Component {
     this.setState({
       selectedPerson: undoFace,
       data: stateData,
-    })
+    });
 
-    let context = this;
-    setTimeout(function() {
+    const context = this;
+    setTimeout(() => {
       context.copyRight();
-    },250)
-  }
+    }, 250);
+  };
 
   toggleUpdateModal = () => {
+    const { updateModal } = this.state;
     this.setState({
-      updateModal: !this.state.updateModal
-    })
-  }
+      updateModal: !updateModal,
+    });
+  };
 
   openUpdatePerson = (i) => {
-    let person = Object.assign({},this.state.data.faces[i]);
+    const { data } = this.state;
+    const person = { ...data.faces[i] };
     let thumbnail = '';
-    if (typeof person.thumbnail!=="undefined") {
+    if (typeof person.thumbnail !== 'undefined') {
       thumbnail = person.thumbnail;
     }
     let honorificPrefix = [];
@@ -597,25 +681,28 @@ export default class ImportClassPieceToDB extends Component {
     let diocese = '';
     let dioceseType = '';
     let type = '';
-    if (typeof person.honorificPrefix!=="undefined" && person.honorificPrefix!=="") {
+    if (
+      typeof person.honorificPrefix !== 'undefined' &&
+      person.honorificPrefix !== ''
+    ) {
       honorificPrefix = person.honorificPrefix;
     }
-    if (typeof person.firstName!=="undefined") {
+    if (typeof person.firstName !== 'undefined') {
       firstName = person.firstName;
     }
-    if (typeof person.middleName!=="undefined") {
+    if (typeof person.middleName !== 'undefined') {
       middleName = person.middleName;
     }
-    if (typeof person.lastName!=="undefined") {
+    if (typeof person.lastName !== 'undefined') {
       lastName = person.lastName;
     }
-    if (typeof person.diocese!=="undefined") {
+    if (typeof person.diocese !== 'undefined') {
       diocese = person.diocese;
     }
-    if (typeof person.dioceseType!=="undefined") {
+    if (typeof person.dioceseType !== 'undefined') {
       dioceseType = person.dioceseType;
     }
-    if (typeof person.type!=="undefined") {
+    if (typeof person.type !== 'undefined') {
       type = person.type;
     }
     this.setState({
@@ -629,416 +716,641 @@ export default class ImportClassPieceToDB extends Component {
       updateType: type,
       selectedPerson: person,
       selectedPersonIndex: i,
-      updateModal: true
-    })
-  }
+      updateModal: true,
+    });
+  };
 
   updatePerson = (e) => {
     e.preventDefault();
-    let data = Object.assign({},this.state.data);
-    let faces = this.state.data.faces;
-    let person = this.state.data.faces[this.state.selectedPersonIndex];
-    person.honorificPrefix = this.state.updateHonorificPrefix;
-    person.firstName = this.state.updateFirstName;
-    person.middleName = this.state.updateMiddleName;
-    person.lastName = this.state.updateLastName;
-    person.diocese = this.state.updateDiocese;
-    person.dioceseType = this.state.updateDioceseType;
-    person.type = this.state.updateType;
-    faces[this.state.selectedPersonIndex] = person;
+    const {
+      data: stateData,
+      selectedPersonIndex,
+      updateHonorificPrefix,
+      updateFirstName,
+      updateMiddleName,
+      updateLastName,
+      updateDiocese,
+      updateDioceseType,
+      updateType,
+    } = this.state;
+    const data = { ...stateData };
+    const { faces } = stateData;
+    const person = faces[selectedPersonIndex];
+    person.honorificPrefix = updateHonorificPrefix;
+    person.firstName = updateFirstName;
+    person.middleName = updateMiddleName;
+    person.lastName = updateLastName;
+    person.diocese = updateDiocese;
+    person.dioceseType = updateDioceseType;
+    person.type = updateType;
+    faces[selectedPersonIndex] = person;
     data.faces = faces;
     this.setState({
-      data: data,
-      updateModal: false
-    })
+      data,
+      updateModal: false,
+    });
+  };
 
-  }
-
-  importSelected = async (e) => {
-    if (this.state.importSelectedStatus) {
+  importSelected = async () => {
+    const { importSelectedStatus, data } = this.state;
+    const { match } = this.props;
+    if (importSelectedStatus) {
       return false;
     }
     this.setState({
-      importSelectedBtn: <span><i>Importing...</i> <Spinner color="secondary" size="sm" /></span>,
-      importSelectedStatus: true
-    })
-    let file = this.props.match.params.fileName;
-    let stateData = Object.assign([{}], this.state.data);
-    let postData = {};
+      importSelectedBtn: (
+        <span>
+          <i>Importing...</i> <Spinner color="secondary" size="sm" />
+        </span>
+      ),
+      importSelectedStatus: true,
+    });
+    const file = match.params.fileName;
+    const stateData = Object.assign([{}], data);
+    const postData = {};
     postData.file = file;
-    let classPiece = stateData.classpiece;
+    const classPiece = stateData.classpiece;
     if (classPiece.checked) {
       postData.classpiece = classPiece;
     }
-    let faces = stateData.faces;
-    let checkedFaces = [];
-    for (let i=0;i<faces.length;i++) {
-      let face = faces[i];
+    const { faces } = stateData;
+    const checkedFaces = [];
+    for (let i = 0; i < faces.length; i += 1) {
+      const face = faces[i];
       if (face.checked) {
         checkedFaces.push(face);
       }
     }
     postData.faces = checkedFaces;
 
-    let context = this;
-    let ingestData = await axios({
-        method: 'put',
-        url: APIPath+'ingest-classpiece',
-        crossDomain: true,
-        data: {data:JSON.stringify(postData)},
-      })
-    .then(function (response) {
-      return response.data;
+    const context = this;
+    const ingestData = await axios({
+      method: 'put',
+      url: `${APIPath}ingest-classpiece`,
+      crossDomain: true,
+      data: { data: JSON.stringify(postData) },
     })
-    .catch(function (error) {
-    });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
     if (ingestData.status) {
       this.setState({
         importSelectedStatus: false,
-        importSelectedBtn: <span>Import complete <i className="fa fa-check"></i></span>,
+        importSelectedBtn: (
+          <span>
+            Import complete <i className="fa fa-check" />
+          </span>
+        ),
       });
 
-      setTimeout(function() {
+      setTimeout(() => {
         context.setState({
           importSelectedBtn: <span>Import selected</span>,
           imported: true,
         });
-      },2000);
+      }, 2000);
     }
-
-  }
+    return false;
+  };
 
   toggleReImportModal = () => {
+    const { reImportModalOpen } = this.state;
     this.setState({
-      reImportModalOpen: !this.state.reImportModalOpen
+      reImportModalOpen: !reImportModalOpen,
     });
-  }
+  };
 
-  removeHP = (i, name=null) => {
-    if (name===null) {
-      return false;
-    }
-    let hps = this.state[name];
-    hps.splice(i,1);
+  updateImported(value) {
     this.setState({
-      inputhonorificprefix: hps
+      imported: value,
     });
-  }
-
-  addHP = (name) => {
-    if (name===null) {
-      return false;
-    }
-    let hps = this.state[name];
-    hps.push("");
-    this.setState({
-      inputhonorificprefix: hps
-    });
-  }
-
-  componentDidMount() {
-    this.loadStatus();
-  }
-
-  componentDidUpdate(prevProps,prevState) {
-    if (!prevState.imported && this.state.imported) {
-      this.setState({
-        imported: false
-      })
-    }
   }
 
   render() {
+    const {
+      imported,
+      loading,
+      data,
+      collapseRelations,
+      dbClasspiece,
+      selectAllBtn,
+      identifyDuplicatesBtn,
+      importSelectedBtn,
+      selectedPerson,
+      selectedDuplicate,
+      inputthumbnail: stateInputthumbnail,
+      duplicateImageOver,
+      inputhonorificprefix,
+      draggedElem,
+      draggedIndex,
+      duplicateModal: duplicateModalOpen,
+      input_id: inputId,
+      inputfirstname,
+      inputmiddlename,
+      inputlastname,
+      inputdiocese,
+      inputdioceseType,
+      inputtype,
+      mergePersonBtn,
+      updateHonorificPrefix,
+      updateModal: updateModalOpen,
+      className,
+      updateFirstName,
+      updateMiddleName,
+      updateLastName,
+      updateDiocese,
+      updateDioceseType,
+      updateType,
+      reImportModalOpen,
+    } = this.state;
     let redirect = [];
-    if (this.state.imported) {
-      redirect = <Redirect to='/parse-class-pieces/' />
+    if (imported) {
+      redirect = <Redirect to="/parse-class-pieces/" />;
     }
-    let content = <div className="row">
-      <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
-          <Spinner type="grow" color="info" /> <i>loading...</i>
+    let content = (
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </div>
         </div>
       </div>
-    </div>
-    if (!this.state.loading) {
-      let data = this.state.data;
-      let classpiece = data.classpiece;
-      let faces = data.faces;
+    );
+    if (!loading) {
+      const { classpiece } = data;
+      const { faces } = data;
       let tableRows = [];
-      let classPieceRelations = [];
+      const classPieceRelations = [];
 
       // faces
-      let f=1;
-      let facesRows = [];
-      for (let i=0; i<faces.length; i++) {
-        let face = faces[i];
+      let f = 1;
+      const facesRows = [];
+      for (let i = 0; i < faces.length; i += 1) {
+        const face = faces[i];
         let rotate = [];
-        if (typeof face.default!=="undefined" && typeof face.default.rotate!=="undefined" && face.default.rotate!==0) {
-          rotate = <span>rotate: {face.default.rotate}</span>
+        if (
+          typeof face.default !== 'undefined' &&
+          typeof face.default.rotate !== 'undefined' &&
+          face.default.rotate !== 0
+        ) {
+          rotate = <span>rotate: {face.default.rotate}</span>;
         }
         let label = '';
-        if (face.firstName!=="" || face.lastName!=="") {
-          if (typeof face.honorificPrefix!=="undefined" && face.honorificPrefix!=="") {
+        if (face.firstName !== '' || face.lastName !== '') {
+          if (
+            typeof face.honorificPrefix !== 'undefined' &&
+            face.honorificPrefix !== ''
+          ) {
             label += face.honorificPrefix;
           }
-          if (typeof face.firstName!=="undefined" && face.firstName!=="") {
-            if (label!=="") {
-              label += " ";
+          if (typeof face.firstName !== 'undefined' && face.firstName !== '') {
+            if (label !== '') {
+              label += ' ';
             }
             label += face.firstName;
           }
-          if (typeof face.middleName!=="undefined" && face.middleName!=="") {
-            if (label!=="") {
-              label += " ";
+          if (
+            typeof face.middleName !== 'undefined' &&
+            face.middleName !== ''
+          ) {
+            if (label !== '') {
+              label += ' ';
             }
             label += face.middleName;
           }
-          if (typeof face.lastName!=="undefined" && face.lastName!=="") {
-            if (label!=="") {
-              label += " ";
+          if (typeof face.lastName !== 'undefined' && face.lastName !== '') {
+            if (label !== '') {
+              label += ' ';
             }
             label += face.lastName;
           }
           // classpiece relations
-          let personRelation = <li key={"depicts-"+f}>
-            <span className="type-of">[:Resource]</span> {classpiece.label} <span className="relation">depicts</span> <span className="type-of">[:Person]</span> {label}</li>;
-          let resourceRelation = <li key={"hasPart-"+f}>
-            <span className="type-of">[:Resource]</span> {classpiece.label} <span className="relation">hasPart</span> <span className="type-of">[:Resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /></li>;
+          const personRelation = (
+            <li key={`depicts-${f}`}>
+              <span className="type-of">[:Resource]</span> {classpiece.label}{' '}
+              <span className="relation">depicts</span>{' '}
+              <span className="type-of">[:Person]</span> {label}
+            </li>
+          );
+          const resourceRelation = (
+            <li key={`hasPart-${f}`}>
+              <span className="type-of">[:Resource]</span> {classpiece.label}{' '}
+              <span className="relation">hasPart</span>{' '}
+              <span className="type-of">[:Resource]</span>{' '}
+              <img
+                src={face.thumbnail.src}
+                alt="Person"
+                className="import-to-db-thumb-small img-responsive"
+              />
+            </li>
+          );
           classPieceRelations.push(personRelation);
           classPieceRelations.push(resourceRelation);
         }
 
         // face relations
-        let faceRelations = [];
-        let personToClasspieceRelation = <li key={0}>
-          <span className="type-of">[:Person]</span> {label} <span className="relation">isDepictedOn</span> <span className="type-of">[:Resource]</span> {classpiece.label}</li>;
-        let resourceToClasspieceRelation = <li key={1}>
-          <span className="type-of">[:Resource]</span> <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb-small img-responsive" /> <span className="relation">isPartOf</span> <span className="type-of">[:Resource]</span> {classpiece.label}</li>;
+        const faceRelations = [];
+        const personToClasspieceRelation = (
+          <li key={0}>
+            <span className="type-of">[:Person]</span> {label}{' '}
+            <span className="relation">isDepictedOn</span>{' '}
+            <span className="type-of">[:Resource]</span> {classpiece.label}
+          </li>
+        );
+        const resourceToClasspieceRelation = (
+          <li key={1}>
+            <span className="type-of">[:Resource]</span>{' '}
+            <img
+              src={face.thumbnail.src}
+              alt="Person"
+              className="import-to-db-thumb-small img-responsive"
+            />{' '}
+            <span className="relation">isPartOf</span>{' '}
+            <span className="type-of">[:Resource]</span> {classpiece.label}
+          </li>
+        );
 
-        let resourceDioceseRelation = <li key={2}>
-          <span className="type-of">[:Person]</span> {label} <span className="relation">hasAffiliation</span> <span className="type-of">[:Organisation]</span> {face.diocese}</li>;
+        const resourceDioceseRelation = (
+          <li key={2}>
+            <span className="type-of">[:Person]</span> {label}{' '}
+            <span className="relation">hasAffiliation</span>{' '}
+            <span className="type-of">[:Organisation]</span> {face.diocese}
+          </li>
+        );
 
-        if (face.firstName!=="" || face.lastName!=="") {
+        if (face.firstName !== '' || face.lastName !== '') {
           faceRelations.push(personToClasspieceRelation);
         }
 
         faceRelations.push(resourceToClasspieceRelation);
 
-        if (face.diocese.trim()!=="") {
+        if (face.diocese.trim() !== '') {
           faceRelations.push(resourceDioceseRelation);
         }
 
         // duplicates
         let duplicatesTitle = [];
-        let duplicatesClass = "";
+        let duplicatesClass = '';
         let duplicatesOutput = [];
-        if (typeof face.matches!=="undefined" && face.matches.length>0) {
-          duplicatesTitle = <div><label>Possible duplicates</label></div>;
-          duplicatesClass = " duplicates";
-          let duplicatesRows = face.matches.map((faceMatch, fm)=>{
-            return <li key={fm}><Button size="sm" type="button" onClick={()=>this.selectPossibleDuplicate(i, fm)}>{faceMatch.firstName} {faceMatch.lastName}</Button> [<i>{faceMatch.score}% match</i>]</li>;
-          })
-          duplicatesOutput = <ul className="duplicates-list">{duplicatesRows}</ul>
+        if (typeof face.matches !== 'undefined' && face.matches.length > 0) {
+          duplicatesTitle = (
+            <div>
+              <Label>Possible duplicates</Label>
+            </div>
+          );
+          duplicatesClass = ' duplicates';
+          const duplicatesRows = face.matches.map((faceMatch, fm) => {
+            const key = `a${fm}`;
+            return (
+              <li key={key}>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => this.selectPossibleDuplicate(i, fm)}
+                >
+                  {faceMatch.firstName} {faceMatch.lastName}
+                </Button>{' '}
+                [<i>{faceMatch.score}% match</i>]
+              </li>
+            );
+          });
+          duplicatesOutput = (
+            <ul className="duplicates-list">{duplicatesRows}</ul>
+          );
         }
-        let checked = "";
-        if (face.checked) {
-          checked = "checked";
-        }
-        let relationToggleIconClass = "";
-        if (this.state.collapseRelations[f]) {
-          relationToggleIconClass = " active";
+        const checked = face.checked ? 'checked' : '';
+        let relationToggleIconClass = '';
+        if (collapseRelations[f]) {
+          relationToggleIconClass = ' active';
         }
 
-        let faceRow = <tr key={f}>
-          <td style={{width: "35px"}}>
+        const faceRow = (
+          <tr key={f}>
+            <td style={{ width: '35px' }}>
+              <div className="select-checkbox-container">
+                <input
+                  type="checkbox"
+                  value={f}
+                  checked={checked}
+                  onChange={() => false}
+                />
+                <span
+                  className="select-checkbox"
+                  onClick={() => this.toggleSelected(i, 'faces')}
+                  onKeyDown={() => false}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="toggle selected"
+                />
+              </div>
+            </td>
+            <td style={{ width: '80px' }}>
+              <div
+                className="thumbnail-person"
+                onClick={() => this.openUpdatePerson(i)}
+                onKeyDown={() => false}
+                role="button"
+                tabIndex={0}
+                aria-label="update person"
+              >
+                <img
+                  src={face.thumbnail.src}
+                  alt="Person"
+                  className="import-to-db-thumb img-responsive"
+                />
+                <div className="thumbnail-person-edit">Edit</div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <Label>{label}</Label>
+              </div>
+              <div className={`import-to-db-details${duplicatesClass}`}>
+                width: {face.default.width}px
+                <br />
+                height: {face.default.height}px
+                <br />
+                filetype: {face.default.type}
+                <br />
+                {rotate}
+              </div>
+              <div className="import-to-db-duplicates">
+                {duplicatesTitle}
+                {duplicatesOutput}
+              </div>
+              <div>
+                <div
+                  className="collapse-trigger"
+                  onClick={() => this.toggleRelations(i)}
+                  size="sm"
+                  onKeyDown={() => false}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="toggle relations"
+                >
+                  Relations{' '}
+                  <i className={`fa fa-angle-left${relationToggleIconClass}`} />
+                </div>
+                <Collapse isOpen={collapseRelations[f]}>
+                  <ul className="collapse-relations-list">{faceRelations}</ul>
+                </Collapse>
+              </div>
+            </td>
+          </tr>
+        );
+        facesRows.push(faceRow);
+        f += 1;
+      }
+
+      let classPieceChecked = '';
+      if (classpiece.checked) {
+        classPieceChecked = 'checked';
+      }
+
+      let classPieceRelationToggleIconClass = '';
+      if (collapseRelations[0]) {
+        classPieceRelationToggleIconClass = ' active';
+      }
+
+      const classpieceRow = (
+        <tr key={0}>
+          <td style={{ width: '35px' }}>
             <div className="select-checkbox-container">
-              <input type="checkbox" value={f} checked={checked} onChange={() => {return false}}/>
-              <span className="select-checkbox" onClick={this.toggleSelected.bind(this,f, "faces")}></span>
+              <input
+                type="checkbox"
+                value={0}
+                onChange={() => false}
+                checked={classPieceChecked}
+              />
+              <span
+                className="select-checkbox"
+                onClick={() => this.toggleSelected(-1, 'classpiece')}
+                onKeyDown={() => false}
+                role="button"
+                tabIndex={0}
+                aria-label="toggle selected"
+              />
             </div>
           </td>
-          <td style={{width: "80px"}}>
-            <div className="thumbnail-person" onClick={this.openUpdatePerson.bind(this, i)}>
-              <img src={face.thumbnail.src} alt="Person" className="import-to-db-thumb img-responsive" />
-              <div className="thumbnail-person-edit">Edit</div>
-            </div>
+          <td style={{ width: '80px' }}>
+            <img
+              src={classpiece.thumbnail.src}
+              alt="Classpiece"
+              className="import-to-db-thumb img-responsive"
+            />
           </td>
           <td>
+            <Label>{classpiece.label}</Label>
             <div>
-              <label>{label}</label>
+              width: {classpiece.default.width}px
+              <br />
+              height: {classpiece.default.height}px
+              <br />
+              filetype: {classpiece.default.type}
+              <br />
+              filename: {classpiece.fileName}
+              <br />
             </div>
-            <div className={"import-to-db-details"+duplicatesClass}>
-              width: {face.default.width}px<br/>
-              height: {face.default.height}px<br/>
-              filetype: {face.default.type}<br/>
-              {rotate}
+            <div
+              className="collapse-trigger"
+              onClick={() => this.toggleRelations(0)}
+              size="sm"
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="toggle relations"
+            >
+              Relations{' '}
+              <i
+                className={`fa fa-angle-left${classPieceRelationToggleIconClass}`}
+              />
             </div>
-            <div className="import-to-db-duplicates">{duplicatesTitle}{duplicatesOutput}</div>
-            <div>
-              <div className="collapse-trigger" onClick={this.toggleRelations.bind(this,f)} size="sm">Relations <i className={"fa fa-angle-left"+relationToggleIconClass} /></div>
-              <Collapse isOpen={this.state.collapseRelations[f]}>
-                <ul className="collapse-relations-list">{faceRelations}</ul>
-              </Collapse>
-            </div>
+            <Collapse isOpen={collapseRelations[0]}>
+              <ul className="collapse-relations-list">{classPieceRelations}</ul>
+            </Collapse>
           </td>
-        </tr>;
-        facesRows.push(faceRow);
-        f++;
-      }
-
-      let classPieceChecked = "";
-      if (classpiece.checked) {
-        classPieceChecked = "checked";
-      }
-
-
-      let classPieceRelationToggleIconClass = "";
-      if (this.state.collapseRelations[0]) {
-        classPieceRelationToggleIconClass = " active";
-      }
-
-      let classpieceRow = <tr key={0}>
-        <td style={{width: "35px"}}>
-          <div className="select-checkbox-container">
-            <input type="checkbox" value={0} onChange={()=>{return false;}} checked={classPieceChecked}/>
-            <span className="select-checkbox" onClick={this.toggleSelected.bind(this,0,"classpiece")}></span>
-          </div>
-        </td>
-        <td style={{width: "80px"}}><img src={classpiece.thumbnail.src} alt="Classpiece" className="import-to-db-thumb img-responsive" /></td>
-        <td>
-          <label>{classpiece.label}</label>
-          <div>
-            width: {classpiece.default.width}px<br/>
-            height: {classpiece.default.height}px<br/>
-            filetype: {classpiece.default.type}<br/>
-            filename: {classpiece.fileName}<br/>
-          </div>
-          <div className="collapse-trigger" onClick={this.toggleRelations.bind(this,0)} size="sm">Relations <i className={"fa fa-angle-left"+classPieceRelationToggleIconClass} /></div>
-          <Collapse isOpen={this.state.collapseRelations[0]}>
-            <ul className="collapse-relations-list">{classPieceRelations}</ul>
-          </Collapse>
-        </td>
-      </tr>;
+        </tr>
+      );
       tableRows.push(classpieceRow);
       tableRows = tableRows.concat(facesRows);
 
       let importFunction = this.importSelected;
-      if (this.state.dbClasspiece!==null && this.state.dbClasspiece!==0 && this.state.dbClasspiece!=="0") {
+      if (dbClasspiece !== null && dbClasspiece !== 0 && dbClasspiece !== '0') {
         importFunction = this.toggleReImportModal;
       }
 
-      let toolbox = <div className={"sidebar-toolbox"}>
-        <ImportToDBToolbox
-          selectAll={this.selectAll}
-          selectAllBtn={this.state.selectAllBtn}
-          identifyDuplicates={this.identifyDuplicates}
-          identifyDuplicatesBtn={this.state.identifyDuplicatesBtn}
-          importSelected={importFunction}
-          importSelectedBtn={this.state.importSelectedBtn}
+      const toolbox = (
+        <div className="sidebar-toolbox">
+          <ImportToDBToolbox
+            selectAll={this.selectAll}
+            selectAllBtn={selectAllBtn}
+            identifyDuplicates={this.identifyDuplicates}
+            identifyDuplicatesBtn={identifyDuplicatesBtn}
+            importSelected={importFunction}
+            importSelectedBtn={importSelectedBtn}
           />
-      </div>;
+        </div>
+      );
 
       // selected duplicate
       let selectedThumbnail = [];
       let selectedFace = [];
       let thumbnail = [];
-      if (this.state.selectedPerson!==null) {
-        selectedFace = this.state.selectedPerson;
-        if (typeof selectedFace!=="undefined") {
+      if (selectedPerson !== null) {
+        selectedFace = selectedPerson;
+        if (typeof selectedFace !== 'undefined') {
           thumbnail = selectedFace.thumbnail;
-          if (typeof thumbnail!=="undefined" && typeof thumbnail.path!=="undefined") {
-            selectedThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnail.src} />
+          if (
+            typeof thumbnail !== 'undefined' &&
+            typeof thumbnail.path !== 'undefined'
+          ) {
+            selectedThumbnail = (
+              <img
+                className="selected-face-thumbnail img-responsive img-thumbnail"
+                alt="thumbnail"
+                src={thumbnail.src}
+              />
+            );
           }
         }
       }
       let duplicateThumbnail = [];
       let duplicateFace = [];
-      if (this.state.selectedDuplicate!==null) {
-        duplicateFace = this.state.selectedDuplicate;
-        let thumbnailURL = getThumbnailURL(duplicateFace);
-        if (thumbnailURL!==null) {
-          duplicateThumbnail = <img className="selected-face-thumbnail img-responsive img-thumbnail" alt="thumbnail" src={thumbnailURL} />
+      if (selectedDuplicate !== null) {
+        duplicateFace = selectedDuplicate;
+        const thumbnailURL = getThumbnailURL(duplicateFace);
+        if (thumbnailURL !== null) {
+          duplicateThumbnail = (
+            <img
+              className="selected-face-thumbnail img-responsive img-thumbnail"
+              alt="thumbnail"
+              src={thumbnailURL}
+            />
+          );
         }
       }
 
-      let inputthumbnail = {src: '', path: ''};
-      if (this.state.inputthumbnail) {
-        inputthumbnail = this.state.inputthumbnail;
+      let inputthumbnail = { src: '', path: '' };
+      if (stateInputthumbnail) {
+        inputthumbnail = stateInputthumbnail;
       }
 
       let mergedImage = [];
-      if (typeof this.state.inputthumbnail!=="undefined" && typeof this.state.inputthumbnail.src!=="undefined" && this.state.inputthumbnail.src!=="") {
-        mergedImage = <img src={inputthumbnail.src} alt="Thumbnail placeholder" className="selected-face-thumbnail img-responsive img-thumbnail"/>
+      if (
+        typeof stateInputthumbnail !== 'undefined' &&
+        typeof stateInputthumbnail.src !== 'undefined' &&
+        stateInputthumbnail.src !== ''
+      ) {
+        mergedImage = (
+          <img
+            src={inputthumbnail.src}
+            alt="Thumbnail placeholder"
+            className="selected-face-thumbnail img-responsive img-thumbnail"
+          />
+        );
       }
 
-      let duplicateImageOverClass = '';
-      if (this.state.duplicateImageOver) {
-        duplicateImageOverClass = " over";
-      }
+      const duplicateImageOverClass = duplicateImageOver ? ' over' : '';
 
-      let honorificPrefixInputs = this.state.inputhonorificprefix.map((h,i)=>{
-        let honorificPrefixActive = "";
-        if (this.state.draggedElem==="inputhonorificprefix" && parseInt(this.state.draggedIndex,10)===i) {
-          honorificPrefixActive = "active";
+      const honorificPrefixInputs = inputhonorificprefix.map((h, i) => {
+        let honorificPrefixActive = '';
+        if (
+          draggedElem === 'inputhonorificprefix' &&
+          parseInt(draggedIndex, 10) === i
+        ) {
+          honorificPrefixActive = 'active';
         }
 
-        let item = <InputGroup key={i}>
-          <Input className={honorificPrefixActive}
-            type="text"
-            name="inputhonorificprefix"
-            placeholder="Person honorific prefix..."
-            data-target="inputhonorificprefix"
-            data-index={i}
-            value={this.state.inputhonorificprefix[i]}
-            onDrop={(e)=>this.dragStopText(e,i)}
-            onDragEnter={this.dragEnterText}
-            onDragOver={this.dragOverText}
-            onDragLeave={this.dragLeaveText}
-            onChange={(e)=>this.handleMultipleChange(e,i)}/>
+        const key = `a${i}`;
+        let item = (
+          <InputGroup key={key}>
+            <Input
+              className={honorificPrefixActive}
+              type="text"
+              name="inputhonorificprefix"
+              placeholder="Person honorific prefix..."
+              data-target="inputhonorificprefix"
+              data-index={i}
+              value={inputhonorificprefix[i]}
+              onDrop={(e) => this.dragStopText(e, i)}
+              onDragEnter={this.dragEnterText}
+              onDragOver={this.dragOverText}
+              onDragLeave={this.dragLeaveText}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
             <InputGroupAddon addonType="append">
-              <Button type="button" color="info" outline onClick={()=>this.removeHP(i, "inputhonorificprefix")}><b><i className="fa fa-minus" /></b></Button>
+              <Button
+                type="button"
+                color="info"
+                outline
+                onClick={() => this.removeHP(i, 'inputhonorificprefix')}
+              >
+                <b>
+                  <i className="fa fa-minus" />
+                </b>
+              </Button>
             </InputGroupAddon>
-        </InputGroup>
-        if (i===0) {
-          item = <Input className={honorificPrefixActive}
-          data-index={i}
-          style={{marginBottom: "5px"}}
-          key={i} type="text"
-          name="inputhonorificprefix"
-          placeholder="Person honorific prefix..."
-          value={this.state.inputhonorificprefix[i]}
-          data-target={"inputhonorificprefix"}
-          onDrop={(e)=>this.dragStopText(e,i)}
-          onDragEnter={this.dragEnterText}
-          onDragOver={this.dragOverText}
-          onDragLeave={this.dragLeaveText}
-          onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+          </InputGroup>
+        );
+        if (i === 0) {
+          item = (
+            <Input
+              className={honorificPrefixActive}
+              data-index={i}
+              style={{ marginBottom: '5px' }}
+              key={key}
+              type="text"
+              name="inputhonorificprefix"
+              placeholder="Person honorific prefix..."
+              value={inputhonorificprefix[i]}
+              data-target="inputhonorificprefix"
+              onDrop={(e) => this.dragStopText(e, i)}
+              onDragEnter={this.dragEnterText}
+              onDragOver={this.dragOverText}
+              onDragLeave={this.dragLeaveText}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
+          );
         }
         return item;
       });
 
-      let duplicateDiocese = {label: '', type: ''};
-      if (typeof duplicateFace!=="undefined" && typeof duplicateFace.organisations!=="undefined" && duplicateFace.organisations.length>0) {
-        duplicateDiocese = {label: duplicateFace.organisations[0].ref.label, type: duplicateFace.organisations[0].ref.organisationType}
+      let duplicateDiocese = { label: '', type: '' };
+      if (
+        typeof duplicateFace !== 'undefined' &&
+        typeof duplicateFace.organisations !== 'undefined' &&
+        duplicateFace.organisations.length > 0
+      ) {
+        duplicateDiocese = {
+          label: duplicateFace.organisations[0].ref.label,
+          type: duplicateFace.organisations[0].ref.organisationType,
+        };
       }
 
-      let firstNameActive="",middleNameActive="",lastNameActive="",dioceseActive="", dioceseTypeActive="",typeActive="";
-      if (this.state.draggedElem==="inputfirstname") {
-        firstNameActive = "active";
+      let firstNameActive = '';
+      let middleNameActive = '';
+      let lastNameActive = '';
+      let dioceseActive = '';
+      let dioceseTypeActive = '';
+      let typeActive = '';
+      if (draggedElem === 'inputfirstname') {
+        firstNameActive = 'active';
       }
-      if (this.state.draggedElem==="inputmiddlename") {
-        middleNameActive = "active";
+      if (draggedElem === 'inputmiddlename') {
+        middleNameActive = 'active';
       }
-      if (this.state.draggedElem==="inputlastname") {
-        lastNameActive = "active";
+      if (draggedElem === 'inputlastname') {
+        lastNameActive = 'active';
       }
-      if (this.state.draggedElem==="inputdiocese") {
-        dioceseActive = "active";
+      if (draggedElem === 'inputdiocese') {
+        dioceseActive = 'active';
       }
-      if (this.state.draggedElem==="inputdioceseType") {
-        dioceseTypeActive = "active";
+      if (draggedElem === 'inputdioceseType') {
+        dioceseTypeActive = 'active';
       }
-      if (this.state.draggedElem==="inputtype") {
-        typeActive = "active";
+      if (draggedElem === 'inputtype') {
+        typeActive = 'active';
       }
 
       // 1. classpiece person values
@@ -1049,69 +1361,108 @@ export default class ImportClassPieceToDB extends Component {
       let cpdo = [];
       let cpty = [];
       let selectedFaceHP = [];
-      if (typeof selectedFace.honorificPrefix!=="undefined" && selectedFace.honorificPrefix.length>0) {
-        selectedFaceHP = selectedFace.honorificPrefix.map((hp, i)=>{
-          return <div
-            key={i}
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{hp}</div>
+      if (
+        typeof selectedFace.honorificPrefix !== 'undefined' &&
+        selectedFace.honorificPrefix.length > 0
+      ) {
+        selectedFaceHP = selectedFace.honorificPrefix.map((hp, index) => {
+          const key = `a${index}`;
+          return (
+            <div
+              key={key}
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {hp}
+            </div>
+          );
         });
       }
-      if (selectedFaceHP.length>0) {
-        cphp = <div className="form-group">
-          <label>Honorific Prefix</label>
-          {selectedFaceHP}
-        </div>
+      if (selectedFaceHP.length > 0) {
+        cphp = (
+          <div className="form-group">
+            <Label>Honorific Prefix</Label>
+            {selectedFaceHP}
+          </div>
+        );
       }
-      if (selectedFace.firstName!=="") {
-        cpfn = <div className="form-group">
-          <label>First Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.firstName}</div>
-        </div>
+      if (selectedFace.firstName !== '') {
+        cpfn = (
+          <div className="form-group">
+            <Label>First Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.firstName}
+            </div>
+          </div>
+        );
       }
-      if (selectedFace.middleName!=="") {
-        cpmn = <div className="form-group">
-          <label>Middle Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.middleName}</div>
-        </div>
+      if (selectedFace.middleName !== '') {
+        cpmn = (
+          <div className="form-group">
+            <Label>Middle Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.middleName}
+            </div>
+          </div>
+        );
       }
-      if (selectedFace.lastName!=="") {
-        cpln = <div className="form-group">
-          <label>Last Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.lastName}</div>
-        </div>
+      if (selectedFace.lastName !== '') {
+        cpln = (
+          <div className="form-group">
+            <Label>Last Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.lastName}
+            </div>
+          </div>
+        );
       }
-      if (selectedFace.diocese!=="") {
-        cpdo = <div className="form-group">
-          <label>Diocese | Order</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.diocese}</div>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.dioceseType}</div>
-        </div>
+      if (selectedFace.diocese !== '') {
+        cpdo = (
+          <div className="form-group">
+            <Label>Diocese | Order</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.diocese}
+            </div>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.dioceseType}
+            </div>
+          </div>
+        );
       }
-      if (selectedFace.type!=="") {
-        cpty = <div className="form-group">
-          <label>Type</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{selectedFace.type}</div>
-        </div>
+      if (selectedFace.type !== '') {
+        cpty = (
+          <div className="form-group">
+            <Label>Type</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {selectedFace.type}
+            </div>
+          </div>
+        );
       }
 
       // 2. db person values
@@ -1123,366 +1474,576 @@ export default class ImportClassPieceToDB extends Component {
       let dbty = [];
 
       let duplicateFaceHP = [];
-      if (typeof duplicateFace.honorificPrefix!=="undefined" && duplicateFace.honorificPrefix.length>0) {
-        duplicateFaceHP = duplicateFace.honorificPrefix.map((hp, i)=>{
-          return <div
-            key={i}
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{hp}</div>
+      if (
+        typeof duplicateFace.honorificPrefix !== 'undefined' &&
+        duplicateFace.honorificPrefix.length > 0
+      ) {
+        duplicateFaceHP = duplicateFace.honorificPrefix.map((hp, index) => {
+          const key = `a${index}`;
+          return (
+            <div
+              key={key}
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {hp}
+            </div>
+          );
         });
       }
-      if (duplicateFaceHP.length>0) {
-        dbhp = <div className="form-group">
-          <label>Honorific Prefix</label>
-          {duplicateFaceHP}
-        </div>
+      if (duplicateFaceHP.length > 0) {
+        dbhp = (
+          <div className="form-group">
+            <Label>Honorific Prefix</Label>
+            {duplicateFaceHP}
+          </div>
+        );
       }
-      if (duplicateFace.firstName!=="") {
-        dbfn = <div className="form-group">
-          <label>First Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{duplicateFace.firstName}</div>
-        </div>
+      if (duplicateFace.firstName !== '') {
+        dbfn = (
+          <div className="form-group">
+            <Label>First Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {duplicateFace.firstName}
+            </div>
+          </div>
+        );
       }
-      if (duplicateFace.middleName!=="") {
-        dbmn = <div className="form-group">
-          <label>Middle Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{duplicateFace.middleName}</div>
-        </div>
+      if (duplicateFace.middleName !== '') {
+        dbmn = (
+          <div className="form-group">
+            <Label>Middle Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {duplicateFace.middleName}
+            </div>
+          </div>
+        );
       }
-      if (duplicateFace.lastName!=="") {
-        dbln = <div className="form-group">
-          <label>Last Name</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{duplicateFace.lastName}</div>
-        </div>
+      if (duplicateFace.lastName !== '') {
+        dbln = (
+          <div className="form-group">
+            <Label>Last Name</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {duplicateFace.lastName}
+            </div>
+          </div>
+        );
       }
-      if (duplicateDiocese.label!=="") {
-        dbdo = <div className="form-group">
-          <label>Diocese | Order</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{duplicateDiocese.label}</div>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{duplicateDiocese.type}</div>
-        </div>
+      if (duplicateDiocese.label !== '') {
+        dbdo = (
+          <div className="form-group">
+            <Label>Diocese | Order</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {duplicateDiocese.label}
+            </div>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {duplicateDiocese.type}
+            </div>
+          </div>
+        );
       }
-      if (typeof duplicateFace.resources!=="undefined" && duplicateFace.resources.find(r=>r.term.label==="isDepictedOn")!=="undefined") {
-        let dbtype = duplicateFace.resources.find(r=>r.term.label==="isDepictedOn").term.role;
-        dbty = <div className="form-group">
-          <label>Type</label>
-          <div
-            draggable="true"
-            onDragStart={(e)=>this.startDragText(e)}
-            className="thumbnail-textbox">{dbtype}</div>
-        </div>
+      if (
+        typeof duplicateFace.resources !== 'undefined' &&
+        duplicateFace.resources.find((r) => r.term.label === 'isDepictedOn') !==
+          'undefined'
+      ) {
+        const dbtype = duplicateFace.resources.find(
+          (r) => r.term.label === 'isDepictedOn'
+        ).term.role;
+        dbty = (
+          <div className="form-group">
+            <Label>Type</Label>
+            <div
+              draggable="true"
+              onDragStart={(e) => this.startDragText(e)}
+              className="thumbnail-textbox"
+            >
+              {dbtype}
+            </div>
+          </div>
+        );
       }
 
-      let duplicateModal = <Modal isOpen={this.state.duplicateModal} toggle={this.toggleDuplicateModal} className="duplicate-modal" size="lg">
-        <form onSubmit={this.mergePerson}>
-          <ModalHeader toggle={this.toggleDuplicateModal}>Merge person</ModalHeader>
-          <ModalBody>
-            <div className="row">
-
-              <div className="col-xs-12 col-sm-4">
-                <h4>Classpiece person</h4>
-                <div className="selected-item-thumbnail">
-                  <div
-                    draggable="true"
-                    onDragStart={this.startDragImage.bind(this,thumbnail)}
-                    className="">
-                    {selectedThumbnail}</div>
+      const duplicateModal = (
+        <Modal
+          isOpen={duplicateModalOpen}
+          toggle={this.toggleDuplicateModal}
+          className="duplicate-modal"
+          size="lg"
+        >
+          <form onSubmit={this.mergePerson}>
+            <ModalHeader toggle={this.toggleDuplicateModal}>
+              Merge person
+            </ModalHeader>
+            <ModalBody>
+              <div className="row">
+                <div className="col-xs-12 col-sm-4">
+                  <h4>Classpiece person</h4>
+                  <div className="selected-item-thumbnail">
+                    <div
+                      draggable="true"
+                      onDragStart={this.startDragImage.bind(this, thumbnail)}
+                      className=""
+                    >
+                      {selectedThumbnail}
+                    </div>
+                  </div>
+                  {cphp}
+                  {cpfn}
+                  {cpmn}
+                  {cpln}
+                  {cpdo}
+                  {cpty}
                 </div>
-                {cphp}
-                {cpfn}
-                {cpmn}
-                {cpln}
-                {cpdo}
-                {cpty}
-              </div>
 
-              <div className="col-xs-12 col-sm-4">
-                <h4>Merged person</h4>
-                <input type="hidden" name="input_id" value={this.state.input_id} onChange={this.handleChange}/>
-                <div className="selected-item-thumbnail">
-                  <div
-                    className={"duplicate-thumbnail-placeholder"+duplicateImageOverClass}
-                    onDrop={this.dragStopImage.bind(this)}
-                    onDragEnter={this.dragEnterText.bind(this)}
-                    onDragOver={this.dragOverText.bind(this)}
-                    onDragLeave={this.dragLeaveText.bind(this)}
-                    data-target="inputthumbnail">
+                <div className="col-xs-12 col-sm-4">
+                  <h4>Merged person</h4>
+                  <input
+                    type="hidden"
+                    name="input_id"
+                    value={inputId}
+                    onChange={this.handleChange}
+                  />
+                  <div className="selected-item-thumbnail">
+                    <div
+                      className={`duplicate-thumbnail-placeholder${duplicateImageOverClass}`}
+                      onDrop={this.dragStopImage.bind(this)}
+                      onDragEnter={this.dragEnterText.bind(this)}
+                      onDragOver={this.dragOverText.bind(this)}
+                      onDragLeave={this.dragLeaveText.bind(this)}
+                      data-target="inputthumbnail"
+                    >
                       {mergedImage}
                     </div>
-                </div>
-                <div className="form-group">
-                  <label>Honorific Prefix</label>
-                  {honorificPrefixInputs}
-                  <div className="text-right">
-                    <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP("inputhonorificprefix")}>Add new <i className="fa fa-plus" /></Button>
+                  </div>
+                  <div className="form-group">
+                    <Label>Honorific Prefix</Label>
+                    {honorificPrefixInputs}
+                    <div className="text-right">
+                      <Button
+                        type="button"
+                        color="info"
+                        outline
+                        size="xs"
+                        onClick={() => this.addHP('inputhonorificprefix')}
+                      >
+                        Add new <i className="fa fa-plus" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <Label>First Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={inputfirstname}
+                      onDrop={(e) => this.dragStopText(e)}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      data-target="inputfirstname"
+                      type="text"
+                      className={`form-control ${firstNameActive}`}
+                      name="inputfirstname"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Middle Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={inputmiddlename}
+                      onDrop={(e) => this.dragStopText(e)}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      data-target="inputmiddlename"
+                      type="text"
+                      className={`form-control ${middleNameActive}`}
+                      name="inputmiddlename"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Last Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={inputlastname}
+                      onDrop={(e) => this.dragStopText(e)}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      data-target="inputlastname"
+                      type="text"
+                      className={`form-control ${lastNameActive}`}
+                      name="inputlastname"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Diocese | Order</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={inputdiocese}
+                      onDrop={(e) => this.dragStopText(e)}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      data-target="inputdiocese"
+                      type="text"
+                      className={`form-control ${dioceseActive}`}
+                      name="inputdiocese"
+                    />
+                    <select
+                      style={{ marginTop: '5px' }}
+                      className={`form-control ${dioceseTypeActive}`}
+                      onChange={this.handleChange}
+                      value={inputdioceseType}
+                      onDrop={(e) => this.dragStopText(e)}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      name="inputdioceseType"
+                    >
+                      <option value="diocese">Diocese</option>
+                      <option value="order">Order</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <Label>Type</Label>
+                    <select
+                      name="inputtype"
+                      className={`form-control ${typeActive}`}
+                      onDrop={this.dragStopText}
+                      onDragEnter={this.dragEnterText}
+                      onDragOver={this.dragOverText}
+                      onDragLeave={this.dragLeaveText}
+                      onChange={this.handleChange}
+                      data-target="inputtype"
+                      value={inputtype}
+                    >
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="guestOfHonor">Guest of honor</option>
+                    </select>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.inputfirstname}
-                    onDrop={(e)=>this.dragStopText(e)}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    data-target="inputfirstname"
-                    type="text" className={"form-control "+firstNameActive} name="inputfirstname" />
-                </div>
-                <div className="form-group">
-                  <label>Middle Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.inputmiddlename}
-                    onDrop={(e)=>this.dragStopText(e)}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    data-target="inputmiddlename"
-                    type="text" className={"form-control "+middleNameActive} name="inputmiddlename" />
-                </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.inputlastname}
-                    onDrop={(e)=>this.dragStopText(e)}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    data-target="inputlastname"
-                    type="text" className={"form-control "+lastNameActive} name="inputlastname" />
-                </div>
-                <div className="form-group">
-                  <label>Diocese | Order</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.inputdiocese}
-                    onDrop={(e)=>this.dragStopText(e)}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    data-target="inputdiocese"
-                    type="text" className={"form-control "+dioceseActive} name="inputdiocese" />
-                  <select
-                    style={{marginTop: "5px"}}
-                    className={"form-control "+dioceseTypeActive}
-                    onChange={this.handleChange}
-                    value={this.state.inputdioceseType}
-                    onDrop={(e)=>this.dragStopText(e)}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    name="inputdioceseType">
-                    <option value="diocese">Diocese</option>
-                    <option value="order">Order</option>
-                  </select>
-                </div>
 
-                <div className="form-group">
-                  <label>Type</label>
-                  <select name="inputtype" className={"form-control "+typeActive}
-                    onDrop={this.dragStopText}
-                    onDragEnter={this.dragEnterText}
-                    onDragOver={this.dragOverText}
-                    onDragLeave={this.dragLeaveText}
-                    onChange={this.handleChange}
-                    data-target="inputtype"
-                    value={this.state.inputtype}>
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="guestOfHonor">Guest of honor</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="col-xs-12 col-sm-4">
-                <h4>Database person</h4>
-                <div className="merge-column">
-                  <div className="selected-item-thumbnail">
-                    {duplicateThumbnail}
+                <div className="col-xs-12 col-sm-4">
+                  <h4>Database person</h4>
+                  <div className="merge-column">
+                    <div className="selected-item-thumbnail">
+                      {duplicateThumbnail}
+                    </div>
+                    {dbhp}
+                    {dbfn}
+                    {dbmn}
+                    {dbln}
+                    {dbdo}
+                    {dbty}
                   </div>
-                  {dbhp}
-                  {dbfn}
-                  {dbmn}
-                  {dbln}
-                  {dbdo}
-                  {dbty}
                 </div>
               </div>
+              <div className="row">
+                <div className="col-xs-12 col-sm-4">
+                  <div className="form-group">
+                    <Button
+                      type="button"
+                      outline
+                      color="primary"
+                      size="sm"
+                      onClick={this.copyRight}
+                    >
+                      Copy right <i className="fa fa-angle-right" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="col-xs-12 col-sm-4" />
+                <div className="col-xs-12 col-sm-4">
+                  <div className="form-group text-right">
+                    <Button
+                      type="button"
+                      outline
+                      color="primary"
+                      size="sm"
+                      onClick={this.copyLeft}
+                    >
+                      <i className="fa fa-angle-left" /> Copy left
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="primary" size="sm" outline type="submit">
+                {mergePersonBtn}
+              </Button>
+              <Button
+                color="warning"
+                size="sm"
+                outline
+                type="button"
+                onClick={this.undoMerge}
+              >
+                Undo Merge
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                color="secondary"
+                onClick={this.closeSelectedModal}
+              >
+                Cancel
+              </Button>
+            </ModalFooter>
+          </form>
+        </Modal>
+      );
 
-            </div>
-            <div className="row">
-              <div className="col-xs-12 col-sm-4">
-                <div className="form-group">
-                  <Button type="button" outline color="primary" size="sm" onClick={this.copyRight}>Copy right <i className="fa fa-angle-right" /></Button>
-                </div>
-              </div>
-              <div className="col-xs-12 col-sm-4"></div>
-              <div className="col-xs-12 col-sm-4">
-                <div className="form-group text-right">
-                  <Button type="button" outline color="primary" size="sm" onClick={this.copyLeft}><i className="fa fa-angle-left" /> Copy left</Button>
-                </div>
-              </div>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="primary" size="sm" outline type="submit">{this.state.mergePersonBtn}</Button>
-            <Button color="warning" size="sm" outline type="button" onClick={this.undoMerge}>Undo Merge</Button>
-            <Button type="button" size="sm" color="secondary" onClick={this.closeSelectedModal}>Cancel</Button>
-          </ModalFooter>
-        </form>
-      </Modal>;
-
-      let updateHonorificPrefixInputs = this.state.updateHonorificPrefix.map((h,i)=>{
-        let honorificPrefixActive = "";
-        if (this.state.draggedElem==="updateHonorificPrefix" && parseInt(this.state.draggedIndex,10)===i) {
-          honorificPrefixActive = "active";
+      const updateHonorificPrefixInputs = updateHonorificPrefix.map((h, i) => {
+        let honorificPrefixActive = '';
+        if (
+          draggedElem === 'updateHonorificPrefix' &&
+          parseInt(draggedIndex, 10) === i
+        ) {
+          honorificPrefixActive = 'active';
         }
-        let item = <InputGroup key={i}>
-          <Input className={honorificPrefixActive} type="text" name="updateHonorificPrefix" id="honorificPrefix" placeholder="Person honorific prefix..."
-          data-target="updateHonorificPrefix" data-index={i} value={this.state.updateHonorificPrefix[i]}
-          onDrop={(e)=>this.dragStopText(e,i)}
-          onDragEnter={this.dragEnterText}
-          onDragOver={this.dragOverText}
-          onDragLeave={this.dragLeaveText}
-           onChange={(e)=>this.handleMultipleChange(e,i)}/>
+        const key = `a${i}`;
+        let item = (
+          <InputGroup key={key}>
+            <Input
+              className={honorificPrefixActive}
+              type="text"
+              name="updateHonorificPrefix"
+              id="honorificPrefix"
+              placeholder="Person honorific prefix..."
+              data-target="updateHonorificPrefix"
+              data-index={i}
+              value={updateHonorificPrefix[i]}
+              onDrop={(e) => this.dragStopText(e, i)}
+              onDragEnter={this.dragEnterText}
+              onDragOver={this.dragOverText}
+              onDragLeave={this.dragLeaveText}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
             <InputGroupAddon addonType="append">
-              <Button type="button" color="info" outline onClick={()=>this.removeHP(i, "updateHonorificPrefix")}><b><i className="fa fa-minus" /></b></Button>
+              <Button
+                type="button"
+                color="info"
+                outline
+                onClick={() => this.removeHP(i, 'updateHonorificPrefix')}
+              >
+                <b>
+                  <i className="fa fa-minus" />
+                </b>
+              </Button>
             </InputGroupAddon>
-        </InputGroup>
-        if (i===0) {
-          item = <Input className={honorificPrefixActive} data-index={i} style={{marginBottom: "5px"}} key={i} type="text" name="updateHonorificPrefix" placeholder="Person honorific prefix..." value={this.state.updateHonorificPrefix[i]}
-          data-target={"updateHonorificPrefix"} onDrop={(e)=>this.dragStopText(e,i)}
-          onDragEnter={this.dragEnterText}
-          onDragOver={this.dragOverText}
-          onDragLeave={this.dragLeaveText} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+          </InputGroup>
+        );
+        if (i === 0) {
+          item = (
+            <Input
+              className={honorificPrefixActive}
+              data-index={i}
+              style={{ marginBottom: '5px' }}
+              key={key}
+              type="text"
+              name="updateHonorificPrefix"
+              placeholder="Person honorific prefix..."
+              value={updateHonorificPrefix[i]}
+              data-target="updateHonorificPrefix"
+              onDrop={(e) => this.dragStopText(e, i)}
+              onDragEnter={this.dragEnterText}
+              onDragOver={this.dragOverText}
+              onDragLeave={this.dragLeaveText}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
+          );
         }
         return item;
       });
 
-      let updateModal = <Modal isOpen={this.state.updateModal} toggle={this.toggleUpdateModal} className={this.props.className+" update-modal"}>
-        <form onSubmit={this.updatePerson}>
-          <ModalHeader toggle={this.toggleUpdateModal}>Update person</ModalHeader>
-          <ModalBody>
-            <div className="row">
+      const updateModal = (
+        <Modal
+          isOpen={updateModalOpen}
+          toggle={this.toggleUpdateModal}
+          className={`${className} update-modal`}
+        >
+          <form onSubmit={this.updatePerson}>
+            <ModalHeader toggle={this.toggleUpdateModal}>
+              Update person
+            </ModalHeader>
+            <ModalBody>
+              <div className="row">
+                <div className="col-xs-12 col-sm-4 col-md-4">
+                  {selectedThumbnail}
+                </div>
+                <div className="col-xs-12 col-sm-8 col-md-8">
+                  <div className="form-group">
+                    <Label>Honorific Prefix</Label>
+                    {updateHonorificPrefixInputs}
 
-              <div className="col-xs-12 col-sm-4 col-md-4">
-                {selectedThumbnail}
-              </div>
-              <div className="col-xs-12 col-sm-8 col-md-8">
-                <div className="form-group">
-                  <label>Honorific Prefix</label>
-                  {updateHonorificPrefixInputs}
-
-                  <div className="text-right">
-                    <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP("updateHonorificPrefix")}>Add new <i className="fa fa-plus" /></Button>
+                    <div className="text-right">
+                      <Button
+                        type="button"
+                        color="info"
+                        outline
+                        size="xs"
+                        onClick={() => this.addHP('updateHonorificPrefix')}
+                      >
+                        Add new <i className="fa fa-plus" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <Label>First Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={updateFirstName}
+                      type="text"
+                      className="form-control"
+                      name="updateFirstName"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Middle Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={updateMiddleName}
+                      type="text"
+                      className="form-control"
+                      name="updateMiddleName"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Last Name</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={updateLastName}
+                      type="text"
+                      className="form-control"
+                      name="updateLastName"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <Label>Diocese | Order</Label>
+                    <input
+                      onChange={this.handleChange}
+                      value={updateDiocese}
+                      type="text"
+                      className="form-control"
+                      name="updateDiocese"
+                    />
+                    <select
+                      style={{ marginTop: '5px' }}
+                      className="form-control"
+                      onChange={this.handleChange}
+                      value={updateDioceseType}
+                      name="updateDioceseType"
+                    >
+                      <option value="diocese">Diocese</option>
+                      <option value="order">Order</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <Label>Type</Label>
+                    <select
+                      name="updateType"
+                      className="form-control"
+                      onChange={this.handleChange}
+                      value={updateType}
+                    >
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="guestOfHonor">Guest of honor</option>
+                    </select>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.updateFirstName}
-                    type="text" className="form-control" name="updateFirstName" />
-                </div>
-                <div className="form-group">
-                  <label>Middle Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.updateMiddleName}
-                    type="text" className="form-control" name="updateMiddleName" />
-                </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.updateLastName}
-                    type="text" className="form-control" name="updateLastName" />
-                </div>
-                <div className="form-group">
-                  <label>Diocese | Order</label>
-                  <input
-                    onChange={this.handleChange}
-                    value={this.state.updateDiocese}
-                    type="text" className="form-control" name="updateDiocese" />
-                  <select
-                    style={{marginTop: "5px"}}
-                    className="form-control"
-                    onChange={this.handleChange}
-                    value={this.state.updateDioceseType}
-                    name="updateDioceseType">
-                    <option value="diocese">Diocese</option>
-                    <option value="order">Order</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Type</label>
-                  <select name="updateType" className="form-control"
-                    onChange={this.handleChange}
-                    value={this.state.updateType}>
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="guestOfHonor">Guest of honor</option>
-                  </select>
-                </div>
               </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="primary" outline type="submit" size="sm">
+                Update person
+              </Button>
+              <Button
+                type="button"
+                color="secondary"
+                onClick={this.closeSelectedModal}
+                size="sm"
+              >
+                Cancel
+              </Button>
+            </ModalFooter>
+          </form>
+        </Modal>
+      );
 
-            </div>
+      const reImportModal = (
+        <Modal
+          isOpen={reImportModalOpen}
+          toggle={this.toggleReImportModal}
+          className={`${className} update-modal`}
+        >
+          <ModalHeader toggle={this.toggleReImportModal}>
+            Re-import Classpiece confirm
+          </ModalHeader>
+          <ModalBody>
+            <p>
+              If you continue the selected items will be re-imported into the
+              repository, resulting in duplicates. Continue?
+            </p>
           </ModalBody>
           <ModalFooter>
-            <Button color="primary" outline type="submit" size="sm">Update person</Button>
-            <Button type="button" color="secondary" onClick={this.closeSelectedModal} size="sm">Cancel</Button>
+            <Button color="danger" outline onClick={this.importSelected}>
+              Re-import
+            </Button>
+            <Button color="secondary" onClick={this.toggleReImportModal}>
+              Cancel
+            </Button>
           </ModalFooter>
-        </form>
-      </Modal>;
+        </Modal>
+      );
 
-      let reImportModal = <Modal isOpen={this.state.reImportModalOpen} toggle={this.toggleReImportModal} className={this.props.className+" update-modal"}>
-         <ModalHeader toggle={this.toggleReImportModal}>Re-import Classpiece confirm</ModalHeader>
-         <ModalBody>
-            <p>If you continue the selected items will be re-imported into the repository, resulting in duplicates. Continue?</p>
-         </ModalBody>
-         <ModalFooter>
-          <Button color="danger" outline onClick={this.importSelected}>Re-import</Button>
-          <Button color="secondary" onClick={this.toggleReImportModal}>Cancel</Button>
-         </ModalFooter>
-      </Modal>;
-
-      content = <div>
+      content = (
+        <div>
           <div className="row">
             <div className="col-xs-12 col-sm-8">
-              <p>The following objects have been identified and are ready to be imported.</p>
+              <p>
+                The following objects have been identified and are ready to be
+                imported.
+              </p>
             </div>
             <div className="col-xs-12 col-sm-4">
-              <div className="text-right">
-              </div>
+              <div className="text-right" />
             </div>
           </div>
           <div className="row">
             <div className="col-12">
               <table className="import-to-db-table">
-                <tbody>
-                  {tableRows}
-                </tbody>
+                <tbody>{tableRows}</tbody>
               </table>
-              <div className="text-right" style={{padding: '15px 0'}}>
-                <Button color="primary" outline onClick={importFunction}>{this.state.importSelectedBtn}</Button>
+              <div className="text-right" style={{ padding: '15px 0' }}>
+                <Button color="primary" outline onClick={importFunction}>
+                  {importSelectedBtn}
+                </Button>
               </div>
             </div>
           </div>
@@ -1490,18 +2051,30 @@ export default class ImportClassPieceToDB extends Component {
           {duplicateModal}
           {updateModal}
           {reImportModal}
-        </div>;
+        </div>
+      );
     }
 
-    let heading = "Import data to repository";
-    if (this.state.dbClasspiece!==null && this.state.dbClasspiece!==0 && this.state.dbClasspiece!=="0") {
-      heading = "Re-import data to repository";
+    let heading = 'Import data to repository';
+    if (dbClasspiece !== null && dbClasspiece !== 0 && dbClasspiece !== '0') {
+      heading = 'Re-import data to repository';
     }
-    let fileName = this.props.match.params.fileName;
-    let breadcrumbsItems = [
-      {label: "Parse Class Pieces", icon: "pe-7s-tools", active: false, path: "/parse-class-pieces"},
-      {label: "Class Piece \""+fileName+"\"", icon: "", active: false, path: "/parse-class-piece/"+fileName},
-      {label: heading, icon: "", active: true, path: ""}
+    const { match } = this.props;
+    const { fileName } = match.params;
+    const breadcrumbsItems = [
+      {
+        label: 'Parse Class Pieces',
+        icon: 'pe-7s-tools',
+        active: false,
+        path: '/parse-class-pieces',
+      },
+      {
+        label: `Class Piece "${fileName}"`,
+        icon: '',
+        active: false,
+        path: `/parse-class-piece/${fileName}`,
+      },
+      { label: heading, icon: '', active: true, path: '' },
     ];
     return (
       <div>
@@ -1513,12 +2086,16 @@ export default class ImportClassPieceToDB extends Component {
           </div>
         </div>
         <div className="row">
-          <div className="col-12">
-            {content}
-          </div>
+          <div className="col-12">{content}</div>
         </div>
-
       </div>
     );
   }
 }
+
+ImportClassPieceToDB.defaultProps = {
+  match: null,
+};
+ImportClassPieceToDB.propTypes = {
+  match: PropTypes.object,
+};

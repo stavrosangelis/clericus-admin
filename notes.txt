@@ -1,0 +1,5 @@
+props spreading
+src/article-image-browser
+customButton
+
+image-viewer needs to be rewritten, image is now embedded in a div

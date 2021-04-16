@@ -1,48 +1,55 @@
 import React, { Component } from 'react';
 import {
-  Card, CardTitle, CardBody,
-  Button, ButtonGroup,
-  Form, FormGroup, Label, Input, InputGroup, InputGroupAddon,
-  Collapse} from 'reactstrap';
-import { getThumbnailURL, getPersonLabel} from '../helpers/helpers';
-import PersonAppelations from './person-alternate-appelations.js';
+  Card,
+  CardTitle,
+  CardBody,
+  Button,
+  ButtonGroup,
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  InputGroup,
+  InputGroupAddon,
+  Collapse,
+} from 'reactstrap';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+import { getThumbnailURL, getPersonLabel } from '../helpers';
+import PersonAppelations from './person-alternate-appelations';
 import RelatedEntitiesBlock from './related-entities-block';
 
-import {connect} from "react-redux";
-
-const mapStateToProps = (state) => {
-  return {
-    personTypes: state.personTypes
-   };
-};
-
+const mapStateToProps = (state) => ({
+  personTypes: state.personTypes,
+});
 
 class ViewPerson extends Component {
   constructor(props) {
     super(props);
 
-    let person = this.props.person;
-    let status = person?.status || 'private';
-    let honorificPrefix = person?.honorificPrefix || [""];
-    let firstName = person?.firstName || '';
-    let middleName = person?.middleName || '';
-    let lastName = person?.lastName || '';
-    let alternateAppelations = person?.alternateAppelations || [];
-    let description = person?.description || '';
-    let personType = person?.personType || '';
+    const { person } = this.props;
+    const status = person?.status || 'private';
+    const honorificPrefix = person?.honorificPrefix || [''];
+    const firstName = person?.firstName || '';
+    const middleName = person?.middleName || '';
+    const lastName = person?.lastName || '';
+    const alternateAppelations = person?.alternateAppelations || [];
+    const description = person?.description || '';
+    const personType = person?.personType || '';
 
     this.state = {
       detailsOpen: true,
       metadataOpen: false,
-      honorificPrefix: honorificPrefix,
-      firstName: firstName,
-      middleName: middleName,
-      lastName: lastName,
-      alternateAppelations: alternateAppelations,
-      description: description,
-      personType: personType,
-      status: status,
-    }
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      alternateAppelations,
+      description,
+      personType,
+      status,
+    };
     this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -56,290 +63,476 @@ class ViewPerson extends Component {
     this.addHP = this.addHP.bind(this);
   }
 
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  handleMultipleChange(e, i) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    const { [name]: elem } = this.state;
+    elem[i] = value;
+    this.setState({
+      [name]: elem,
+    });
+  }
+
   updateStatus(value) {
-    this.setState({status:value});
+    this.setState({ status: value });
   }
 
   formSubmit(e) {
     e.preventDefault();
-    let newData = {
-      honorificPrefix: this.state.honorificPrefix,
-      firstName: this.state.firstName,
-      middleName: this.state.middleName,
-      lastName: this.state.lastName,
-      alternateAppelations: this.state.alternateAppelations,
-      description: this.state.description,
-      personType: this.state.personType,
-      status: this.state.status,
-    }
-    this.props.update(newData);
+    const {
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      alternateAppelations,
+      description,
+      personType,
+      status,
+    } = this.state;
+    const { update } = this.props;
+    const newData = {
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      alternateAppelations,
+      description,
+      personType,
+      status,
+    };
+    update(newData);
   }
 
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-
-    this.setState({
-      [name]: value
-    });
-  }
-
-  handleMultipleChange(e, i){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let elem = this.state[name];
-    elem[i] = value;
-    this.setState({
-      [name]: elem
-    });
-  }
-
-  parseMetadata(metadata) {
-    if (metadata===null) {
+  parseMetadata(metadata = null) {
+    if (metadata === null) {
       return false;
     }
-    let metadataOutput = [];
+    const metadataOutput = [];
     let i = 0;
-    for (let key in metadata) {
-      let metaItems = metadata[key];
+    Object.keys(metadata).forEach((key) => {
+      const metaItems = metadata[key];
       let metadataOutputItems = [];
-      if (metaItems!==null && typeof metaItems.length==="undefined") {
+      if (metaItems !== null && typeof metaItems.length === 'undefined') {
         metadataOutputItems = this.parseMetadataItems(metaItems);
+      } else if (metaItems !== null) {
+        const newItems = this.parseMetadata(metaItems[0]);
+        metadataOutputItems.push(newItems);
       }
-      else {
-        if (metaItems!==null) {
-          let newItems = this.parseMetadata(metaItems[0]);
-          metadataOutputItems.push(newItems)
-        }
-      }
-      metadataOutputItems = <div className="list-items">{metadataOutputItems}</div>;
-      let metaRow = <div key={i}>
-        <div className="metadata-title">{key}</div>
-        {metadataOutputItems}
+      metadataOutputItems = (
+        <div className="list-items">{metadataOutputItems}</div>
+      );
+      const metaRow = (
+        <div key={i}>
+          <div className="metadata-title">{key}</div>
+          {metadataOutputItems}
         </div>
+      );
       metadataOutput.push(metaRow);
-      i++;
-    }
+      i += 1;
+    });
     return metadataOutput;
   }
 
   parseMetadataItems(metaItems) {
-    let i=0;
-    let items = [];
-    for (let metaKey in metaItems) {
-      let value = metaItems[metaKey];
+    let i = 0;
+    const items = [];
+    Object.keys(metaItems).forEach((metaKey) => {
+      const value = metaItems[metaKey];
       let newRow = [];
-      if (typeof value!=="object") {
-        newRow = <div key={i}><label>{metaKey}</label> : {metaItems[metaKey]}</div>
-      }
-      else {
-        let newRows = <div className="list-items">{this.parseMetadataItems(value)}</div>;
-        newRow = <div key={i}><div className="metadata-title">{metaKey}</div>{newRows}</div>
+      if (typeof value !== 'object') {
+        newRow = (
+          <div key={i}>
+            <Label>{metaKey}</Label> : {metaItems[metaKey]}
+          </div>
+        );
+      } else {
+        const newRows = (
+          <div className="list-items">{this.parseMetadataItems(value)}</div>
+        );
+        newRow = (
+          <div key={i}>
+            <div className="metadata-title">{metaKey}</div>
+            {newRows}
+          </div>
+        );
       }
       items.push(newRow);
-      i++
-    }
+      i += 1;
+    });
     return items;
   }
 
   toggleCollapse(name) {
-    let value = true;
-    if (this.state[name]==="undefined" || this.state[name]) {
-      value = false
-    }
+    const { [name]: value } = this.state;
     this.setState({
-      [name]: value
+      [name]: !value,
     });
   }
 
   updateAlternateAppelation(index, data) {
-    let person = this.props.person;
-    let alternateAppelations = person.alternateAppelations;
-    if (index==="new") {
+    const { person, update } = this.props;
+    const { alternateAppelations } = person;
+    const {
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      description,
+      personType,
+      status,
+    } = this.state;
+    if (index === 'new') {
       alternateAppelations.push(data);
-    }
-    else if (index!==null) {
+    } else if (index !== null) {
       alternateAppelations[index] = data;
     }
-    this.setState({
-      alternateAppelations: alternateAppelations
-    },()=> {
-      let newData = {
-        honorificPrefix: this.state.honorificPrefix,
-        firstName: this.state.firstName,
-        middleName: this.state.middleName,
-        lastName: this.state.lastName,
-        alternateAppelations: this.state.alternateAppelations,
-        description: this.state.description,
-        personType: this.state.personType,
-        status: this.state.status,
+    this.setState(
+      {
+        alternateAppelations,
+      },
+      () => {
+        const newData = {
+          honorificPrefix,
+          firstName,
+          middleName,
+          lastName,
+          alternateAppelations,
+          description,
+          personType,
+          status,
+        };
+        update(newData);
       }
-      this.props.update(newData);
-    });
+    );
   }
 
   removeAlternateAppelation(index) {
-    let person = this.props.person;
-    let alternateAppelations = person.alternateAppelations;
-    if (index!==null) {
-      alternateAppelations.splice(index,1);
+    const { person, update } = this.props;
+    const { alternateAppelations } = person;
+    const {
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      description,
+      personType,
+      status,
+    } = this.state;
+    if (index !== null) {
+      alternateAppelations.splice(index, 1);
     }
-    this.setState({
-      alternateAppelations: alternateAppelations
-    },()=> {
-      let newData = {
-        honorificPrefix: this.state.honorificPrefix,
-        firstName: this.state.firstName,
-        middleName: this.state.middleName,
-        lastName: this.state.lastName,
-        alternateAppelations: this.state.alternateAppelations,
-        description: this.state.description,
-        personType: this.state.personType,
-        status: this.state.status,
+    this.setState(
+      {
+        alternateAppelations,
+      },
+      () => {
+        const newData = {
+          honorificPrefix,
+          firstName,
+          middleName,
+          lastName,
+          alternateAppelations,
+          description,
+          personType,
+          status,
+        };
+        update(newData);
       }
-      this.props.update(newData);
-    });
+    );
   }
 
   removeHP(i) {
-    let hps = this.state.honorificPrefix;
-    hps.splice(i,1);
+    const { honorificPrefix } = this.state;
+    const hps = honorificPrefix;
+    hps.splice(i, 1);
     this.setState({
-      honorificPrefix: hps
+      honorificPrefix: hps,
     });
   }
 
   addHP() {
-    let hps = this.state.honorificPrefix;
-    hps.push("");
+    const { honorificPrefix } = this.state;
+    const hps = honorificPrefix;
+    hps.push('');
     this.setState({
-      honorificPrefix: hps
+      honorificPrefix: hps,
     });
   }
 
   render() {
-    let detailsOpenActive = " active";
-    if (!this.state.detailsOpen) {
-      detailsOpenActive = "";
-    }
-    let metadataOpenActive = " active";
-    if (!this.state.metadataOpen) {
-      metadataOpenActive = "";
-    }
-    let statusPublic = "secondary";
-    let statusPrivate = "secondary";
+    const {
+      person,
+      delete: deleteFn,
+      updateBtn: propsUpdateBtn,
+      errorVisible,
+      errorText,
+      personTypes,
+      reload,
+    } = this.props;
+    const {
+      detailsOpen,
+      metadataOpen,
+      status,
+      honorificPrefix,
+      firstName,
+      middleName,
+      lastName,
+      description,
+      personType,
+    } = this.state;
+    const detailsOpenActive = detailsOpen ? ' active' : '';
+    const metadataOpenActive = metadataOpen ? ' active' : '';
+    let statusPublic = 'secondary';
+    const statusPrivate = 'secondary';
     let publicOutline = true;
     let privateOutline = false;
-    if (this.state.status==="public") {
-      statusPublic = "success";
+    if (status === 'public') {
+      statusPublic = 'success';
       publicOutline = false;
       privateOutline = true;
     }
 
     let metadataItems = this.parseMetadata();
 
-    let metadataCard = " hidden";
-    if (metadataItems.length>0) {
-      metadataItems = "";
+    const metadataCard = ' hidden';
+    if (metadataItems.length > 0) {
+      metadataItems = '';
     }
     let thumbnailImage = [];
-    let thumbnailURL = getThumbnailURL(this.props.person);
-    if (thumbnailURL!==null) {
-      thumbnailImage = <img src={thumbnailURL} className="img-fluid img-thumbnail" alt={getPersonLabel(this.props.person)} />
+    const thumbnailURL = getThumbnailURL(person);
+    if (thumbnailURL !== null) {
+      thumbnailImage = (
+        <img
+          src={thumbnailURL}
+          className="img-fluid img-thumbnail"
+          alt={getPersonLabel(person)}
+        />
+      );
     }
-    let metadataOutput = [];
+    const metadataOutput = [];
 
-    let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
-    let updateBtn = <Button color="primary" outline type="submit" size="sm" onClick={()=>this.formSubmit}>{this.props.updateBtn}</Button>
+    const deleteBtn = (
+      <Button
+        color="danger"
+        onClick={deleteFn}
+        outline
+        type="button"
+        size="sm"
+        className="pull-left"
+      >
+        <i className="fa fa-trash-o" /> Delete
+      </Button>
+    );
+    const updateBtn = (
+      <Button
+        color="primary"
+        outline
+        type="submit"
+        size="sm"
+        onClick={(e) => this.formSubmit(e)}
+      >
+        {propsUpdateBtn}
+      </Button>
+    );
 
-    let errorContainerClass = " hidden";
-    if (this.props.errorVisible) {
-      errorContainerClass = "";
+    let errorContainerClass = ' hidden';
+    if (errorVisible) {
+      errorContainerClass = '';
     }
-    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
+    const errorContainer = (
+      <div className={`error-container${errorContainerClass}`}>{errorText}</div>
+    );
 
     let personAppelationsData = [];
-    if (this.props.person!==null) {
-      personAppelationsData = this.props.person.alternateAppelations;
+    if (person !== null) {
+      personAppelationsData = person.alternateAppelations;
     }
     let honorificPrefixInputs = [];
-    if (typeof this.state.honorificPrefix!=="string") {
-      honorificPrefixInputs = this.state.honorificPrefix.map((h,i)=>{
-        let item = <InputGroup key={i}>
-          <Input type="text" name="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>
+    if (typeof honorificPrefix !== 'string') {
+      honorificPrefixInputs = honorificPrefix.map((h, i) => {
+        const key = `a${i}`;
+        let item = (
+          <InputGroup key={key}>
+            <Input
+              type="text"
+              name="honorificPrefix"
+              placeholder="Person honorific prefix..."
+              value={honorificPrefix[i]}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
             <InputGroupAddon addonType="append">
-              <Button type="button" color="info" outline onClick={()=>this.removeHP(i)}><b><i className="fa fa-minus" /></b></Button>
+              <Button
+                type="button"
+                color="info"
+                outline
+                onClick={() => this.removeHP(i)}
+              >
+                <b>
+                  <i className="fa fa-minus" />
+                </b>
+              </Button>
             </InputGroupAddon>
-        </InputGroup>
-        if (i===0) {
-          item = <Input style={{marginBottom: "5px"}} key={i} type="text" name="honorificPrefix" placeholder="Person honorific prefix..." value={this.state.honorificPrefix[i]} onChange={(e)=>this.handleMultipleChange(e,i)}/>;
+          </InputGroup>
+        );
+        if (i === 0) {
+          item = (
+            <Input
+              style={{ marginBottom: '5px' }}
+              key={key}
+              type="text"
+              name="honorificPrefix"
+              placeholder="Person honorific prefix..."
+              value={honorificPrefix[i]}
+              onChange={(e) => this.handleMultipleChange(e, i)}
+            />
+          );
         }
         return item;
       });
     }
 
     let alternateAppelationsBlock = [];
-    if (this.props.person!==null) {
-      alternateAppelationsBlock = <div className="alternate-appelations">
-        <div className="label">Alternate appelations</div>
-        <PersonAppelations
-          data={personAppelationsData}
-          update={this.updateAlternateAppelation}
-          remove={this.removeAlternateAppelation}
-        />
-      </div>
+    if (person !== null) {
+      alternateAppelationsBlock = (
+        <div className="alternate-appelations">
+          <div className="label">Alternate appelations</div>
+          <PersonAppelations
+            data={personAppelationsData}
+            update={this.updateAlternateAppelation}
+            remove={this.removeAlternateAppelation}
+          />
+        </div>
+      );
     }
 
-    let selectPersonTypes = this.props.personTypes?.map((p,i)=><option key={i} value={p.label}>{p.label}</option>);
+    const selectPersonTypes = personTypes?.map((p, i) => {
+      const key = `a${i}`;
+      return (
+        <option key={key} value={p.label}>
+          {p.label}
+        </option>
+      );
+    });
 
     return (
       <div className="row">
-        <div className="col-xs-12 col-sm-6">
-          {thumbnailImage}
-        </div>
+        <div className="col-xs-12 col-sm-6">{thumbnailImage}</div>
         <div className="col-xs-12 col-sm-6">
           <div className="resource-details">
             <Card>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'detailsOpen')}>Details <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={() => this.toggleCollapse('detailsOpen')}>
+                  Details{' '}
+                  <Button
+                    type="button"
+                    className="pull-right"
+                    color="secondary"
+                    outline
+                    size="xs"
+                  >
+                    <i
+                      className={`collapse-toggle fa fa-angle-left${detailsOpenActive}`}
+                    />
+                  </Button>
+                </CardTitle>
                 {errorContainer}
-                <Collapse isOpen={this.state.detailsOpen}>
-                  <Form onSubmit={this.formSubmit}>
+                <Collapse isOpen={detailsOpen}>
+                  <Form onSubmit={(e) => this.formSubmit(e)}>
                     <div className="text-right">
                       <ButtonGroup>
-                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
-                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                        <Button
+                          size="sm"
+                          outline={publicOutline}
+                          color={statusPublic}
+                          onClick={() => this.updateStatus('public')}
+                        >
+                          Public
+                        </Button>
+                        <Button
+                          size="sm"
+                          outline={privateOutline}
+                          color={statusPrivate}
+                          onClick={() => this.updateStatus('private')}
+                        >
+                          Private
+                        </Button>
                       </ButtonGroup>
                     </div>
                     <FormGroup>
                       <Label>Honorific Prefix</Label>
                       {honorificPrefixInputs}
                       <div className="text-right">
-                        <Button type="button" color="info" outline size="xs" onClick={()=>this.addHP()}>Add new <i className="fa fa-plus" /></Button>
+                        <Button
+                          type="button"
+                          color="info"
+                          outline
+                          size="xs"
+                          onClick={() => this.addHP()}
+                        >
+                          Add new <i className="fa fa-plus" />
+                        </Button>
                       </div>
                     </FormGroup>
                     <FormGroup>
                       <Label>First name</Label>
-                      <Input type="text" name="firstName" placeholder="Person first name prefix..." value={this.state.firstName} onChange={this.handleChange}/>
+                      <Input
+                        type="text"
+                        name="firstName"
+                        placeholder="Person first name prefix..."
+                        value={firstName}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label>Middle name</Label>
-                      <Input type="text" name="middleName" placeholder="Person middle name prefix..." value={this.state.middleName} onChange={this.handleChange}/>
+                      <Input
+                        type="text"
+                        name="middleName"
+                        placeholder="Person middle name prefix..."
+                        value={middleName}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label>Last name</Label>
-                      <Input type="text" name="lastName" placeholder="Person last name prefix..." value={this.state.lastName} onChange={this.handleChange}/>
+                      <Input
+                        type="text"
+                        name="lastName"
+                        placeholder="Person last name prefix..."
+                        value={lastName}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     {alternateAppelationsBlock}
                     <FormGroup>
                       <Label>Description</Label>
-                      <Input type="textarea" name="description" placeholder="Person description..." value={this.state.description} onChange={this.handleChange}/>
+                      <Input
+                        type="textarea"
+                        name="description"
+                        placeholder="Person description..."
+                        value={description}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label>Type</Label>
-                      <Input type="select" name="personType" value={this.state.personType} onChange={this.handleChange}>
+                      <Input
+                        type="select"
+                        name="personType"
+                        value={personType}
+                        onChange={this.handleChange}
+                      >
                         {selectPersonTypes}
                       </Input>
                     </FormGroup>
@@ -354,24 +547,54 @@ class ViewPerson extends Component {
 
             <Card className={metadataCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'metadataOpen')}>Metadata<Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+metadataOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.metadataOpen}>
-                  {metadataOutput}
-                </Collapse>
+                <CardTitle onClick={() => this.toggleCollapse('metadataOpen')}>
+                  Metadata
+                  <Button
+                    type="button"
+                    className="pull-right"
+                    color="secondary"
+                    outline
+                    size="xs"
+                  >
+                    <i
+                      className={`collapse-toggle fa fa-angle-left${metadataOpenActive}`}
+                    />
+                  </Button>
+                </CardTitle>
+                <Collapse isOpen={metadataOpen}>{metadataOutput}</Collapse>
               </CardBody>
             </Card>
 
             <RelatedEntitiesBlock
-              item={this.props.person}
+              item={person}
               itemType="Person"
-              reload={this.props.reload}
-              />
-
+              reload={reload}
+            />
           </div>
         </div>
       </div>
-    )
+    );
   }
 }
 
-export default ViewPerson = connect(mapStateToProps, [])(ViewPerson);;
+ViewPerson.defaultProps = {
+  person: null,
+  update: () => {},
+  delete: () => {},
+  reload: () => {},
+  updateBtn: null,
+  personTypes: [],
+  errorVisible: false,
+  errorText: [],
+};
+ViewPerson.propTypes = {
+  person: PropTypes.object,
+  update: PropTypes.func,
+  delete: PropTypes.func,
+  reload: PropTypes.func,
+  updateBtn: PropTypes.object,
+  personTypes: PropTypes.array,
+  errorVisible: PropTypes.bool,
+  errorText: PropTypes.array,
+};
+export default compose(connect(mapStateToProps, []))(ViewPerson);

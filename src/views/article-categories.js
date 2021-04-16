@@ -1,202 +1,236 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
-  Card, CardBody,
-  Button, ButtonGroup,
-  Form, FormGroup, Label, Input,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Spinner
-} from "reactstrap";
-
+  Card,
+  CardBody,
+  Button,
+  ButtonGroup,
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Spinner,
+} from 'reactstrap';
 import ArticleCategoriesItems from '../components/article-categories-block';
-import {Breadcrumbs} from '../components/breadcrumbs';
+import Breadcrumbs from '../components/breadcrumbs';
+
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const ArticleCategories = props => {
+const ArticleCategories = () => {
+  // state
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [item, setItem] = useState(null);
   const [updating, setUpdating] = useState(false);
-  const [updateBtn, setUpdateBtn] = useState(<span><i className="fa fa-save" /> Update</span>);
-  const [status, setStatus] = useState("private");
-  const [error, setError] = useState({visible:false, text: []});
-  let defaultForm = {
+  const [updateBtn, setUpdateBtn] = useState(
+    <span>
+      <i className="fa fa-save" /> Update
+    </span>
+  );
+  const [status, setStatus] = useState('private');
+  const [error, setError] = useState({ visible: false, text: [] });
+  const defaultForm = {
     _id: null,
-    label: "",
+    label: '',
     parentId: 0,
-    status: "private"
-  }
+    status: 'private',
+  };
   const [itemForm, setItemForm] = useState(defaultForm);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  const formSubmit = async (e)=> {
-    e.preventDefault();
-    if (updating) {
-      return false;
-    }
-    setUpdating(true);
-    setUpdateBtn(<span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>);
-    let postData = Object.assign({},itemForm);
-    let isValid = itemValidate(postData);
-    if (!isValid) {
-      return false;
-    }
-    let updateData = await axios({
-        method: 'put',
-        url: APIPath+'article-category',
-        crossDomain: true,
-        data: postData
-      })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-    });
-    if (updateData.status) {
-      setUpdating(false);
-      setUpdateBtn(<span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>);
-      setLoading(true);
-      loadItem(updateData.data._id);
-
-      setTimeout(function() {
-        setUpdateBtn(<span><i className="fa fa-save" /> Update</span>);
-      },2000);
-    }
-  }
-
   const itemValidate = (postData) => {
-    if (postData.label==="") {
+    if (postData.label === '') {
       setUpdating(false);
-      setError({visible: true, text: <div>Please enter the <b>Label</b> to continue!</div>});
-      setUpdateBtn(<span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>);
+      setError({
+        visible: true,
+        text: (
+          <div>
+            Please enter the <b>Label</b> to continue!
+          </div>
+        ),
+      });
+      setUpdateBtn(
+        <span>
+          <i className="fa fa-save" /> Update error{' '}
+          <i className="fa fa-times" />
+        </span>
+      );
       return false;
     }
-    else {
-      setError({visible:false, text: []});
-    }
+
+    setError({ visible: false, text: [] });
+
     return true;
-  }
+  };
 
-  const deleteItem = async() => {
-    let _id = itemForm._id;
-    let data = {_id: _id};
-    let responseData = await axios({
-      method: 'delete',
-      url: APIPath+'article-category',
-      crossDomain: true,
-      data: data
-    })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-    });
-    if (responseData.status) {
-      setDeleteModalVisible(false);
-      setItemModalVisible(false);
-      setLoading(true);
-    }
-    else {
-      setDeleteModalVisible(false);
-      let errorMsg = responseData.msg;
-      let errorText = errorMsg.map((e,i)=><div key={i}>{e}</div>);
-      setError({visible:true, text: errorText});
-    }
-  }
-
-  const handleChange = (e) => {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let form = Object.assign({},itemForm);
-    form[name] = value;
-    setItemForm(form);
-  }
-
-  const updateStatus = (value) => {
-    let form = Object.assign({},itemForm);
-    form.status = value;
-    setStatus(value);
-    setItemForm(form);
-  }
-
-  const loadItem = async(_id) => {
-    setError({visible:false, text: []});
-    if (_id===null) {
-      let newForm = {
+  const loadItem = async (_id) => {
+    setError({ visible: false, text: [] });
+    if (_id === null) {
+      const newForm = {
         _id: null,
-        label: "",
+        label: '',
         parentId: 0,
-        status: "private"
-      }
+        status: 'private',
+      };
       setItemForm(newForm);
-      setStatus("private");
+      setStatus('private');
       setItem(null);
-    }
-    else {
-      let url = APIPath+'article-category';
-      let responseData = await axios({
+    } else {
+      const url = `${APIPath}article-category`;
+      const responseData = await axios({
         method: 'get',
-        url: url,
+        url,
         crossDomain: true,
-        params: {_id: _id}
+        params: { _id },
       })
-      .then(function (response) {
-        return response.data.data;
-      })
-      .catch(function (error) {
-      });
-      let newForm = {
+        .then((response) => response.data.data)
+        .catch((err) => {
+          console.log(err);
+        });
+      const newForm = {
         _id: responseData._id,
         label: responseData.label,
         parentId: responseData.parentId,
-        status: responseData.status
-      }
+        status: responseData.status,
+      };
       setItemForm(newForm);
       setItem(responseData);
       setStatus(responseData.status);
     }
     setItemModalVisible(true);
-  }
+  };
+
+  const formSubmit = async (e) => {
+    e.preventDefault();
+    if (updating) {
+      return false;
+    }
+    setUpdating(true);
+    setUpdateBtn(
+      <span>
+        <i className="fa fa-save" /> <i>Saving...</i>{' '}
+        <Spinner color="info" size="sm" />
+      </span>
+    );
+    const postData = { ...itemForm };
+    const isValid = itemValidate(postData);
+    if (!isValid) {
+      return false;
+    }
+    const updateData = await axios({
+      method: 'put',
+      url: `${APIPath}article-category`,
+      crossDomain: true,
+      data: postData,
+    })
+      .then((response) => response.data)
+      .catch((err) => {
+        console.log(err);
+      });
+    if (updateData.status) {
+      setUpdating(false);
+      setUpdateBtn(
+        <span>
+          <i className="fa fa-save" /> Update success{' '}
+          <i className="fa fa-check" />
+        </span>
+      );
+      setLoading(true);
+      loadItem(updateData.data._id);
+
+      setTimeout(() => {
+        setUpdateBtn(
+          <span>
+            <i className="fa fa-save" /> Update
+          </span>
+        );
+      }, 2000);
+    }
+    return false;
+  };
+
+  const deleteItem = async () => {
+    const { _id } = itemForm;
+    const data = { _id };
+    const responseData = await axios({
+      method: 'delete',
+      url: `${APIPath}article-category`,
+      crossDomain: true,
+      data,
+    })
+      .then((response) => response.data)
+      .catch((err) => {
+        console.log(err);
+      });
+    if (responseData.status) {
+      setDeleteModalVisible(false);
+      setItemModalVisible(false);
+      setLoading(true);
+    } else {
+      setDeleteModalVisible(false);
+      const errorMsg = responseData.msg;
+      const errorText = errorMsg.map((e, i) => {
+        const key = `a${i}`;
+        return <div key={key}>{e}</div>;
+      });
+      setError({ visible: true, text: errorText });
+    }
+  };
+
+  const handleChange = (e) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    const form = { ...itemForm };
+    form[name] = value;
+    setItemForm(form);
+  };
+
+  const updateStatus = (value) => {
+    const form = { ...itemForm };
+    form.status = value;
+    setStatus(value);
+    setItemForm(form);
+  };
 
   // load categories
-  const loadItems = useCallback(async()=> {
-    const loadData = async()=> {
-      let url = APIPath+'article-categories';
+  const newItem = useCallback((it) => {
+    const itCopy = it;
+    itCopy.open = true;
+    if (itCopy.children.length > 0) {
+      const children = itCopy.children.map((child) => newItem(child));
+      itCopy.children = children;
+    }
+    return itCopy;
+  }, []);
+
+  const loadItems = useCallback(async () => {
+    const loadData = async () => {
+      const url = `${APIPath}article-categories`;
       setLoading(false);
-      let responseData = await axios({
+      const responseData = await axios({
         method: 'get',
-        url: url,
-        crossDomain: true
+        url,
+        crossDomain: true,
       })
-  	  .then(function (response) {
-        return response.data.data;
-  	  })
-  	  .catch(function (error) {
-  	  });
-      return responseData;
-    }
-    let newData = await loadData();
-    // add open toggle to menu items
-    let newItems = newData.map(item=>{
-      return newItem(item);
-    });
-
-    setItems(newItems);
-    function newItem(item) {
-      item.open = true;
-      if (item.children.length>0) {
-        let children = item.children.map((child, i)=>{
-          return newItem(child);
+        .then((response) => response.data.data)
+        .catch((err) => {
+          console.log(err);
         });
-        item.children = children;
-      }
-      return item;
-    }
-  },[]);
+      return responseData;
+    };
+    const newData = await loadData();
+    // add open toggle to menu items
+    const newItems = newData.map((it) => newItem(it));
+    setItems(newItems);
+  }, [newItem]);
 
-  useEffect(()=> {
+  useEffect(() => {
     if (loading) {
       loadItems();
     }
@@ -204,85 +238,114 @@ const ArticleCategories = props => {
 
   const toggleItemModal = () => {
     setItemModalVisible(!itemModalVisible);
-  }
+  };
 
   const toggleDeleteModal = () => {
     setDeleteModalVisible(!deleteModalVisible);
-  }
+  };
 
-  let heading = "Article categories";
-  let breadcrumbsItems = [
-    {label: heading, icon: "fa fa-list", active: true, path: ""},
+  const heading = 'Article categories';
+  const breadcrumbsItems = [
+    { label: heading, icon: 'fa fa-list', active: true, path: '' },
   ];
 
-  let content = <div>
-    <div className="row">
-      <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
-          <Spinner type="grow" color="info" /> <i>loading...</i>
+  const parentOptions = (it = null, sep = '') => {
+    if (it === null) {
+      return [];
+    }
+    const options = [];
+    let newSep = sep;
+    if (itemForm._id !== null) {
+      if (it._id !== itemForm._id) {
+        options.push(
+          <option value={it._id} key={it._id}>
+            {newSep} {it.label}
+          </option>
+        );
+      }
+    }
+    if (it.children.length > 0) {
+      newSep += '-';
+      for (let j = 0; j < it.children.length; j += 1) {
+        const child = it.children[j];
+        options.push(parentOptions(child, newSep));
+      }
+    }
+    return options;
+  };
+
+  let content = (
+    <div>
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  let errorContainerClass = " hidden";
+  );
+  let errorContainerClass = ' hidden';
   if (error.visible) {
-    errorContainerClass = "";
+    errorContainerClass = '';
   }
-  let errorContainer = <div className={"error-container"+errorContainerClass}>{error.text}</div>;
+  const errorContainer = (
+    <div className={`error-container${errorContainerClass}`}>{error.text}</div>
+  );
   let itemsHTML = [];
-  if (items.length>0) {
-    itemsHTML = <ArticleCategoriesItems
-      items={items}
-      toggle={loadItem} />
+  if (items.length > 0) {
+    itemsHTML = <ArticleCategoriesItems items={items} toggle={loadItem} />;
   }
 
-  let statusPublic = "secondary";
-  let statusPrivate = "secondary";
+  let statusPublic = 'secondary';
+  const statusPrivate = 'secondary';
   let publicOutline = true;
   let privateOutline = false;
-  if (status==="public") {
-    statusPublic = "success";
+  if (status === 'public') {
+    statusPublic = 'success';
     publicOutline = false;
     privateOutline = true;
   }
 
   let parentIdOptions = [
-    <option value="0" key={0}>-- Select parent --</option>
+    <option value="0" key={0}>
+      -- Select parent --
+    </option>,
   ];
 
-  for (let i=0; i<items.length; i++) {
-    let item = items[i];
-    let options = parentOptions(item, "");
+  for (let i = 0; i < items.length; i += 1) {
+    const it = items[i];
+    const options = parentOptions(it, '');
     parentIdOptions = [...parentIdOptions, ...options];
   }
 
-  function parentOptions(item, sep="") {
-    let options = [];
-    if (item._id!==itemForm._id) {
-      options.push(<option value={item._id} key={item._id}>{sep} {item.label}</option>);
-    }
-    if (item.children.length>0) {
-      sep +="-";
-      for (let j=0;j<item.children.length; j++) {
-        let child = item.children[j];
-        options.push(parentOptions(child, sep));
-      }
-    }
-    return options;
+  let itemModalTitle = 'Add new article category';
+  if (item !== null) {
+    itemModalTitle = 'Edit article category';
   }
-
-  let itemModalTitle = "Add new article category";
-  if (item!==null) {
-    itemModalTitle = "Edit article category";
-  }
-  let itemModal = <Modal isOpen={itemModalVisible} toggle={toggleItemModal}>
+  const itemModal = (
+    <Modal isOpen={itemModalVisible} toggle={toggleItemModal}>
       <ModalHeader toggle={toggleItemModal}>{itemModalTitle}</ModalHeader>
       <ModalBody>
         <Form onSubmit={formSubmit}>
           <div className="text-right">
             <ButtonGroup>
-              <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>updateStatus("public")}>Public</Button>
-              <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>updateStatus("private")}>Private</Button>
+              <Button
+                size="sm"
+                outline={publicOutline}
+                color={statusPublic}
+                onClick={() => updateStatus('public')}
+              >
+                Public
+              </Button>
+              <Button
+                size="sm"
+                outline={privateOutline}
+                color={statusPrivate}
+                onClick={() => updateStatus('private')}
+              >
+                Private
+              </Button>
             </ButtonGroup>
           </div>
           <div className="row">
@@ -290,12 +353,23 @@ const ArticleCategories = props => {
               {errorContainer}
               <FormGroup>
                 <Label>Label</Label>
-                <Input type="text" name="label" placeholder="The label of the article category..." value={itemForm.label} onChange={handleChange}/>
+                <Input
+                  type="text"
+                  name="label"
+                  placeholder="The label of the article category..."
+                  value={itemForm.label}
+                  onChange={handleChange}
+                />
               </FormGroup>
               <FormGroup>
                 <Label>Parent</Label>
 
-                <Input type="select" name="parentId" value={itemForm.parentId} onChange={handleChange}>
+                <Input
+                  type="select"
+                  name="parentId"
+                  value={itemForm.parentId}
+                  onChange={handleChange}
+                >
                   {parentIdOptions}
                 </Input>
               </FormGroup>
@@ -304,33 +378,79 @@ const ArticleCategories = props => {
         </Form>
       </ModalBody>
       <ModalFooter>
-        <Button color="danger" onClick={toggleDeleteModal} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>
-        <Button color="primary" outline type="submit" size="sm" onClick={formSubmit}>{updateBtn}</Button>
+        <Button
+          color="danger"
+          onClick={toggleDeleteModal}
+          outline
+          type="button"
+          size="sm"
+          className="pull-left"
+        >
+          <i className="fa fa-trash-o" /> Delete
+        </Button>
+        <Button
+          color="primary"
+          outline
+          type="submit"
+          size="sm"
+          onClick={formSubmit}
+        >
+          {updateBtn}
+        </Button>
       </ModalFooter>
     </Modal>
+  );
 
-  let deleteModal = <Modal isOpen={deleteModalVisible} toggle={toggleDeleteModal}>
-    <ModalHeader toggle={toggleDeleteModal}>Delete "{itemForm.label}"</ModalHeader>
-    <ModalBody>The article category"{itemForm.label}" will be deleted. Continue?</ModalBody>
-    <ModalFooter className="text-left">
-      <Button className="pull-right" color="danger" size="sm" outline onClick={deleteItem}><i className="fa fa-trash-o" /> Delete</Button>
-      <Button color="secondary" size="sm" onClick={toggleDeleteModal}>Cancel</Button>
-    </ModalFooter>
-  </Modal>;
+  const deleteModal = (
+    <Modal isOpen={deleteModalVisible} toggle={toggleDeleteModal}>
+      <ModalHeader toggle={toggleDeleteModal}>
+        Delete &quot;{itemForm.label}&quot;
+      </ModalHeader>
+      <ModalBody>
+        The article category &quot;{itemForm.label}&quot; will be deleted.
+        Continue?
+      </ModalBody>
+      <ModalFooter className="text-left">
+        <Button
+          className="pull-right"
+          color="danger"
+          size="sm"
+          outline
+          onClick={deleteItem}
+        >
+          <i className="fa fa-trash-o" /> Delete
+        </Button>
+        <Button color="secondary" size="sm" onClick={toggleDeleteModal}>
+          Cancel
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
 
   if (!loading) {
-    content = <div>
-      <div className="row">
-        <div className="col-12">
-          <Card>
-            <CardBody>
-              {itemsHTML}
-              <Button type="button" size="sm" color="info" className="pull-right" outline onClick={()=>loadItem(null)}>Add new <i className=" fa fa-plus"/></Button>
-            </CardBody>
-          </Card>
+    content = (
+      <div>
+        <div className="row">
+          <div className="col-12">
+            <Card>
+              <CardBody>
+                {itemsHTML}
+                <Button
+                  type="button"
+                  size="sm"
+                  color="info"
+                  className="pull-right"
+                  outline
+                  onClick={() => loadItem(null)}
+                >
+                  Add new <i className=" fa fa-plus" />
+                </Button>
+              </CardBody>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    );
   }
   return (
     <div>
@@ -344,7 +464,6 @@ const ArticleCategories = props => {
       {itemModal}
       {deleteModal}
     </div>
-  )
-
-}
+  );
+};
 export default ArticleCategories;

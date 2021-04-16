@@ -1,33 +1,42 @@
 import React, { Component } from 'react';
 import {
   Table,
-  Card, CardBody,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Form, FormGroup, Label, Input,
-  Button,ButtonGroup
+  Card,
+  CardBody,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  Button,
+  ButtonGroup,
+  Spinner,
 } from 'reactstrap';
-import { Spinner } from 'reactstrap';
-import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+
+import Breadcrumbs from '../components/breadcrumbs';
+
 import PageActions from '../components/page-actions';
-import ArticleImageBrowser from '../components/article-image-browser.js';
+import ArticleImageBrowser from '../components/article-image-browser';
 
-import {connect} from "react-redux";
+import { setPaginationParams } from '../redux/actions';
 
-import {
-  setPaginationParams
-} from "../redux/actions/main-actions";
-const mapStateToProps = state => {
-  return {
-    slideshowPagination: state.slideshowPagination,
-   };
-};
+const mapStateToProps = (state) => ({
+  slideshowPagination: state.slideshowPagination,
+});
 
 function mapDispatchToProps(dispatch) {
   return {
-    setPaginationParams: (type,params) => dispatch(setPaginationParams(type,params))
-  }
+    setPaginationParams: (type, params) =>
+      dispatch(setPaginationParams(type, params)),
+  };
 }
 
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -36,19 +45,29 @@ class Slideshow extends Component {
   constructor(props) {
     super(props);
 
+    const { slideshowPagination } = this.props;
+    const {
+      orderField,
+      orderDesc,
+      page,
+      limit,
+      status,
+      searchInput,
+    } = slideshowPagination;
+
     this.state = {
       loading: true,
       items: [],
-      orderField: this.props.slideshowPagination.orderField,
-      orderDesc: this.props.slideshowPagination.orderDesc,
-      page: this.props.slideshowPagination.page,
-      gotoPage: this.props.slideshowPagination.page,
-      limit: this.props.slideshowPagination.limit,
-      status: this.props.slideshowPagination.status,
+      orderField,
+      orderDesc,
+      page,
+      gotoPage: page,
+      limit,
+      status,
       totalPages: 0,
       totalItems: 0,
       modalVisible: false,
-      searchInput: this.props.slideshowPagination.searchInput,
+      searchInput,
       // form
       form: {
         _id: null,
@@ -61,12 +80,16 @@ class Slideshow extends Component {
       },
       imageDetails: '',
       saving: false,
-      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
       errorVisible: false,
       errorText: [],
       imageModal: false,
-      deleteModalVisible: false
-    }
+      deleteModalVisible: false,
+    };
     this.load = this.load.bind(this);
     this.loadItem = this.loadItem.bind(this);
     this.deleteItem = this.deleteItem.bind(this);
@@ -89,379 +112,7 @@ class Slideshow extends Component {
     this.toggleDeleteModal = this.toggleDeleteModal.bind(this);
 
     // hack to kill load promise on unmount
-    this.cancelLoad=false;
-  }
-
-  toggleModal(item=null) {
-    let update = {
-      modalVisible: !this.state.modalVisible
-    }
-    if (item!==null) {
-      this.loadItem(item._id);
-    }
-    else {
-      update.form = {
-        _id: null,
-        label: '',
-        caption: '',
-        order: 0,
-        url: '',
-        status: 'private',
-        image: ''
-      };
-      update.imageDetails = "";
-    }
-    this.setState(update);
-  }
-
-  toggleImage() {
-    this.setState({
-      imageModal: !this.state.imageModal
-    })
-  }
-
-  toggleDeleteModal() {
-    this.setState({
-      deleteModalVisible: !this.state.deleteModalVisible
-    })
-  }
-
-  imageFn(_id) {
-    let form = Object.assign({},this.state.form);
-    form.image = _id;
-    this.setState({form:form});
-  }
-
-  async load() {
-    this.setState({
-      loading: true
-    })
-    let params = {
-      page: this.state.page,
-      limit: this.state.limit,
-      orderField: this.state.orderField,
-      orderDesc: this.state.orderDesc,
-      status: this.state.status,
-    };
-    if (this.state.searchInput!=="") {
-      params.label = this.state.searchInput;
-    }
-    let url = APIPath+'slideshow-items';
-    let responseData = await axios({
-      method: 'get',
-      url: url,
-      crossDomain: true,
-      params: params
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    if (this.cancelLoad) {
-      return false;
-    }
-    this.setState({
-      loading: false,
-      totalItems: responseData.totalItems,
-      items: responseData.data
-    });
-
-  }
-
-  async loadItem(_id) {
-    let url = APIPath+'slideshow-item';
-    let responseData = await axios({
-      method: 'get',
-      url: url,
-      crossDomain: true,
-      params: {_id: _id}
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    if (this.cancelLoad) {
-      return false;
-    }
-
-    let form = {
-      _id: responseData._id,
-      label: responseData.label,
-      caption: responseData.caption,
-      order: responseData.order,
-      url: responseData.url,
-      status: responseData.status,
-      image: responseData.image
-    };
-    this.setState({
-      form: form,
-      imageDetails: responseData.imageDetails
-    });
-
-  }
-
-  async simpleSearch(e) {
-    e.preventDefault();
-    if (this.state.searchInput<2) {
-      return false;
-    }
-    this.updateStorePagination({searchInput:this.state.searchInput});
-    this.setState({
-      loading: true
-    });
-    let params = {
-      page: this.state.page,
-      limit: this.state.limit,
-      label: this.state.searchInput,
-      orderField: this.state.orderField,
-      orderDesc: this.state.orderDesc,
-      status: this.state.status,
-    }
-    let url = APIPath+'slideshow-items';
-    let responseData = await axios({
-      method: 'get',
-      url: url,
-      crossDomain: true,
-      params: params
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    this.setState({
-      loading: false,
-      totalItems: responseData.totalItems,
-      items: responseData.data,
-      simpleSearch: true
-    });
-  }
-
-  clearSearch() {
-    return new Promise((resolve)=> {
-      this.setState({
-        searchInput: '',
-        simpleSearch: false,
-      });
-      this.updateStorePagination({searchInput:""});
-      resolve(true)
-    })
-    .then(()=> {
-      this.load();
-    });
-  }
-
-  updateOrdering(orderField="") {
-    let orderDesc = false;
-    if (orderField === this.state.orderField) {
-      orderDesc = !this.state.orderDesc;
-    }
-    this.setState({
-      orderField: orderField,
-      orderDesc: orderDesc
-    });
-    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
-    let context = this;
-    setTimeout(function(){
-      context.load();
-    },100);
-  }
-
-  updatePage(e) {
-    if (e>0 && e!==this.state.page) {
-      this.setState({
-        page: e,
-        gotoPage: e,
-      })
-      this.updateStorePagination({page:e});
-      let context = this;
-      setTimeout(function(){
-        context.load();
-      },100);
-    }
-  }
-
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
-    if (limit===null) {
-      limit = this.state.limit;
-    }
-    if (page===null) {
-      page = this.state.page;
-    }
-    if (orderField==="") {
-      orderField = this.state.orderField;
-    }
-    if (orderDesc===false) {
-      orderDesc = this.state.orderDesc;
-    }
-    if (status===null) {
-      status = this.state.status;
-    }
-    if (searchInput==="") {
-      searchInput = this.state.searchInput;
-    }
-    let payload = {
-      limit:limit,
-      page:page,
-      orderField:orderField,
-      orderDesc:orderDesc,
-      status:status,
-      searchInput:searchInput,
-    }
-    this.props.setPaginationParams("slideshow", payload);
-  }
-
-  gotoPage(e) {
-    e.preventDefault();
-    let gotoPage = parseInt(this.state.gotoPage,10);
-    let page = this.state.page;
-    if (gotoPage>0 && gotoPage!==page) {
-      this.setState({
-        page: gotoPage
-      })
-      this.updateStorePagination({page:gotoPage});
-      let context = this;
-      setTimeout(function(){
-        context.load();
-      },100);
-    }
-  }
-
-  updateLimit(limit) {
-    this.setState({
-      limit: limit
-    })
-    this.updateStorePagination({limit:limit});
-    let context = this;
-    setTimeout(function(){
-      context.load();
-    },100)
-  }
-
-  setStatus(status=null) {
-    this.setState({
-      status: status
-    });
-    this.updateStorePagination({status:status});
-    let context = this;
-    setTimeout(function() {
-      context.load();
-    },100)
-  }
-
-  setItemStatus(status) {
-    let newForm = Object.assign({}, this.state.form);
-    newForm.status = status;
-    this.setState({
-      form: newForm
-    })
-  }
-
-  handleChange(e) {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    let newForm = Object.assign({}, this.state.form);
-    newForm[name] = value;
-    this.setState({
-      form: newForm
-    });
-  }
-
-  handleSearch(e) {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    this.setState({
-      [name]: value
-    });
-  }
-
-  async formSubmit(e) {
-    e.preventDefault();
-    if (this.state.saving) {
-      return false;
-    }
-    this.setState({saving: true});
-    let update = await axios({
-      method: 'put',
-      url: APIPath+'slideshow-item',
-      crossDomain: true,
-      data: this.state.form
-    })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-      console.log(error)
-    });
-    if (update.status) {
-      let formCopy = Object.assign({}, this.state.form);
-      formCopy._id = update.data._id;
-      this.setState({
-        updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-        loading: true,
-        form: formCopy,
-        saving: false
-      });
-      this.loadItem(update.data._id);
-    }
-    else {
-      let errorText = [];
-      for (let i=0; i<update.errors.length; i++) {
-        let error = update.errors[i];
-        errorText.push(<div key={i}>{error.msg}</div>)
-      }
-      this.setState({
-        errorVisible: true,
-        errorText: errorText,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>,
-        saving: false
-      });
-    }
-    let context = this;
-    setTimeout(function() {
-      context.setState({
-        updateBtn: <span><i className="fa fa-save" /> Update</span>
-      });
-    },2000);
-  }
-
-  tableRows() {
-    let items = this.state.items;
-    let rows = items.map((item,i)=>{
-      let count = i+1;
-      let row = <tr key={i}>
-        <td>{count}</td>
-        <td><div className="link-imitation" onClick={()=>this.toggleModal(item)}>{item.label}</div></td>
-        <td><div className="link-imitation edit-item" onClick={()=>this.toggleModal(item)}><i className="fa fa-pencil" /></div></td>
-      </tr>;
-      return row;
-    });
-    return rows;
-  }
-
-  async deleteItem(){
-    let _id = this.state.form._id;
-    let data = {_id: _id};
-    let responseData = await axios({
-      method: 'delete',
-      url: APIPath+'slideshow-item',
-      crossDomain: true,
-      data: data
-    })
-    .then(function (response) {
-      return response.data;
-    })
-    .catch(function (error) {
-    });
-    if (responseData.status) {
-      this.toggleDeleteModal();
-      this.toggleModal(null);
-      this.load();
-    }
+    this.cancelLoad = false;
   }
 
   componentDidMount() {
@@ -469,177 +120,758 @@ class Slideshow extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (!prevState.loading && this.state.loading) {
+    const { loading } = this.state;
+    if (!prevState.loading && loading) {
       this.load();
     }
   }
 
   componentWillUnmount() {
-    this.cancelLoad=true;
+    this.cancelLoad = true;
+  }
+
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    const { form } = this.state;
+    const newForm = { ...form };
+    newForm[name] = value;
+    this.setState({
+      form: newForm,
+    });
+  }
+
+  handleSearch(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  setItemStatus(status) {
+    const { form } = this.state;
+    const newForm = { ...form };
+    newForm.status = status;
+    this.setState({
+      form: newForm,
+    });
+  }
+
+  setStatus(status = null) {
+    this.updateStorePagination({ status });
+    this.setState(
+      {
+        status,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  toggleModal(item = null) {
+    const { modalVisible } = this.state;
+    const update = {
+      modalVisible: !modalVisible,
+    };
+    if (item !== null) {
+      this.loadItem(item._id);
+    } else {
+      update.form = {
+        _id: null,
+        label: '',
+        caption: '',
+        order: 0,
+        url: '',
+        status: 'private',
+        image: '',
+      };
+      update.imageDetails = '';
+    }
+    this.setState(update);
+  }
+
+  toggleImage() {
+    const { imageModal } = this.state;
+    this.setState({
+      imageModal: !imageModal,
+    });
+  }
+
+  toggleDeleteModal() {
+    const { deleteModalVisible } = this.state;
+    this.setState({
+      deleteModalVisible: !deleteModalVisible,
+    });
+  }
+
+  imageFn(_id) {
+    const { form } = this.state;
+    const formCopy = { ...form };
+    form.image = _id;
+    this.setState({ form: formCopy });
+  }
+
+  async load() {
+    const {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+      searchInput: stateSearchInput,
+    } = this.state;
+    this.setState({
+      loading: true,
+    });
+    const params = {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+    };
+    if (stateSearchInput !== '') {
+      params.label = stateSearchInput;
+    }
+    const url = `${APIPath}slideshow-items`;
+    const responseData = await axios({
+      method: 'get',
+      url,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (this.cancelLoad) {
+      return false;
+    }
+    this.setState({
+      loading: false,
+      totalItems: responseData.totalItems,
+      items: responseData.data,
+    });
+    return false;
+  }
+
+  async loadItem(_id) {
+    const url = `${APIPath}slideshow-item`;
+    const responseData = await axios({
+      method: 'get',
+      url,
+      crossDomain: true,
+      params: { _id },
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (this.cancelLoad) {
+      return false;
+    }
+
+    const form = {
+      _id: responseData._id,
+      label: responseData.label,
+      caption: responseData.caption,
+      order: responseData.order,
+      url: responseData.url,
+      status: responseData.status,
+      image: responseData.image,
+    };
+    this.setState({
+      form,
+      imageDetails: responseData.imageDetails,
+    });
+    return false;
+  }
+
+  async simpleSearch(e) {
+    e.preventDefault();
+    const {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+      searchInput,
+    } = this.state;
+    if (searchInput < 2) {
+      return false;
+    }
+    this.updateStorePagination({ searchInput });
+    this.setState({
+      loading: true,
+    });
+    const params = {
+      page,
+      limit,
+      label: searchInput,
+      orderField,
+      orderDesc,
+      status,
+    };
+    const url = `${APIPath}slideshow-items`;
+    const responseData = await axios({
+      method: 'get',
+      url,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    this.setState({
+      loading: false,
+      totalItems: responseData.totalItems,
+      items: responseData.data,
+    });
+    return false;
+  }
+
+  clearSearch() {
+    return new Promise((resolve) => {
+      this.setState({
+        searchInput: '',
+      });
+      this.updateStorePagination({ searchInput: '' });
+      resolve(true);
+    }).then(() => {
+      this.load();
+    });
+  }
+
+  updateOrdering(orderField = '') {
+    const {
+      orderField: stateOrderField,
+      orderDesc: stateOrderDesc,
+    } = this.state;
+    let orderDesc = false;
+    if (orderField === stateOrderField) {
+      orderDesc = !stateOrderDesc;
+    }
+    this.updateStorePagination({ orderField, orderDesc });
+    this.setState(
+      {
+        orderField,
+        orderDesc,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  updatePage(value) {
+    const { page } = this.state;
+    if (value > 0 && value !== page) {
+      this.updateStorePagination({ page: value });
+      this.setState(
+        {
+          page: value,
+          gotoPage: value,
+        },
+        () => {
+          this.load();
+        }
+      );
+    }
+  }
+
+  updateStorePagination({
+    limit = null,
+    page = null,
+    orderField = '',
+    orderDesc = false,
+    status = null,
+    searchInput = '',
+  }) {
+    const {
+      limit: stateLimit,
+      page: statePage,
+      orderField: stateOrderField,
+      orderDesc: stateOrderDesc,
+      status: stateStatus,
+      searchInput: stateSearchInput,
+    } = this.state;
+    let limitCopy = limit;
+    let pageCopy = page;
+    let orderFieldCopy = orderField;
+    let orderDescCopy = orderDesc;
+    let statusCopy = status;
+    let searchInputCopy = searchInput;
+    if (limit === null) {
+      limitCopy = stateLimit;
+    }
+    if (page === null) {
+      pageCopy = statePage;
+    }
+    if (orderField === '') {
+      orderFieldCopy = stateOrderField;
+    }
+    if (orderDesc === false) {
+      orderDescCopy = stateOrderDesc;
+    }
+    if (status === null) {
+      statusCopy = stateStatus;
+    }
+    if (searchInput === null) {
+      searchInputCopy = stateSearchInput;
+    }
+    const payload = {
+      limit: limitCopy,
+      page: pageCopy,
+      orderField: orderFieldCopy,
+      orderDesc: orderDescCopy,
+      status: statusCopy,
+      searchInput: searchInputCopy,
+    };
+    const { setPaginationParams: setPaginationParamsFn } = this.props;
+    setPaginationParamsFn('slideshow', payload);
+  }
+
+  gotoPage(e) {
+    e.preventDefault();
+    const { page } = this.state;
+    let { gotoPage } = this.state;
+    gotoPage = parseInt(gotoPage, 10);
+    if (gotoPage > 0 && gotoPage !== page) {
+      this.updateStorePagination({ page: gotoPage });
+      this.setState(
+        {
+          page: gotoPage,
+        },
+        () => {
+          this.load();
+        }
+      );
+    }
+  }
+
+  updateLimit(limit) {
+    this.updateStorePagination({ limit });
+    this.setState(
+      {
+        limit,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  async formSubmit(e) {
+    const { saving, form } = this.state;
+    e.preventDefault();
+    if (saving) {
+      return false;
+    }
+    this.setState({ saving: true });
+    const update = await axios({
+      method: 'put',
+      url: `${APIPath}slideshow-item`,
+      crossDomain: true,
+      data: form,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (update.status) {
+      const formCopy = { ...form };
+      formCopy._id = update.data._id;
+      this.setState({
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update success{' '}
+            <i className="fa fa-check" />
+          </span>
+        ),
+        loading: true,
+        form: formCopy,
+        saving: false,
+      });
+      await this.loadItem(update.data._id);
+    } else {
+      const errorText = [];
+      for (let i = 0; i < update.errors.length; i += 1) {
+        const error = update.errors[i];
+        errorText.push(<div key={i}>{error.msg}</div>);
+      }
+      this.setState({
+        errorVisible: true,
+        errorText,
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+        saving: false,
+      });
+    }
+    const context = this;
+    setTimeout(() => {
+      context.setState({
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update
+          </span>
+        ),
+      });
+    }, 2000);
+    return false;
+  }
+
+  tableRows() {
+    const { items } = this.state;
+    const rows = items.map((item, i) => {
+      const count = i + 1;
+      const row = (
+        <tr key={item._id}>
+          <td>{count}</td>
+          <td>
+            <div
+              className="link-imitation"
+              onClick={() => this.toggleModal(item)}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="toggle modal"
+            >
+              {item.label}
+            </div>
+          </td>
+          <td>
+            <div
+              className="link-imitation edit-item"
+              onClick={() => this.toggleModal(item)}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="toggle modal"
+            >
+              <i className="fa fa-pencil" />
+            </div>
+          </td>
+        </tr>
+      );
+      return row;
+    });
+    return rows;
+  }
+
+  async deleteItem() {
+    const { form } = this.state;
+    const { _id } = form;
+    const data = { _id };
+    const responseData = await axios({
+      method: 'delete',
+      url: `${APIPath}slideshow-item`,
+      crossDomain: true,
+      data,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (responseData.status) {
+      this.toggleDeleteModal();
+      this.toggleModal(null);
+      this.load();
+    }
   }
 
   render() {
-    let heading = "Slideshow";
-    let breadcrumbsItems = [
-      {label: heading, icon: "fa fa-image", active: true, path: ""}
+    const {
+      page,
+      gotoPage,
+      totalPages,
+      limit,
+      loading,
+      tableLoading,
+      status,
+      searchInput,
+      totalItems,
+      form,
+      errorVisible,
+      errorText,
+      imageDetails,
+      modalVisible,
+      imageModal,
+      updateBtn,
+      deleteModalVisible,
+    } = this.state;
+    const heading = 'Slideshow';
+    const breadcrumbsItems = [
+      { label: heading, icon: 'fa fa-image', active: true, path: '' },
     ];
 
-    let pageActions = <PageActions
-      clearSearch={this.clearSearch}
-      current_page={this.state.page}
-      gotoPage={this.gotoPage}
-      gotoPageValue={this.state.gotoPage}
-      handleChange={this.handleSearch}
-      limit={this.state.limit}
-      pageType="slideshow"
-      searchInput={this.state.searchInput}
-      setStatus={this.setStatus}
-      status={this.state.status}
-      simpleSearch={this.simpleSearch}
-      total_pages={this.state.totalPages}
-      types={[]}
-      updateLimit={this.updateLimit}
-      updatePage={this.updatePage}
-    />
+    const pageActions = (
+      <PageActions
+        clearSearch={this.clearSearch}
+        current_page={page}
+        gotoPage={this.gotoPage}
+        gotoPageValue={gotoPage}
+        handleChange={this.handleSearch}
+        limit={limit}
+        pageType="slideshow"
+        searchInput={searchInput}
+        setStatus={this.setStatus}
+        status={status}
+        simpleSearch={this.simpleSearch}
+        total_pages={totalPages}
+        types={[]}
+        updateLimit={this.updateLimit}
+        updatePage={this.updatePage}
+      />
+    );
 
-    let content = <div>
-      {pageActions}
-      <div className="row">
-        <div className="col-12">
-          <div style={{padding: '40pt',textAlign: 'center'}}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </div>
-        </div>
-      </div>
-      {pageActions}
-    </div>
-    if (!this.state.loading) {
-      let addNewBtn = <div className="btn btn-outline-secondary add-new-item-btn" onClick={()=>this.toggleModal(null)}><i className="fa fa-plus" /></div>;
-
-      let tableLoadingSpinner = <tr>
-        <td colSpan={6}><Spinner type="grow" color="info" /> <i>loading...</i></td>
-      </tr>;
-      let itemsRows = [];
-      if (this.state.tableLoading) {
-        itemsRows = tableLoadingSpinner;
-      }
-      else {
-        itemsRows = this.tableRows();
-      }
-      content = <div className="people-container">
+    let content = (
+      <div>
         {pageActions}
         <div className="row">
           <div className="col-12">
-            <Card>
-              <CardBody className="people-card">
-                <Table hover className="people-table">
-                  <thead>
-                    <tr>
-                      <th style={{width: '40px'}}>#</th>
-                      <th>Label</th>
-                      <th style={{width: '30px'}}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itemsRows}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th>#</th>
-                      <th>Label</th>
-                      <th></th>
-                    </tr>
-                  </tfoot>
-                </Table>
-              </CardBody>
-            </Card>
+            <div style={{ padding: '40pt', textAlign: 'center' }}>
+              <Spinner type="grow" color="info" /> <i>loading...</i>
+            </div>
           </div>
         </div>
         {pageActions}
-        {addNewBtn}
       </div>
-    }
-    let modalTitle = "Add new slideshow item";
-    if (this.state.form._id!==null) {
-      modalTitle = "Edit slideshow item";
-    }
-    let errorContainerClass = " hidden";
-    if (this.state.errorVisible) {
-      errorContainerClass = "";
-    }
-    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
+    );
+    if (!loading) {
+      const addNewBtn = (
+        <div
+          className="btn btn-outline-secondary add-new-item-btn"
+          onClick={() => this.toggleModal(null)}
+          onKeyDown={() => false}
+          role="button"
+          tabIndex={0}
+          aria-label="toggle modal"
+        >
+          <i className="fa fa-plus" />
+        </div>
+      );
 
-    let statusPublic = "secondary";
-    let statusPrivate = "secondary";
+      const tableLoadingSpinner = (
+        <tr>
+          <td colSpan={6}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </td>
+        </tr>
+      );
+      let itemsRows = [];
+      if (tableLoading) {
+        itemsRows = tableLoadingSpinner;
+      } else {
+        itemsRows = this.tableRows();
+      }
+      content = (
+        <div className="people-container">
+          {pageActions}
+          <div className="row">
+            <div className="col-12">
+              <Card>
+                <CardBody className="people-card">
+                  <Table hover className="people-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}>#</th>
+                        <th>Label</th>
+                        <th style={{ width: '30px' }} aria-label="edit" />
+                      </tr>
+                    </thead>
+                    <tbody>{itemsRows}</tbody>
+                    <tfoot>
+                      <tr>
+                        <th>#</th>
+                        <th>Label</th>
+                        <th aria-label="edit" />
+                      </tr>
+                    </tfoot>
+                  </Table>
+                </CardBody>
+              </Card>
+            </div>
+          </div>
+          {pageActions}
+          {addNewBtn}
+        </div>
+      );
+    }
+    const modalTitle =
+      form._id !== null ? 'Edit slideshow item' : 'Add new slideshow item';
+    const errorContainerClass = errorVisible ? '' : ' hidden';
+    const errorContainer = (
+      <div className={`error-container${errorContainerClass}`}>{errorText}</div>
+    );
+
+    let statusPublic = 'secondary';
+    const statusPrivate = 'secondary';
     let publicOutline = true;
     let privateOutline = false;
-    if (this.state.form.status==="public") {
-      statusPublic = "success";
+    if (form.status === 'public') {
+      statusPublic = 'success';
       publicOutline = false;
       privateOutline = true;
     }
     let imagePreview = [];
-    if (this.state.imageDetails!==null && this.state.imageDetails!=="") {
-      let image = this.state.imageDetails;
-      let imagePath = image.paths.find(p=>p.pathType==="source").path;
-      imagePreview = <img className="slideshow-preview" alt="" src={imagePath} />
+    if (imageDetails !== null && imageDetails !== '') {
+      const image = imageDetails;
+      const imagePath = image.paths.find((p) => p.pathType === 'source').path;
+      imagePreview = (
+        <img className="slideshow-preview" alt="" src={imagePath} />
+      );
     }
-    let editModal = <Modal isOpen={this.state.modalVisible} toggle={()=>this.toggleModal(null)} size="lg">
-        <ModalHeader toggle={()=>this.toggleModal(null)}>{modalTitle}</ModalHeader>
+    const editModal = (
+      <Modal
+        isOpen={modalVisible}
+        toggle={() => this.toggleModal(null)}
+        size="lg"
+      >
+        <ModalHeader toggle={() => this.toggleModal(null)}>
+          {modalTitle}
+        </ModalHeader>
         <ModalBody>
           <Form onSubmit={this.formSubmit}>
             <div className="text-right">
               <ButtonGroup>
-                <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.setItemStatus("public")}>Public</Button>
-                <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.setItemStatus("private")}>Private</Button>
+                <Button
+                  size="sm"
+                  outline={publicOutline}
+                  color={statusPublic}
+                  onClick={() => this.setItemStatus('public')}
+                >
+                  Public
+                </Button>
+                <Button
+                  size="sm"
+                  outline={privateOutline}
+                  color={statusPrivate}
+                  onClick={() => this.setItemStatus('private')}
+                >
+                  Private
+                </Button>
               </ButtonGroup>
             </div>
             {errorContainer}
             <FormGroup>
               <Label>Label</Label>
-              <Input type="text" name="label" placeholder="The label of this slideshow item..." value={this.state.form.label} onChange={this.handleChange}/>
+              <Input
+                type="text"
+                name="label"
+                placeholder="The label of this slideshow item..."
+                value={form.label}
+                onChange={this.handleChange}
+              />
             </FormGroup>
             <FormGroup>
               <Label>Caption</Label>
-              <Input type="textarea" name="caption" placeholder="The caption of this slideshow item..." value={this.state.form.caption} onChange={this.handleChange}/>
+              <Input
+                type="textarea"
+                name="caption"
+                placeholder="The caption of this slideshow item..."
+                value={form.caption}
+                onChange={this.handleChange}
+              />
             </FormGroup>
             <FormGroup>
               <Label>Order</Label>
-              <Input type="number" style={{width: "70px"}} name="order" placeholder="0" value={this.state.form.order} onChange={this.handleChange}/>
+              <Input
+                type="number"
+                style={{ width: '70px' }}
+                name="order"
+                placeholder="0"
+                value={form.order}
+                onChange={this.handleChange}
+              />
             </FormGroup>
             <FormGroup>
               <Label>URL</Label>
-              <Input type="text" name="url" placeholder="The url of this slideshow item..." value={this.state.form.url} onChange={this.handleChange}/>
+              <Input
+                type="text"
+                name="url"
+                placeholder="The url of this slideshow item..."
+                value={form.url}
+                onChange={this.handleChange}
+              />
             </FormGroup>
           </Form>
           <FormGroup>
             <Label>Image</Label>
-            <Button type="button" onClick={()=>this.toggleImage()} size="sm">Select image</Button>
+            <Button type="button" onClick={() => this.toggleImage()} size="sm">
+              Select image
+            </Button>
             <div className="img-preview-container">{imagePreview}</div>
           </FormGroup>
-          <ArticleImageBrowser modal={this.state.imageModal} toggle={this.toggleImage} featuredImgFn={this.imageFn} />
+          <ArticleImageBrowser
+            modal={imageModal}
+            toggle={this.toggleImage}
+            featuredImgFn={this.imageFn}
+          />
         </ModalBody>
         <ModalFooter>
-          <Button color="danger" outline size="sm" onClick={()=>this.toggleDeleteModal()} className="pull-left"><i className="fa fa-trash" /> Delete</Button>
-          <Button color="primary" outline size="sm" onClick={(e)=>this.formSubmit(e)}>{this.state.updateBtn}</Button>
+          <Button
+            color="danger"
+            outline
+            size="sm"
+            onClick={() => this.toggleDeleteModal()}
+            className="pull-left"
+          >
+            <i className="fa fa-trash" /> Delete
+          </Button>
+          <Button
+            color="primary"
+            outline
+            size="sm"
+            onClick={(e) => this.formSubmit(e)}
+          >
+            {updateBtn}
+          </Button>
         </ModalFooter>
       </Modal>
+    );
 
-    let deleteModal = <Modal isOpen={this.state.deleteModalVisible} toggle={this.toggleDeleteModal}>
-      <ModalHeader toggle={this.toggleDeleteModal}>Delete "{this.state.form.label}"</ModalHeader>
-      <ModalBody>The slideshow item "{this.state.form.label}" will be deleted. Continue?</ModalBody>
-      <ModalFooter className="text-left">
-        <Button className="pull-right" color="danger" size="sm" outline onClick={this.deleteItem}><i className="fa fa-trash-o" /> Delete</Button>
-        <Button color="secondary" size="sm" onClick={this.toggleDeleteModal}>Cancel</Button>
-      </ModalFooter>
-    </Modal>;
+    const deleteModal = (
+      <Modal isOpen={deleteModalVisible} toggle={this.toggleDeleteModal}>
+        <ModalHeader toggle={this.toggleDeleteModal}>
+          Delete &quot;{form.label}&quot;
+        </ModalHeader>
+        <ModalBody>
+          The slideshow item &quot;{form.label}&quot; will be deleted. Continue?
+        </ModalBody>
+        <ModalFooter className="text-left">
+          <Button
+            className="pull-right"
+            color="danger"
+            size="sm"
+            outline
+            onClick={this.deleteItem}
+          >
+            <i className="fa fa-trash-o" /> Delete
+          </Button>
+          <Button color="secondary" size="sm" onClick={this.toggleDeleteModal}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+    );
 
-    return(
+    return (
       <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+        <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading} <small>({this.state.totalItems})</small></h2>
+            <h2>
+              {heading} <small>({totalItems})</small>
+            </h2>
           </div>
         </div>
         {content}
@@ -649,4 +881,13 @@ class Slideshow extends Component {
     );
   }
 }
-export default Slideshow = connect(mapStateToProps, mapDispatchToProps)(Slideshow);
+
+Slideshow.defaultProps = {
+  slideshowPagination: null,
+  setPaginationParams: () => {},
+};
+Slideshow.propTypes = {
+  slideshowPagination: PropTypes.object,
+  setPaginationParams: PropTypes.func,
+};
+export default compose(connect(mapStateToProps, mapDispatchToProps))(Slideshow);

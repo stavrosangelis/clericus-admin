@@ -1,8 +1,14 @@
 import React, { Component } from 'react';
 import {
-  UncontrolledButtonDropdown, DropdownMenu, DropdownItem, DropdownToggle,
+  UncontrolledButtonDropdown,
+  DropdownMenu,
+  DropdownItem,
+  DropdownToggle,
 } from 'reactstrap';
 
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
 import AddEventModal from './add-event';
 import AddOrganisationModal from './add-organisation';
 import AddPersonModal from './add-person';
@@ -10,13 +16,10 @@ import AddResourceModal from './add-resource';
 import AddTemporalModal from './add-temporal';
 import AddSpatialModal from './add-spatial';
 
-import {connect} from "react-redux";
-const mapStateToProps = state => {
-  return {
-    entitiesLoaded: state.entitiesLoaded,
-    peopleRoles: state.peopleRoles,
-   };
-};
+const mapStateToProps = (state) => ({
+  entitiesLoaded: state.entitiesLoaded,
+  peopleRoles: state.peopleRoles,
+});
 
 class AddRelation extends Component {
   constructor(props) {
@@ -28,124 +31,190 @@ class AddRelation extends Component {
       addResourceModal: false,
       addTemporalModal: false,
       addSpatialModal: false,
-      entitiesLoaded: false,
-    }
+    };
     this.toggleModal = this.toggleModal.bind(this);
   }
 
   toggleModal(modal) {
+    const { [modal]: value } = this.state;
     this.setState({
-      [modal]: !this.state[modal]
+      [modal]: !value,
     });
   }
 
   render() {
-    let eventVisible = "";
-    let organisationVisible = "";
-    let personVisible = "";
-    let resourceVisible = "";
-    let temporalVisible = "";
-    let spatialVisible = "";
+    const {
+      item,
+      type,
+      referencesTypes,
+      reload,
+      reference,
+      peopleRoles,
+      referencesLabels,
+    } = this.props;
+    const {
+      addEventModal,
+      addOrganisationModal,
+      addPersonModal,
+      addResourceModal,
+      addTemporalModal,
+      addSpatialModal,
+    } = this.state;
+    let eventVisible = '';
+    let organisationVisible = '';
+    let personVisible = '';
+    let resourceVisible = '';
+    let temporalVisible = '';
+    let spatialVisible = '';
 
-    let eventModal = <AddEventModal
-      item={this.props.item}
-      type={this.props.type}
-      refTypes={this.props.referencesTypes.event}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addEventModal} />
+    let eventModal = (
+      <AddEventModal
+        item={item}
+        type={type}
+        refTypes={referencesTypes.event}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addEventModal}
+      />
+    );
 
-    let organisationModal = <AddOrganisationModal
-      item={this.props.item}
-      type={this.props.type}
-      refTypes={this.props.referencesTypes.organisation}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addOrganisationModal} />
+    let organisationModal = (
+      <AddOrganisationModal
+        item={item}
+        type={type}
+        refTypes={referencesTypes.organisation}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addOrganisationModal}
+      />
+    );
 
-    let personModal = <AddPersonModal
-      item={this.props.item}
-      type={this.props.type}
-      refTypes={this.props.referencesTypes.person}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addPersonModal} />
+    let personModal = (
+      <AddPersonModal
+        item={item}
+        type={type}
+        refTypes={referencesTypes.person}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addPersonModal}
+      />
+    );
 
-    let resourceModal = <AddResourceModal
-      item={this.props.item}
-      type={this.props.type}
-      peopleRoles={this.props.peopleRoles}
-      refTypes={this.props.referencesTypes.resource}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addResourceModal} />
+    let resourceModal = (
+      <AddResourceModal
+        item={item}
+        type={type}
+        peopleRoles={peopleRoles}
+        refTypes={referencesTypes.resource}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addResourceModal}
+      />
+    );
 
-    let temporalModal = <AddTemporalModal
-      item={this.props.item}
-      type={this.props.type}
-      refTypes={this.props.referencesTypes.temporal}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addTemporalModal} />
+    let temporalModal = (
+      <AddTemporalModal
+        item={item}
+        type={type}
+        refTypes={referencesTypes.temporal}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addTemporalModal}
+      />
+    );
 
-    let spatialModal = <AddSpatialModal
-      item={this.props.item}
-      type={this.props.type}
-      refTypes={this.props.referencesTypes.spatial}
-      reload={this.props.reload}
-      toggleModal={this.toggleModal}
-      reference={this.props.reference}
-      visible={this.state.addSpatialModal} />
+    let spatialModal = (
+      <AddSpatialModal
+        item={item}
+        type={type}
+        refTypes={referencesTypes.spatial}
+        reload={reload}
+        toggleModal={this.toggleModal}
+        reference={reference}
+        visible={addSpatialModal}
+      />
+    );
 
-    if (typeof this.props.referencesLabels!=="undefined") {
-      let referencesLabels = this.props.referencesLabels;
-      if (referencesLabels.indexOf("Event")===-1) {
-        eventVisible = "hidden";
+    if (typeof referencesLabels !== 'undefined') {
+      if (referencesLabels.indexOf('Event') === -1) {
+        eventVisible = 'hidden';
         eventModal = [];
       }
-      if (referencesLabels.indexOf("Organisation")===-1) {
-        organisationVisible = "hidden";
+      if (referencesLabels.indexOf('Organisation') === -1) {
+        organisationVisible = 'hidden';
         organisationModal = [];
       }
-      if (referencesLabels.indexOf("Person")===-1) {
-        personVisible = "hidden";
+      if (referencesLabels.indexOf('Person') === -1) {
+        personVisible = 'hidden';
         personModal = [];
       }
-      if (referencesLabels.indexOf("Resource")===-1) {
-        resourceVisible = "hidden";
+      if (referencesLabels.indexOf('Resource') === -1) {
+        resourceVisible = 'hidden';
         resourceModal = [];
       }
-      if (referencesLabels.indexOf("Temporal")===-1) {
-        temporalVisible = "hidden";
+      if (referencesLabels.indexOf('Temporal') === -1) {
+        temporalVisible = 'hidden';
         temporalModal = [];
       }
-      if (referencesLabels.indexOf("Spatial")===-1) {
-        spatialVisible = "hidden";
+      if (referencesLabels.indexOf('Spatial') === -1) {
+        spatialVisible = 'hidden';
         spatialModal = [];
       }
     }
 
-
-
     return (
       <div>
         <UncontrolledButtonDropdown className="add-reference-group">
-          <DropdownToggle className="add-reference-btn" outline color="secondary">
+          <DropdownToggle
+            className="add-reference-btn"
+            outline
+            color="secondary"
+          >
             <i className="fa fa-plus" />
           </DropdownToggle>
           <DropdownMenu>
             <DropdownItem header>Add relations</DropdownItem>
-            <DropdownItem className={eventVisible} onClick={()=>this.toggleModal('addEventModal')}>Add event</DropdownItem>
-            <DropdownItem className={organisationVisible} onClick={()=>this.toggleModal('addOrganisationModal')}>Add organisation</DropdownItem>
-            <DropdownItem className={personVisible} onClick={()=>this.toggleModal('addPersonModal')}>Add person</DropdownItem>
-            <DropdownItem className={resourceVisible} onClick={()=>this.toggleModal('addResourceModal')}>Add resource</DropdownItem>
-            <DropdownItem className={temporalVisible} onClick={()=>this.toggleModal('addTemporalModal')}>Add temporal</DropdownItem>
-            <DropdownItem className={spatialVisible} onClick={()=>this.toggleModal('addSpatialModal')}>Add spatial</DropdownItem>
+            <DropdownItem
+              className={eventVisible}
+              onClick={() => this.toggleModal('addEventModal')}
+            >
+              Add event
+            </DropdownItem>
+            <DropdownItem
+              className={organisationVisible}
+              onClick={() => this.toggleModal('addOrganisationModal')}
+            >
+              Add organisation
+            </DropdownItem>
+            <DropdownItem
+              className={personVisible}
+              onClick={() => this.toggleModal('addPersonModal')}
+            >
+              Add person
+            </DropdownItem>
+            <DropdownItem
+              className={resourceVisible}
+              onClick={() => this.toggleModal('addResourceModal')}
+            >
+              Add resource
+            </DropdownItem>
+            <DropdownItem
+              className={temporalVisible}
+              onClick={() => this.toggleModal('addTemporalModal')}
+            >
+              Add temporal
+            </DropdownItem>
+            <DropdownItem
+              className={spatialVisible}
+              onClick={() => this.toggleModal('addSpatialModal')}
+            >
+              Add spatial
+            </DropdownItem>
           </DropdownMenu>
         </UncontrolledButtonDropdown>
         {eventModal}
@@ -154,10 +223,29 @@ class AddRelation extends Component {
         {resourceModal}
         {temporalModal}
         {spatialModal}
-
-
       </div>
-    )
+    );
   }
 }
-export default AddRelation = connect(mapStateToProps, [])(AddRelation);
+
+AddRelation.defaultProps = {
+  type: '',
+  item: null,
+  reload: () => {},
+  reference: null,
+  referencesTypes: null,
+  peopleRoles: [],
+  referencesLabels: [],
+};
+
+AddRelation.propTypes = {
+  type: PropTypes.string,
+  item: PropTypes.object,
+  reload: PropTypes.func,
+  reference: PropTypes.object,
+  referencesTypes: PropTypes.object,
+  peopleRoles: PropTypes.array,
+  referencesLabels: PropTypes.array,
+};
+
+export default compose(connect(mapStateToProps, []))(AddRelation);

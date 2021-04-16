@@ -1,0 +1,376 @@
+{
+  "Event": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "eventType",
+      "type": "list",
+      "values": []
+    },
+    {
+      "name": "status",
+      "type": "list",
+      "values": [{
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Public",
+          "value": "public"
+        },
+        {
+          "label": "Private",
+          "value": "private"
+        }
+      ]
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }
+  ],
+
+  "Organisation": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "labelSoundex",
+      "type": "text"
+    },
+    {
+      "name": "alternateAppelation",
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "organisationType",
+      "type": "list",
+      "values": []
+    },
+    {
+      "name": "status",
+      "type": "list",
+      "values": [{
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Public",
+          "value": "public"
+        },
+        {
+          "label": "Private",
+          "value": "private"
+        }
+      ]
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }],
+
+  "Person": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "honorificPrefix",
+      "type": "text"
+    },
+    {
+      "name": "firstName",
+      "type": "text"
+    },
+    {
+      "name": "middleName",
+      "type": "text"
+    },
+    {
+      "name": "lastName",
+      "type": "text"
+    },
+    {
+      "name": "fnameSoundex",
+      "type": "text"
+    },
+    {
+      "name": "lnameSoundex",
+      "type": "text"
+    },
+    {
+      "name": "alternateAppelation",
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "personType",
+      "type": "list",
+      "values": []
+    },
+    {
+      "name": "status",
+      "type": "list",
+      "values": [{
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Public",
+          "value": "public"
+        },
+        {
+          "label": "Private",
+          "value": "private"
+        }
+      ]
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }],
+
+  "Resource": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "alternateLabel",
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "type": "text"
+    },
+    {
+      "name": "fileName",
+      "type": "text"
+    },
+    {
+      "name": "originalLocation",
+      "type": "text"
+    },
+    {
+      "name": "systemType",
+      "type": "list",
+      "values": []
+    },
+    {
+      "name": "resourceType",
+      "type": "list",
+      "values": [
+        {
+          "label": "image",
+          "value": "image"
+        },
+        {
+          "label": "document",
+          "value": "document"
+        }
+      ]
+    },
+    {
+      "name": "status",
+      "type": "list",
+      "values": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Public",
+          "value": "public"
+        },
+        {
+          "label": "Private",
+          "value": "private"
+        }
+      ]
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }],
+
+  "Spatial": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "streetAddress",
+      "type": "text"
+    },
+    {
+      "name": "locality",
+      "type": "text"
+    },
+    {
+      "name": "region",
+      "type": "text"
+    },
+    {
+      "name": "postalCode",
+      "type": "text"
+    },
+    {
+      "name": "country",
+      "type": "text"
+    },
+    {
+      "name": "latitude",
+      "type": "text"
+    },
+    {
+      "name": "longitude",
+      "type": "text"
+    },
+    {
+      "name": "locationType",
+      "type": "text"
+    },
+    {
+      "name": "note",
+      "type": "text"
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }
+  ],
+
+  "Temporal": [
+    {
+      "name": "_id",
+      "type": "number"
+    },
+    {
+      "name": "label",
+      "type": "text"
+    },
+    {
+      "name": "startDate",
+      "type": "date"
+    },
+    {
+      "name": "endDate",
+      "type": "date"
+    },
+    {
+      "name": "format",
+      "type": "text"
+    },
+    {
+      "name": "createdBy",
+      "type": "list"
+    },
+    {
+      "name": "createdAt",
+      "type": "date"
+    },
+    {
+      "name": "updatedBy",
+      "type": "list"
+    },
+    {
+      "name": "updatedAt",
+      "type": "date"
+    }
+  ]
+
+}

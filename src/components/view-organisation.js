@@ -1,11 +1,18 @@
 import React, { Component } from 'react';
 import {
-  Card, CardTitle, CardBody,
-  Button, ButtonGroup,
-  Form, FormGroup, Label, Input,
-  Collapse
+  Card,
+  CardTitle,
+  CardBody,
+  Button,
+  ButtonGroup,
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  Collapse,
 } from 'reactstrap';
-import { getThumbnailURL } from '../helpers/helpers';
+import PropTypes from 'prop-types';
+import { getThumbnailURL } from '../helpers';
 import OrganisationAppelations from './organisation-alternate-appelations';
 import RelatedEntitiesBlock from './related-entities-block';
 
@@ -13,33 +20,52 @@ export default class ViewOrganisation extends Component {
   constructor(props) {
     super(props);
 
-    let organisation = this.props.organisation;
-    let status = 'private', label = '', description = '', organisationType = '', alternateAppelations = [];
-    if (organisation!==null) {
-      if (typeof organisation.label!=="undefined" && organisation.label!==null) {
+    const { organisation } = this.props;
+    let status = 'private';
+    let label = '';
+    let description = '';
+    let organisationType = '';
+    let alternateAppelations = [];
+    if (organisation !== null) {
+      if (
+        typeof organisation.label !== 'undefined' &&
+        organisation.label !== null
+      ) {
         label = organisation.label;
       }
-      if (typeof organisation.description!=="undefined" && organisation.description!==null) {
+      if (
+        typeof organisation.description !== 'undefined' &&
+        organisation.description !== null
+      ) {
         description = organisation.description;
       }
-      if (typeof organisation.organisationType!=="undefined" && organisation.organisationType!==null) {
+      if (
+        typeof organisation.organisationType !== 'undefined' &&
+        organisation.organisationType !== null
+      ) {
         organisationType = organisation.organisationType;
       }
-      if (typeof organisation.alternateAppelations!=="undefined" && organisation.alternateAppelations!==null) {
+      if (
+        typeof organisation.alternateAppelations !== 'undefined' &&
+        organisation.alternateAppelations !== null
+      ) {
         alternateAppelations = organisation.alternateAppelations;
       }
-      if (typeof organisation.status!=="undefined" && organisation.status!==null) {
+      if (
+        typeof organisation.status !== 'undefined' &&
+        organisation.status !== null
+      ) {
         status = organisation.status;
       }
     }
     this.state = {
       detailsOpen: true,
-      label: label,
-      description: description,
-      organisationType: organisationType,
-      status: status,
-      alternateAppelations: alternateAppelations,
-    }
+      label,
+      description,
+      organisationType,
+      status,
+      alternateAppelations,
+    };
     this.updateStatus = this.updateStatus.bind(this);
     this.formSubmit = this.formSubmit.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -50,207 +76,317 @@ export default class ViewOrganisation extends Component {
     this.removeAlternateAppelation = this.removeAlternateAppelation.bind(this);
   }
 
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+
+    this.setState({
+      [name]: value,
+    });
+  }
+
   updateStatus(value) {
-    this.setState({status:value});
+    this.setState({ status: value });
   }
 
   formSubmit(e) {
     e.preventDefault();
-    let newData = {
-      label: this.state.label,
-      description: this.state.description,
-      organisationType: this.state.organisationType,
-      alternateAppelations: this.state.alternateAppelations,
-      status: this.state.status,
-    }
-    this.props.update(newData);
+    const {
+      label,
+      description,
+      organisationType,
+      alternateAppelations,
+      status,
+    } = this.state;
+    const { update } = this.props;
+    const newData = {
+      label,
+      description,
+      organisationType,
+      alternateAppelations,
+      status,
+    };
+    update(newData);
   }
 
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-
-    this.setState({
-      [name]: value
-    });
-  }
-
-  parseMetadata(metadata) {
-    if (metadata===null) {
+  parseMetadata(metadata = null) {
+    if (metadata === null) {
       return false;
     }
-    let metadataOutput = [];
+    const metadataOutput = [];
     let i = 0;
-    for (let key in metadata) {
-      let metaItems = metadata[key];
+    Object.keys(metadata).forEach((key) => {
+      const metaItems = metadata[key];
       let metadataOutputItems = [];
-      if (metaItems!==null && typeof metaItems.length==="undefined") {
+      if (metaItems !== null && typeof metaItems.length === 'undefined') {
         metadataOutputItems = this.parseMetadataItems(metaItems);
+      } else if (metaItems !== null) {
+        const newItems = this.parseMetadata(metaItems[0]);
+        metadataOutputItems.push(newItems);
       }
-      else {
-        if (metaItems!==null) {
-          let newItems = this.parseMetadata(metaItems[0]);
-          metadataOutputItems.push(newItems)
-        }
-      }
-      metadataOutputItems = <div className="list-items">{metadataOutputItems}</div>;
-      let metaRow = <div key={i}>
-        <div className="metadata-title">{key}</div>
-        {metadataOutputItems}
+      metadataOutputItems = (
+        <div className="list-items">{metadataOutputItems}</div>
+      );
+      const metaRow = (
+        <div key={i}>
+          <div className="metadata-title">{key}</div>
+          {metadataOutputItems}
         </div>
+      );
       metadataOutput.push(metaRow);
-      i++;
-    }
+      i += 1;
+    });
     return metadataOutput;
   }
 
   parseMetadataItems(metaItems) {
-    let i=0;
-    let items = [];
-    for (let metaKey in metaItems) {
-      let value = metaItems[metaKey];
+    let i = 0;
+    const items = [];
+    Object.keys(metaItems).forEach((metaKey) => {
+      const value = metaItems[metaKey];
       let newRow = [];
-      if (typeof value!=="object") {
-        newRow = <div key={i}><label>{metaKey}</label> : {metaItems[metaKey]}</div>
-      }
-      else {
-        let newRows = <div className="list-items">{this.parseMetadataItems(value)}</div>;
-        newRow = <div key={i}><div className="metadata-title">{metaKey}</div>{newRows}</div>
+      if (typeof value !== 'object') {
+        newRow = (
+          <div key={i}>
+            <Label>{metaKey}</Label> : {metaItems[metaKey]}
+          </div>
+        );
+      } else {
+        const newRows = (
+          <div className="list-items">{this.parseMetadataItems(value)}</div>
+        );
+        newRow = (
+          <div key={i}>
+            <div className="metadata-title">{metaKey}</div>
+            {newRows}
+          </div>
+        );
       }
       items.push(newRow);
-      i++
-    }
+      i += 1;
+    });
     return items;
   }
 
   toggleCollapse(name) {
-    let value = true;
-    if (this.state[name]==="undefined" || this.state[name]) {
-      value = false
-    }
+    const { [name]: value } = this.state;
     this.setState({
-      [name]: value
+      [name]: !value,
     });
   }
 
   updateAlternateAppelation(index, data) {
-    let organisation = this.props.organisation;
-    let alternateAppelations = organisation.alternateAppelations;
-    if (index==="new") {
+    const { organisation, update } = this.props;
+    const { alternateAppelations } = organisation;
+    const {
+      label,
+      description,
+      organisationType,
+      alternateAppelations: stateAlternateAppelations,
+      status,
+    } = this.state;
+    if (index === 'new') {
       alternateAppelations.push(data);
-    }
-    else if (index!==null) {
+    } else if (index !== null) {
       alternateAppelations[index] = data;
     }
-    this.setState({
-      alternateAppelations: alternateAppelations
-    },()=> {
-      let newData = {
-        label: this.state.label,
-        description: this.state.description,
-        organisationType: this.state.organisationType,
-        alternateAppelations: this.state.alternateAppelations,
-        status: this.state.status,
+    this.setState(
+      {
+        alternateAppelations,
+      },
+      () => {
+        const newData = {
+          label,
+          description,
+          organisationType,
+          alternateAppelations: stateAlternateAppelations,
+          status,
+        };
+        update(newData);
       }
-      this.props.update(newData);
-    });
+    );
   }
 
   removeAlternateAppelation(index) {
-    let organisation = this.props.organisation;
-    let alternateAppelations = organisation.alternateAppelations;
-    if (index!==null) {
-      alternateAppelations.splice(index,1);
+    const { organisation, update } = this.props;
+    const { alternateAppelations } = organisation;
+    const {
+      label,
+      description,
+      organisationType,
+      alternateAppelations: stateAlternateAppelations,
+      status,
+    } = this.state;
+    if (index !== null) {
+      alternateAppelations.splice(index, 1);
     }
-    this.setState({
-      alternateAppelations: alternateAppelations
-    },()=> {
-      let newData = {
-        label: this.state.label,
-        description: this.state.description,
-        organisationType: this.state.organisationType,
-        alternateAppelations: this.state.alternateAppelations,
-        status: this.state.status,
+    this.setState(
+      {
+        alternateAppelations,
+      },
+      () => {
+        const newData = {
+          label,
+          description,
+          organisationType,
+          stateAlternateAppelations,
+          status,
+        };
+        update(newData);
       }
-      this.props.update(newData);
-    });
+    );
   }
 
   render() {
-    let detailsOpenActive = " active";
-    if (!this.state.detailsOpen) {
-      detailsOpenActive = "";
-    }
-    let metadataOpenActive = " active";
-    if (!this.state.metadataOpen) {
-      metadataOpenActive = "";
-    }
-
-    let statusPublic = "secondary";
-    let statusPrivate = "secondary";
+    const {
+      organisation,
+      label,
+      delete: deleteFn,
+      updateBtn: propsUpdateBtn,
+      errorVisible,
+      errorText,
+      organisationTypes,
+      reload,
+    } = this.props;
+    const {
+      detailsOpen,
+      metadataOpen,
+      status,
+      label: stateLabel,
+      description,
+      organisationType,
+    } = this.state;
+    const detailsOpenActive = detailsOpen ? ' active' : '';
+    const metadataOpenActive = metadataOpen ? ' active' : '';
+    let statusPublic = 'secondary';
+    const statusPrivate = 'secondary';
     let publicOutline = true;
     let privateOutline = false;
-    if (this.state.status==="public") {
-      statusPublic = "success";
+    if (status === 'public') {
+      statusPublic = 'success';
       publicOutline = false;
       privateOutline = true;
     }
 
     let metadataItems = this.parseMetadata();
 
-    let metadataCard = " hidden";
-    if (metadataItems.length>0) {
-      metadataItems = "";
+    const metadataCard = ' hidden';
+    if (metadataItems.length > 0) {
+      metadataItems = '';
     }
 
     let thumbnailImage = [];
-    let thumbnailURL = getThumbnailURL(this.props.organisation);
-    if (thumbnailURL!==null) {
-      thumbnailImage = <img src={thumbnailURL} className="img-fluid img-thumbnail" alt={this.props.label} />
+    const thumbnailURL = getThumbnailURL(organisation);
+    if (thumbnailURL !== null) {
+      thumbnailImage = (
+        <img
+          src={thumbnailURL}
+          className="img-fluid img-thumbnail"
+          alt={label}
+        />
+      );
     }
-    let metadataOutput = [];
-    let deleteBtn = <Button color="danger" onClick={this.props.delete} outline type="button" size="sm" className="pull-left"><i className="fa fa-trash-o" /> Delete</Button>;
-    let updateBtn = <Button color="primary" outline type="submit" size="sm" onClick={()=>this.formSubmit}>{this.props.updateBtn}</Button>
+    const metadataOutput = [];
+    const deleteBtn = (
+      <Button
+        color="danger"
+        onClick={deleteFn}
+        outline
+        type="button"
+        size="sm"
+        className="pull-left"
+      >
+        <i className="fa fa-trash-o" /> Delete
+      </Button>
+    );
+    const updateBtn = (
+      <Button
+        color="primary"
+        outline
+        type="submit"
+        size="sm"
+        onClick={() => this.formSubmit}
+      >
+        {propsUpdateBtn}
+      </Button>
+    );
 
-    let errorContainerClass = " hidden";
-    if (this.props.errorVisible) {
-      errorContainerClass = "";
-    }
-    let errorContainer = <div className={"error-container"+errorContainerClass}>{this.props.errorText}</div>
+    const errorContainerClass = errorVisible ? '' : ' hidden';
+    const errorContainer = (
+      <div className={`error-container${errorContainerClass}`}>{errorText}</div>
+    );
 
     let organisationAppelationsData = [];
-    if (this.props.organisation!==null) {
-      organisationAppelationsData = this.props.organisation.alternateAppelations;
+    if (organisation !== null) {
+      organisationAppelationsData = organisation.alternateAppelations;
     }
 
     let organisationTypesOptions = [];
-    if (this.props.organisationTypes.length>0) {
-      organisationTypesOptions = this.props.organisationTypes.map((o,i)=><option value={o.labelId} key={i}>{o.label}</option>);
+    if (organisationTypes.length > 0) {
+      organisationTypesOptions = organisationTypes.map((o, i) => {
+        const key = `a${i}`;
+        return (
+          <option value={o.labelId} key={key}>
+            {o.label}
+          </option>
+        );
+      });
     }
 
     return (
       <div className="row">
-        <div className="col-xs-12 col-sm-6">
-          {thumbnailImage}
-        </div>
+        <div className="col-xs-12 col-sm-6">{thumbnailImage}</div>
         <div className="col-xs-12 col-sm-6">
           <div className="resource-details">
             <Card>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'detailsOpen')}>Details <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></CardTitle>
+                <CardTitle onClick={() => this.toggleCollapse('detailsOpen')}>
+                  Details{' '}
+                  <Button
+                    type="button"
+                    className="pull-right"
+                    color="secondary"
+                    outline
+                    size="xs"
+                  >
+                    <i
+                      className={`collapse-toggle fa fa-angle-left${detailsOpenActive}`}
+                    />
+                  </Button>
+                </CardTitle>
                 {errorContainer}
-                <Collapse isOpen={this.state.detailsOpen}>
+                <Collapse isOpen={detailsOpen}>
                   <Form onSubmit={this.formSubmit}>
                     <div className="text-right">
                       <ButtonGroup>
-                        <Button size="sm" outline={publicOutline} color={statusPublic} onClick={()=>this.updateStatus("public")}>Public</Button>
-                        <Button size="sm" outline={privateOutline} color={statusPrivate} onClick={()=>this.updateStatus("private")}>Private</Button>
+                        <Button
+                          size="sm"
+                          outline={publicOutline}
+                          color={statusPublic}
+                          onClick={() => this.updateStatus('public')}
+                        >
+                          Public
+                        </Button>
+                        <Button
+                          size="sm"
+                          outline={privateOutline}
+                          color={statusPrivate}
+                          onClick={() => this.updateStatus('private')}
+                        >
+                          Private
+                        </Button>
                       </ButtonGroup>
                     </div>
                     <FormGroup>
                       <Label>Label</Label>
-                      <Input type="text" name="label" placeholder="Organisation label..." value={this.state.label} onChange={this.handleChange}/>
+                      <Input
+                        type="text"
+                        name="label"
+                        placeholder="Organisation label..."
+                        value={stateLabel}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <div className="alternate-appelations">
                       <div className="label">Alternate labels</div>
@@ -262,11 +398,25 @@ export default class ViewOrganisation extends Component {
                     </div>
                     <FormGroup>
                       <Label>Description</Label>
-                      <Input type="textarea" name="description" placeholder="Organisation description..." value={this.state.description} onChange={this.handleChange}/>
+                      <Input
+                        type="textarea"
+                        name="description"
+                        placeholder="Organisation description..."
+                        value={description}
+                        onChange={this.handleChange}
+                      />
                     </FormGroup>
                     <FormGroup>
                       <Label>Type</Label>
-                      <Input type="select" name="organisationType" placeholder="Organisation type..." value={this.state.organisationType} onChange={this.handleChange}>{organisationTypesOptions}</Input>
+                      <Input
+                        type="select"
+                        name="organisationType"
+                        placeholder="Organisation type..."
+                        value={organisationType}
+                        onChange={this.handleChange}
+                      >
+                        {organisationTypesOptions}
+                      </Input>
                     </FormGroup>
                     <div className="text-right">
                       {deleteBtn}
@@ -279,22 +429,55 @@ export default class ViewOrganisation extends Component {
 
             <Card className={metadataCard}>
               <CardBody>
-                <CardTitle onClick={this.toggleCollapse.bind(this, 'metadataOpen')}>Metadata<Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+metadataOpenActive} /></Button></CardTitle>
-                <Collapse isOpen={this.state.metadataOpen}>
-                  {metadataOutput}
-                </Collapse>
+                <CardTitle onClick={() => this.toggleCollapse('metadataOpen')}>
+                  Metadata
+                  <Button
+                    type="button"
+                    className="pull-right"
+                    color="secondary"
+                    outline
+                    size="xs"
+                  >
+                    <i
+                      className={`collapse-toggle fa fa-angle-left${metadataOpenActive}`}
+                    />
+                  </Button>
+                </CardTitle>
+                <Collapse isOpen={metadataOpen}>{metadataOutput}</Collapse>
               </CardBody>
             </Card>
 
             <RelatedEntitiesBlock
-              item={this.props.organisation}
+              item={organisation}
               itemType="Organisation"
-              reload={this.props.reload}
-              />
-
+              reload={reload}
+            />
           </div>
         </div>
       </div>
-    )
+    );
   }
 }
+
+ViewOrganisation.defaultProps = {
+  organisation: null,
+  update: () => {},
+  delete: () => {},
+  label: '',
+  updateBtn: null,
+  errorVisible: false,
+  errorText: [],
+  organisationTypes: [],
+  reload: () => {},
+};
+ViewOrganisation.propTypes = {
+  organisation: PropTypes.object,
+  update: PropTypes.func,
+  delete: PropTypes.func,
+  label: PropTypes.string,
+  updateBtn: PropTypes.object,
+  errorVisible: PropTypes.bool,
+  errorText: PropTypes.array,
+  organisationTypes: PropTypes.array,
+  reload: PropTypes.func,
+};

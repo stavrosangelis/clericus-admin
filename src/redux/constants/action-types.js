@@ -1,1 +1,0 @@
-export const GENERIC_UPDATE = "GENERIC_UPDATE";

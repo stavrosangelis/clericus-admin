@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Component } from 'react';
 import {
   Collapse,
   Navbar,
@@ -9,157 +9,125 @@ import {
   DropdownMenu,
   DropdownItem,
   Container,
-} from "reactstrap";
+} from 'reactstrap';
 
-import dashboardRoutes from "../routes/index";
-import {connect} from "react-redux";
-import {
-  logout,
-} from "../redux/actions/main-actions";
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+
+import dashboardRoutes from '../routes/index';
+import { logout } from '../redux/actions';
 
 function mapDispatchToProps(dispatch) {
   return {
-    logout: () => dispatch(logout())
-  }
+    logout: () => dispatch(logout()),
+  };
 }
 
-class Header extends React.Component {
+class Header extends Component {
+  static openSidebar() {
+    document.documentElement.classList.toggle('nav-open');
+  }
+
   constructor(props) {
     super(props);
     this.state = {
       isOpen: false,
       dropdownOpen: false,
-      color: "transparent"
     };
     this.toggle = this.toggle.bind(this);
     this.dropdownToggle = this.dropdownToggle.bind(this);
   }
 
-  toggle() {
-    if (this.state.isOpen) {
-      this.setState({
-        color: "transparent"
-      });
-    } else {
-      this.setState({
-        color: "dark"
-      });
-    }
-    this.setState({
-      isOpen: !this.state.isOpen
-    });
-  }
-
-  dropdownToggle(e) {
-    this.setState({
-      dropdownOpen: !this.state.dropdownOpen
-    });
-  }
-
   getBrand() {
-    var name;
-    dashboardRoutes.map((prop, key) => {
+    const { location } = this.prop;
+    let name;
+    dashboardRoutes.map((prop) => {
       if (prop.collapse) {
-        prop.views.map((prop, key) => {
-          if (prop.path === this.props.location.pathname) {
-            name = prop.name;
+        prop.views.map((p) => {
+          if (p.path === location.pathname) {
+            name = p.name;
           }
           return null;
         });
-      } else {
-        if (prop.redirect) {
-          if (prop.path === this.props.location.pathname) {
-            name = prop.name;
-          }
-        } else {
-          if (prop.path === this.props.location.pathname) {
-            name = prop.name;
-          }
+      } else if (prop.redirect) {
+        if (prop.path === location.pathname) {
+          name = prop.name;
         }
+      } else if (prop.path === location.pathname) {
+        name = prop.name;
       }
       return null;
     });
     return name;
   }
 
-  openSidebar() {
-    document.documentElement.classList.toggle("nav-open");
+  toggle() {
+    const { isOpen } = this.state;
+    this.setState({
+      isOpen: !isOpen,
+    });
   }
 
-  updateColor() {
-    if (window.innerWidth < 993 && this.state.isOpen) {
-      this.setState({
-        color: "dark"
-      });
-    } else {
-      this.setState({
-        color: "transparent"
-      });
-    }
-  }
-
-  componentDidMount() {
-    window.addEventListener("resize", this.updateColor.bind(this));
+  dropdownToggle() {
+    const { dropdownOpen } = this.state;
+    this.setState({
+      dropdownOpen: !dropdownOpen,
+    });
   }
 
   render() {
+    const { isOpen, dropdownOpen } = this.state;
     let userName = '';
-    let user = JSON.parse(localStorage.getItem('user'));
-    if (user!==null) {
-      if (user.firstName!=="") {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user !== null) {
+      if (user.firstName !== '') {
         userName = user.firstName;
       }
-      if (user.lastName!=="") {
-        userName += " "+user.lastName;
+      if (user.lastName !== '') {
+        userName += ` ${user.lastName}`;
       }
-      if (userName==="") {
+      if (userName === '') {
         userName = user.email;
       }
     }
-
+    const { logout: logoutFn } = this.props;
     return (
-      <Navbar
-        expand="md"
-        className="main-navbar"
-      >
+      <Navbar expand="md" className="main-navbar">
         <Container fluid>
           <div className="navbar-wrapper">
             <div className="navbar-toggle">
               <button
                 type="button"
-                ref="sidebarToggle"
                 className="navbar-toggler left"
-                onClick={() => this.openSidebar()}
+                onClick={() => this.constructor.openSidebar()}
               >
                 <span className="navbar-toggler-bar bar1" />
                 <span className="navbar-toggler-bar bar2" />
                 <span className="navbar-toggler-bar bar3" />
               </button>
             </div>
-
           </div>
           <NavbarToggler onClick={this.toggle}>
             <span className="navbar-toggler-bar navbar-kebab" />
             <span className="navbar-toggler-bar navbar-kebab" />
             <span className="navbar-toggler-bar navbar-kebab" />
           </NavbarToggler>
-          <Collapse
-            isOpen={this.state.isOpen}
-            navbar
-            className="justify-content-end"
-          >
+          <Collapse isOpen={isOpen} navbar className="justify-content-end">
             <Nav navbar>
               <Dropdown
                 nav
-                isOpen={this.state.dropdownOpen}
-                toggle={e => this.dropdownToggle(e)}
+                isOpen={dropdownOpen}
+                toggle={(e) => this.dropdownToggle(e)}
               >
                 <DropdownToggle caret nav>
                   <i className="pe-header-bar-icon pe-7s-user" />
                 </DropdownToggle>
                 <DropdownMenu right>
                   <DropdownItem header>Welcome {userName}</DropdownItem>
-                  <DropdownItem tag="a" onClick={()=>this.props.logout()}>Logout</DropdownItem>
+                  <DropdownItem tag="a" onClick={() => logoutFn()}>
+                    Logout
+                  </DropdownItem>
                 </DropdownMenu>
               </Dropdown>
             </Nav>
@@ -169,5 +137,10 @@ class Header extends React.Component {
     );
   }
 }
-
-export default Header = connect(null, mapDispatchToProps)(Header);
+Header.defaultProps = {
+  logout: () => {},
+};
+Header.propTypes = {
+  logout: PropTypes.func,
+};
+export default compose(connect(null, mapDispatchToProps))(Header);

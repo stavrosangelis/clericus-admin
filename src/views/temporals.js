@@ -1,53 +1,59 @@
 import React, { Component } from 'react';
-import {
-  Table,
-  Card, CardBody,
-} from 'reactstrap';
+import { Table, Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-import { Spinner } from 'reactstrap';
-import {Breadcrumbs} from '../components/breadcrumbs';
 
 import axios from 'axios';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+
+import Breadcrumbs from '../components/breadcrumbs';
 import PageActions from '../components/page-actions';
 import BatchActions from '../components/add-batch-relations';
 
-import {connect} from "react-redux";
-import {
-  setPaginationParams
-} from "../redux/actions/main-actions";
+import { setPaginationParams } from '../redux/actions';
 
 const APIPath = process.env.REACT_APP_APIPATH;
-const mapStateToProps = state => {
-  return {
-    temporalsPagination: state.temporalsPagination,
-   };
-};
+const mapStateToProps = (state) => ({
+  temporalsPagination: state.temporalsPagination,
+});
 
 function mapDispatchToProps(dispatch) {
   return {
-    setPaginationParams: (type,params) => dispatch(setPaginationParams(type,params))
-  }
+    setPaginationParams: (type, params) =>
+      dispatch(setPaginationParams(type, params)),
+  };
 }
 
 class Temporals extends Component {
   constructor(props) {
     super(props);
 
+    const { temporalsPagination } = this.props;
+    const {
+      orderField,
+      orderDesc,
+      page,
+      limit,
+      status,
+      searchInput,
+    } = temporalsPagination;
+
     this.state = {
       loading: true,
       tableLoading: true,
       items: [],
-      orderField: this.props.temporalsPagination.orderField,
-      orderDesc: this.props.temporalsPagination.orderDesc,
-      page: this.props.temporalsPagination.page,
-      gotoPage: this.props.temporalsPagination.page,
-      limit: this.props.temporalsPagination.limit,
-      status: this.props.temporalsPagination.status,
+      orderField,
+      orderDesc,
+      page,
+      gotoPage: page,
+      limit,
+      status,
       totalPages: 0,
       totalItems: 0,
       allChecked: false,
-      searchInput: this.props.temporalsPagination.searchInput
-    }
+      searchInput,
+    };
     this.load = this.load.bind(this);
     this.simpleSearch = this.simpleSearch.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
@@ -65,337 +71,7 @@ class Temporals extends Component {
     this.removeSelected = this.removeSelected.bind(this);
 
     // hack to kill load promise on unmount
-    this.cancelLoad=false;
-  }
-
-  async load() {
-    this.setState({
-      tableLoading: true
-    });
-    let params = {
-      page: this.state.page,
-      limit: this.state.limit,
-      orderField: this.state.orderField,
-      orderDesc: this.state.orderDesc,
-      status: this.state.status,
-    }
-    if (this.state.searchInput!=="") {
-      params.label = this.state.searchInput;
-    }
-    let url = APIPath+'temporals';
-    let responseData = await axios({
-      method: 'get',
-      url: url,
-      crossDomain: true,
-      params: params
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-    if (this.cancelLoad) {
-      return false;
-    }
-    let items = responseData.data.map(item=>{
-      item.checked = false;
-      return item;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage>0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage>1 && currentPage>responseData.totalPages) {
-      this.setState({
-        page: responseData.totalPages
-      },()=> {
-        this.load();
-      });
-    }
-    else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        items: items,
-        totalItems:responseData.totalItems
-      });
-    }
-  }
-
-  async simpleSearch(e) {
-    e.preventDefault();
-    if (this.state.searchInput<2) {
-      return false;
-    }
-    this.updateStorePagination({searchInput:this.state.searchInput});
-    this.setState({
-      tableLoading: true
-    });
-    let params = {
-      page: this.state.page,
-      limit: this.state.limit,
-      label: this.state.searchInput,
-      orderField: this.state.orderField,
-      orderDesc: this.state.orderDesc,
-      status: this.state.status,
-    }
-    let url = APIPath+'temporals';
-    let responseData = await axios({
-      method: 'get',
-      url: url,
-      crossDomain: true,
-      params: params
-    })
-	  .then(function (response) {
-      return response.data.data;
-	  })
-	  .catch(function (error) {
-	  });
-
-    let items = responseData.data.map(item=>{
-      item.checked = false;
-      return item;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage>0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage>1 && currentPage>responseData.totalPages) {
-      this.setState({
-        page: responseData.totalPages
-      },()=> {
-        this.load();
-      });
-    }
-    else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        items: items
-      });
-    }
-  }
-
-  clearSearch() {
-    return new Promise((resolve)=> {
-      this.setState({
-        searchInput: ''
-      });
-      this.updateStorePagination({searchInput:""});
-      resolve(true)
-    })
-    .then(()=> {
-      this.load();
-    });
-  }
-
-  updateOrdering(orderField="") {
-    let orderDesc = false;
-    if (orderField === this.state.orderField) {
-      orderDesc = !this.state.orderDesc;
-    }
-    this.setState({
-      orderField: orderField,
-      orderDesc: orderDesc
-    });
-    this.updateStorePagination({orderField:orderField,orderDesc:orderDesc});
-    let context = this;
-    setTimeout(function(){
-      context.load();
-    },100);
-  }
-
-  updatePage(e) {
-    if (e>0 && e!==this.state.page) {
-      this.setState({
-        page: e,
-        gotoPage: e,
-      });
-      this.updateStorePagination({page:e});
-      let context = this;
-      setTimeout(function(){
-        context.load();
-      },100);
-    }
-  }
-
-  updateStorePagination({limit=null, page=null, orderField="", orderDesc=false, status=null, searchInput=""}) {
-    if (limit===null) {
-      limit = this.state.limit;
-    }
-    if (page===null) {
-      page = this.state.page;
-    }
-    if (orderField==="") {
-      orderField = this.state.orderField;
-    }
-    if (orderDesc===false) {
-      orderDesc = this.state.orderDesc;
-    }
-    if (status===null) {
-      status = this.state.status;
-    }
-    if (searchInput==="") {
-      searchInput = this.state.searchInput;
-    }
-    let payload = {
-      limit:limit,
-      page:page,
-      orderField:orderField,
-      orderDesc:orderDesc,
-      status: status,
-      searchInput: searchInput,
-    }
-    this.props.setPaginationParams("temporals", payload);
-  }
-
-  gotoPage(e) {
-    e.preventDefault();
-    let gotoPage = parseInt(this.state.gotoPage,10);
-    let page = this.state.page;
-    if (gotoPage>0 && gotoPage!==page) {
-      this.setState({
-        page: gotoPage
-      })
-      this.updateStorePagination({page:gotoPage});
-      let context = this;
-      setTimeout(function(){
-        context.load();
-      },100);
-    }
-  }
-
-  updateLimit(limit) {
-    this.setState({
-      limit: limit
-    })
-    this.updateStorePagination({limit:limit});
-    let context = this;
-    setTimeout(function(){
-      context.load();
-    },100)
-  }
-
-  handleChange(e) {
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    this.setState({
-      [name]: value
-    });
-  }
-
-  setStatus(status=null) {
-    this.setState({
-      status: status
-    })
-    this.updateStorePagination({status:status});
-    let context = this;
-    setTimeout(function() {
-      context.load();
-    },100)
-  }
-
-  itemsTableRows() {
-    let items = this.state.items;
-    let rows = [];
-    for (let i=0;i<items.length; i++) {
-      let item = items[i];
-      let countPage = parseInt(this.state.page,10)-1;
-      let count = (i+1) + (countPage*this.state.limit);
-      let label = item.label;
-      let createdAt = <div><small>{item.createdAt.split("T")[0]}</small><br/><small>{item.createdAt.split("T")[1]}</small></div>;
-      let updatedAt = <div><small>{item.updatedAt.split("T")[0]}</small><br/><small>{item.updatedAt.split("T")[1]}</small></div>;
-      let row = <tr key={i}>
-        <td>
-          <div className="select-checkbox-container">
-            <input type="checkbox" value={i} checked={items[i].checked} onChange={() => {return false}}/>
-            <span className="select-checkbox" onClick={this.toggleSelected.bind(this,i)}></span>
-          </div>
-        </td>
-        <td>{count}</td>
-        <td>
-          <Link href={"/temporal/"+item._id} to={"/temporal/"+item._id}>{label}</Link>
-        </td>
-        <td>{createdAt}</td>
-        <td>{updatedAt}</td>
-        <td><Link href={"/temporal/"+item._id} to={"/temporal/"+item._id} className="edit-item"><i className="fa fa-pencil" /></Link></td>
-      </tr>
-      rows.push(row);
-    }
-    return rows;
-  }
-
-  toggleSelected(i) {
-    let items = this.state.items;
-    let newPersonChecked = !items[i].checked;
-    items[i].checked = newPersonChecked;
-    this.setState({
-      items: items
-    });
-  }
-
-  toggleSelectedAll() {
-    let allChecked = !this.state.allChecked;
-    let items = this.state.items;
-    let newItems = [];
-    for (let i=0;i<items.length; i++) {
-      let item = items[i];
-      item.checked = allChecked;
-      newItems.push(item);
-    }
-    this.setState({
-      items: newItems,
-      allChecked: allChecked
-    })
-  }
-
-  async deleteSelected() {
-    let selectedTemporals = this.state.items.filter(item=>{
-      return item.checked;
-    }).map(item=>item._id);
-    let data = {
-      _ids: selectedTemporals,
-    }
-    let url = APIPath+'temporals';
-    await axios({
-      method: 'delete',
-      url: url,
-      crossDomain: true,
-      data: data
-    })
-	  .then(function (response) {
-      return true;
-	  })
-	  .catch(function (error) {
-	  });
-    this.setState({
-      allChecked: false,
-      deleteModalOpen: false,
-    })
-    this.load();
-  }
-
-  removeSelected(_id=null) {
-    if (_id==null) {
-      return false;
-    }
-    let newTemporals = this.state.items.map(item=> {
-      if (item._id===_id) {
-        item.checked = false;
-      }
-      return item;
-    });
-    this.setState({
-      items: newTemporals
-    });
+    this.cancelLoad = false;
   }
 
   componentDidMount() {
@@ -403,164 +79,660 @@ class Temporals extends Component {
   }
 
   componentWillUnmount() {
-    this.cancelLoad=true;
+    this.cancelLoad = true;
+  }
+
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  setStatus(status = null) {
+    this.updateStorePagination({ status });
+    this.setState(
+      {
+        status,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  async load() {
+    const {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+      searchInput,
+    } = this.state;
+    this.setState({
+      tableLoading: true,
+    });
+    const params = {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+    };
+    if (searchInput !== '') {
+      params.label = searchInput;
+    }
+    const url = `${APIPath}temporals`;
+    const responseData = await axios({
+      method: 'get',
+      url,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (this.cancelLoad) {
+      return false;
+    }
+    const items = responseData.data.map((item) => {
+      const itemCopy = item;
+      itemCopy.checked = false;
+      return itemCopy;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage > 0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage > 1 && currentPage > responseData.totalPages) {
+      this.setState(
+        {
+          page: responseData.totalPages,
+        },
+        () => {
+          this.load();
+        }
+      );
+    } else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        items,
+        totalItems: responseData.totalItems,
+      });
+    }
+    return false;
+  }
+
+  async simpleSearch(e) {
+    e.preventDefault();
+    const {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+      searchInput,
+    } = this.state;
+    if (searchInput < 2) {
+      return false;
+    }
+    this.updateStorePagination({ searchInput });
+    this.setState({
+      tableLoading: true,
+    });
+    const params = {
+      page,
+      limit,
+      orderField,
+      orderDesc,
+      status,
+      label: searchInput,
+    };
+    const url = `${APIPath}temporals`;
+    const responseData = await axios({
+      method: 'get',
+      url,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+
+    const items = responseData.data.map((item) => {
+      const itemCopy = item;
+      itemCopy.checked = false;
+      return itemCopy;
+    });
+    let currentPage = 1;
+    if (responseData.currentPage > 0) {
+      currentPage = responseData.currentPage;
+    }
+    // normalize the page number when the selected page is empty for the selected number of items per page
+    if (currentPage > 1 && currentPage > responseData.totalPages) {
+      this.setState(
+        {
+          page: responseData.totalPages,
+        },
+        () => {
+          this.load();
+        }
+      );
+    } else {
+      this.setState({
+        loading: false,
+        tableLoading: false,
+        page: responseData.currentPage,
+        totalPages: responseData.totalPages,
+        totalItems: responseData.totalItems,
+        items,
+      });
+    }
+    return false;
+  }
+
+  clearSearch() {
+    return new Promise((resolve) => {
+      this.setState({
+        searchInput: '',
+      });
+      this.updateStorePagination({ searchInput: '' });
+      resolve(true);
+    }).then(() => {
+      this.load();
+    });
+  }
+
+  updateOrdering(orderField = '') {
+    const {
+      orderField: stateOrderField,
+      orderDesc: stateOrderDesc,
+    } = this.state;
+    let orderDesc = false;
+    if (orderField === stateOrderField) {
+      orderDesc = !stateOrderDesc;
+    }
+    this.updateStorePagination({ orderField, orderDesc });
+    this.setState(
+      {
+        orderField,
+        orderDesc,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  updatePage(value) {
+    const { page } = this.state;
+    if (value > 0 && value !== page) {
+      this.updateStorePagination({ page: value });
+      this.setState(
+        {
+          page: value,
+          gotoPage: value,
+        },
+        () => {
+          this.load();
+        }
+      );
+    }
+  }
+
+  updateStorePagination({
+    limit = null,
+    page = null,
+    orderField = '',
+    orderDesc = false,
+    status = null,
+    searchInput = '',
+  }) {
+    const {
+      limit: stateLimit,
+      page: statePage,
+      orderField: stateOrderField,
+      orderDesc: stateOrderDesc,
+      status: stateStatus,
+      searchInput: stateSearchInput,
+    } = this.state;
+    let limitCopy = limit;
+    let pageCopy = page;
+    let orderFieldCopy = orderField;
+    let orderDescCopy = orderDesc;
+    let statusCopy = status;
+    let searchInputCopy = searchInput;
+    if (limit === null) {
+      limitCopy = stateLimit;
+    }
+    if (page === null) {
+      pageCopy = statePage;
+    }
+    if (orderField === '') {
+      orderFieldCopy = stateOrderField;
+    }
+    if (orderDesc === false) {
+      orderDescCopy = stateOrderDesc;
+    }
+    if (status === null) {
+      statusCopy = stateStatus;
+    }
+    if (searchInput === null) {
+      searchInputCopy = stateSearchInput;
+    }
+    const payload = {
+      limit: limitCopy,
+      page: pageCopy,
+      orderField: orderFieldCopy,
+      orderDesc: orderDescCopy,
+      status: statusCopy,
+      searchInput: searchInputCopy,
+    };
+    const { setPaginationParams: setPaginationParamsFn } = this.props;
+    setPaginationParamsFn('temporals', payload);
+  }
+
+  gotoPage(e) {
+    e.preventDefault();
+    const { page } = this.state;
+    let { gotoPage } = this.state;
+    gotoPage = parseInt(gotoPage, 10);
+    if (gotoPage > 0 && gotoPage !== page) {
+      this.updateStorePagination({ page: gotoPage });
+      this.setState(
+        {
+          page: gotoPage,
+        },
+        () => {
+          this.load();
+        }
+      );
+    }
+  }
+
+  updateLimit(limit) {
+    this.updateStorePagination({ limit });
+    this.setState(
+      {
+        limit,
+      },
+      () => {
+        this.load();
+      }
+    );
+  }
+
+  itemsTableRows() {
+    const { items, page, limit } = this.state;
+    const rows = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      const countPage = parseInt(page, 10) - 1;
+      const count = i + 1 + countPage * limit;
+      const { label } = item;
+      const createdAt = (
+        <div>
+          <small>{item.createdAt.split('T')[0]}</small>
+          <br />
+          <small>{item.createdAt.split('T')[1]}</small>
+        </div>
+      );
+      const updatedAt = (
+        <div>
+          <small>{item.updatedAt.split('T')[0]}</small>
+          <br />
+          <small>{item.updatedAt.split('T')[1]}</small>
+        </div>
+      );
+      const row = (
+        <tr key={i}>
+          <td>
+            <div className="select-checkbox-container">
+              <input
+                type="checkbox"
+                value={i}
+                checked={items[i].checked}
+                onChange={() => false}
+              />
+              <span
+                className="select-checkbox"
+                onClick={() => this.toggleSelected(i)}
+                onKeyDown={() => false}
+                role="button"
+                tabIndex={0}
+                aria-label="toggle selected"
+              />
+            </div>
+          </td>
+          <td>{count}</td>
+          <td>
+            <Link href={`/temporal/${item._id}`} to={`/temporal/${item._id}`}>
+              {label}
+            </Link>
+          </td>
+          <td>{createdAt}</td>
+          <td>{updatedAt}</td>
+          <td>
+            <Link
+              href={`/temporal/${item._id}`}
+              to={`/temporal/${item._id}`}
+              className="edit-item"
+            >
+              <i className="fa fa-pencil" />
+            </Link>
+          </td>
+        </tr>
+      );
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  toggleSelected(i) {
+    const { items } = this.state;
+    const newPersonChecked = !items[i].checked;
+    items[i].checked = newPersonChecked;
+    this.setState({
+      items,
+    });
+  }
+
+  toggleSelectedAll() {
+    const { allChecked: stateAllChecked, items } = this.state;
+    const allChecked = !stateAllChecked;
+    const newItems = items.map((item) => {
+      const itemCopy = item;
+      itemCopy.checked = allChecked;
+      return itemCopy;
+    });
+    this.setState({
+      items: newItems,
+      allChecked,
+    });
+  }
+
+  async deleteSelected() {
+    const { items } = this.state;
+    const selectedTemporals = items
+      .filter((item) => item.checked)
+      .map((item) => item._id);
+    const data = {
+      _ids: selectedTemporals,
+    };
+    const url = `${APIPath}temporals`;
+    const responseData = await axios({
+      method: 'delete',
+      url,
+      crossDomain: true,
+      data,
+    })
+      .then(() => true)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (responseData) {
+      this.setState({
+        allChecked: false,
+      });
+      this.load();
+    }
+  }
+
+  removeSelected(_id = null) {
+    if (_id == null) {
+      return false;
+    }
+    const { items } = this.state;
+    const newTemporals = items.map((item) => {
+      const itemCopy = item;
+      if (itemCopy._id === _id) {
+        itemCopy.checked = false;
+      }
+      return itemCopy;
+    });
+    this.setState({
+      items: newTemporals,
+    });
+    return false;
   }
 
   render() {
-    let heading = "Temporal";
-    let breadcrumbsItems = [
-      {label: heading, icon: "pe-7s-clock", active: true, path: ""}
+    const {
+      page,
+      gotoPage,
+      totalPages,
+      limit,
+      loading,
+      tableLoading,
+      allChecked: stateAllChecked,
+      orderField,
+      orderDesc,
+      searchInput,
+      totalItems,
+      items,
+    } = this.state;
+    const heading = 'Temporal';
+    const breadcrumbsItems = [
+      { label: heading, icon: 'pe-7s-clock', active: true, path: '' },
     ];
 
-    let pageActions = <PageActions
-      clearSearch={this.clearSearch}
-      current_page={this.state.page}
-      gotoPage={this.gotoPage}
-      gotoPageValue={this.state.gotoPage}
-      handleChange={this.handleChange}
-      limit={this.state.limit}
-      pageType="temporals"
-      searchInput={this.state.searchInput}
-      setStatus={this.setStatus}
-      simpleSearch={this.simpleSearch}
-      total_pages={this.state.totalPages}
-      types={[]}
-      updateLimit={this.updateLimit}
-      updatePage={this.updatePage}
-    />
-    let content = <div>
-      {pageActions}
-      <div className="row">
-        <div className="col-12">
-          <div style={{padding: '40pt',textAlign: 'center'}}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
+    const pageActions = (
+      <PageActions
+        clearSearch={this.clearSearch}
+        current_page={page}
+        gotoPage={this.gotoPage}
+        gotoPageValue={gotoPage}
+        handleChange={this.handleChange}
+        limit={limit}
+        pageType="temporals"
+        searchInput={searchInput}
+        setStatus={this.setStatus}
+        simpleSearch={this.simpleSearch}
+        total_pages={totalPages}
+        types={[]}
+        updateLimit={this.updateLimit}
+        updatePage={this.updatePage}
+      />
+    );
+    let content = (
+      <div>
+        {pageActions}
+        <div className="row">
+          <div className="col-12">
+            <div style={{ padding: '40pt', textAlign: 'center' }}>
+              <Spinner type="grow" color="info" /> <i>loading...</i>
+            </div>
           </div>
         </div>
+        {pageActions}
       </div>
-      {pageActions}
-    </div>
-    if (!this.state.loading) {
-      let addNewBtn = <Link className="btn btn-outline-secondary add-new-item-btn" to="/temporal/new" href="/temporal/new"><i className="fa fa-plus" /></Link>;
+    );
+    if (!loading) {
+      const addNewBtn = (
+        <Link
+          className="btn btn-outline-secondary add-new-item-btn"
+          to="/temporal/new"
+          href="/temporal/new"
+        >
+          <i className="fa fa-plus" />
+        </Link>
+      );
 
-      let tableLoadingSpinner = <tr>
-        <td colSpan={5}><Spinner type="grow" color="info" /> <i>loading...</i></td>
-      </tr>;
+      const tableLoadingSpinner = (
+        <tr>
+          <td colSpan={5}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
+          </td>
+        </tr>
+      );
       let itemsRows = [];
-      if (this.state.tableLoading) {
+      if (tableLoading) {
         itemsRows = tableLoadingSpinner;
-      }
-      else {
+      } else {
         itemsRows = this.itemsTableRows();
       }
-      let allChecked = "";
-      if (this.state.allChecked) {
-        allChecked = "checked";
-      }
+      const allChecked = stateAllChecked ? 'checked' : '';
 
-      let selectedTemporals = this.state.items.filter(item=>{
-          return item.checked;
-      });
+      const selectedTemporals = items.filter((item) => item.checked);
 
-      let batchActions = <BatchActions
-        items={selectedTemporals}
-        removeSelected={this.removeSelected}
-        type="Temporal"
-        relationProperties={[]}
-        deleteSelected={this.deleteSelected}
-        selectAll={this.toggleSelectedAll}
-        allChecked={this.state.allChecked}
-      />
+      const batchActions = (
+        <BatchActions
+          items={selectedTemporals}
+          removeSelected={this.removeSelected}
+          type="Temporal"
+          relationProperties={[]}
+          deleteSelected={this.deleteSelected}
+          selectAll={this.toggleSelectedAll}
+          allChecked={stateAllChecked}
+        />
+      );
 
       // ordering
       let labelOrderIcon = [];
       let createdOrderIcon = [];
       let updatedOrderIcon = [];
-      if (this.state.orderField==="label" || this.state.orderField==="") {
-        if (this.state.orderDesc) {
-          labelOrderIcon = <i className="fa fa-caret-down" />
-        }
-        else {
-          labelOrderIcon = <i className="fa fa-caret-up" />
-        }
-      }
-      if (this.state.orderField==="createdAt") {
-        if (this.state.orderDesc) {
-          createdOrderIcon = <i className="fa fa-caret-down" />
-        }
-        else {
-          createdOrderIcon = <i className="fa fa-caret-up" />
+      if (orderField === 'label' || orderField === '') {
+        if (orderDesc) {
+          labelOrderIcon = <i className="fa fa-caret-down" />;
+        } else {
+          labelOrderIcon = <i className="fa fa-caret-up" />;
         }
       }
-      if (this.state.orderField==="updatedAt") {
-        if (this.state.orderDesc) {
-          updatedOrderIcon = <i className="fa fa-caret-down" />
-        }
-        else {
-          updatedOrderIcon = <i className="fa fa-caret-up" />
+      if (orderField === 'createdAt') {
+        if (orderDesc) {
+          createdOrderIcon = <i className="fa fa-caret-down" />;
+        } else {
+          createdOrderIcon = <i className="fa fa-caret-up" />;
         }
       }
-      content = <div className="items-container">
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <Card>
-              <CardBody>
-                <div className="pull-right">
-                  {batchActions}
-                </div>
-                <Table hover>
-                  <thead>
-                    <tr>
-                      <th style={{width: "30px"}}>
-                        <div className="select-checkbox-container default">
-                          <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
-                          <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
-                        </div>
-                      </th>
-                      <th style={{width: "40px"}}>#</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
-                      <th style={{width: "30px"}}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itemsRows}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th>
-                        <div className="select-checkbox-container default">
-                          <input type="checkbox" checked={allChecked} onChange={() => {return false}}/>
-                          <span className="select-checkbox" onClick={this.toggleSelectedAll}></span>
-                        </div>
-                      </th>
-                      <th>#</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("label")}>Label {labelOrderIcon}</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("createdAt")}>Created {createdOrderIcon}</th>
-                      <th className="ordering-label" onClick={()=>this.updateOrdering("updatedAt")}>Updated {updatedOrderIcon}</th>
-                      <th></th>
-                    </tr>
-                  </tfoot>
-                </Table>
-                <div className="pull-right">
-                  {batchActions}
-                </div>
-              </CardBody>
-            </Card>
+      if (orderField === 'updatedAt') {
+        if (orderDesc) {
+          updatedOrderIcon = <i className="fa fa-caret-down" />;
+        } else {
+          updatedOrderIcon = <i className="fa fa-caret-up" />;
+        }
+      }
+      content = (
+        <div className="items-container">
+          {pageActions}
+          <div className="row">
+            <div className="col-12">
+              <Card>
+                <CardBody>
+                  <div className="pull-right">{batchActions}</div>
+                  <Table hover>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '30px' }}>
+                          <div className="select-checkbox-container default">
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              onChange={() => false}
+                            />
+                            <span
+                              className="select-checkbox"
+                              onClick={this.toggleSelectedAll}
+                              onKeyDown={() => false}
+                              role="button"
+                              tabIndex={0}
+                              aria-label="toggle select all"
+                            />
+                          </div>
+                        </th>
+                        <th style={{ width: '40px' }}>#</th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('label')}
+                        >
+                          Label {labelOrderIcon}
+                        </th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('createdAt')}
+                        >
+                          Created {createdOrderIcon}
+                        </th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('updatedAt')}
+                        >
+                          Updated {updatedOrderIcon}
+                        </th>
+                        <th style={{ width: '30px' }} aria-label="edit" />
+                      </tr>
+                    </thead>
+                    <tbody>{itemsRows}</tbody>
+                    <tfoot>
+                      <tr>
+                        <th>
+                          <div className="select-checkbox-container default">
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              onChange={() => false}
+                            />
+                            <span
+                              className="select-checkbox"
+                              onClick={this.toggleSelectedAll}
+                              onKeyDown={() => false}
+                              role="button"
+                              tabIndex={0}
+                              aria-label="toggle select all"
+                            />
+                          </div>
+                        </th>
+                        <th>#</th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('label')}
+                        >
+                          Label {labelOrderIcon}
+                        </th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('createdAt')}
+                        >
+                          Created {createdOrderIcon}
+                        </th>
+                        <th
+                          className="ordering-label"
+                          onClick={() => this.updateOrdering('updatedAt')}
+                        >
+                          Updated {updatedOrderIcon}
+                        </th>
+                        <th aria-label="edit" />
+                      </tr>
+                    </tfoot>
+                  </Table>
+                  <div className="pull-right">{batchActions}</div>
+                </CardBody>
+              </Card>
+            </div>
           </div>
+          {pageActions}
+          {addNewBtn}
         </div>
-        {pageActions}
-        {addNewBtn}
-      </div>
+      );
     }
 
-    return(
+    return (
       <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+        <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
-            <h2>{heading} <small>({this.state.totalItems})</small></h2>
+            <h2>
+              {heading} <small>({totalItems})</small>
+            </h2>
           </div>
         </div>
         {content}
@@ -568,4 +740,13 @@ class Temporals extends Component {
     );
   }
 }
-export default Temporals = connect(mapStateToProps, mapDispatchToProps)(Temporals);
+
+Temporals.defaultProps = {
+  temporalsPagination: null,
+  setPaginationParams: () => {},
+};
+Temporals.propTypes = {
+  temporalsPagination: PropTypes.object,
+  setPaginationParams: PropTypes.func,
+};
+export default compose(connect(mapStateToProps, mapDispatchToProps))(Temporals);

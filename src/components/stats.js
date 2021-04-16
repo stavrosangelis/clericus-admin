@@ -1,23 +1,24 @@
-import React from "react";
-// used for making the prop types of this component
-import PropTypes from "prop-types";
+import React from 'react';
+import PropTypes from 'prop-types';
 
-class Stats extends React.Component {
-  render() {
-    var stats = [];
-    for (var i = 0; i < this.props.children.length; i++) {
-      stats.push(<i className={this.props.children[i].i} key={i} />);
-      stats.push(" " + this.props.children[i].t);
-      if (i !== this.props.children.length - 1) {
-        stats.push(<br />);
-      }
+const Stats = (props) => {
+  const { children } = props;
+  const stats = [];
+  for (let i = 0; i < children.length; i += 1) {
+    stats.push(<i className={children[i].i} key={i} />);
+    stats.push(` ${children[i].t}`);
+    if (i !== children.length - 1) {
+      stats.push(<br />);
     }
-    return <div className="stats">{stats}</div>;
   }
-}
+  return <div className="stats">{stats}</div>;
+};
 
+Stats.defaultProps = {
+  children: [],
+};
 Stats.propTypes = {
-  children: PropTypes.array
+  children: PropTypes.array,
 };
 
 export default Stats;

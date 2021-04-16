@@ -1,292 +1,385 @@
-import React, { Component } from 'react';
-import {Spinner, Button, Modal, ModalHeader, ModalBody, ModalFooter} from 'reactstrap';
-import {Link} from 'react-router-dom';
-import { Redirect } from 'react-router';
-import {Breadcrumbs} from '../../components/breadcrumbs';
-
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import axios from 'axios';
+import {
+  Spinner,
+  Button,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from 'reactstrap';
+import { Link } from 'react-router-dom';
+import { Redirect } from 'react-router';
+import PropTypes from 'prop-types';
+import Breadcrumbs from '../../components/breadcrumbs';
+
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export class ParseClassPiece extends Component {
-  constructor(props) {
-    super(props);
+const ParseClassPiece = (props) => {
+  // props
+  const { match } = props;
+  const fileName = match.params?.fileName || '';
+  const [loading, setLoading] = useState(true);
+  // state
+  const defaultState = {
+    loading: true,
+    file: [],
+    analyzeBtnText: <span>Analyze image</span>,
+    analyzeBtnStatus: true,
+    analyzeStatus: false,
+    analyzeStep: 0,
+    analyzingText: [],
+    createThumbnailsBtnText: <span>Identify people</span>,
+    createThumbnailsBtnStatus: false,
+    identifyStep: 0,
+    importDataBtnText: <span>Import data to database</span>,
+    importDataBtnStatus: false,
+    importDataStep: 0,
+    faceBoxes: [],
+    textBoxes: [],
+    zoomSliderValue: 100,
+    confirmModal: false,
+    confirmModalTitle: '',
+    confirmModalContent: [],
+    confirmModalAction: () => {},
+    confirmModalBtn: [],
+    redirect: false,
+  };
+  const [state, setState] = useReducer(
+    (exState, newState) => ({ ...exState, ...newState }),
+    defaultState
+  );
 
-    this.state = {
-      loading: true,
-      file: [],
-      analyzeBtnText: <span>Analyze image</span>,
-      analyzeBtnStatus: true,
-      analyzeStatus: false,
-      analyzeStep: 0,
-      analyzingText: [],
-      createThumbnailsBtnText: <span>Identify people</span>,
-      createThumbnailsBtnStatus: false,
-      identifyStep: 0,
-      importDataBtnText: <span>Import data to database</span>,
-      importDataBtnStatus: false,
-      importDataStep: 0,
-      faceBoxes: [],
-      textBoxes: [],
-      zoomSliderValue: 100,
-      confirmModal: false,
-      confirmModalTitle: '',
-      confirmModalContent: [],
-      confirmModalAction: this.confirmModalToggle,
-      confirmModalBtn: [],
-      redirect: false
-    }
-    this.loadFile = this.loadFile.bind(this);
-    this.loadFaces = this.loadFaces.bind(this);
-    this.analyzeFile = this.analyzeFile.bind(this);
-    this.confirmReidentify = this.confirmReidentify.bind(this);
-    this.redirectToIdentify = this.redirectToIdentify.bind(this);
-    this.confirmModalToggle = this.confirmModalToggle.bind(this);
-  }
+  const confirmModalToggle = useCallback(() => {
+    setState({
+      confirmModal: !state.confirmModal,
+    });
+  }, [state.confirmModal]);
 
-  loadFile = async() => {
-    let fileName = this.props.match.params.fileName;
-    let loadData = await axios({
+  const loadFaces = useCallback(async () => {
+    const facesFile = state.file.faces;
+    const responseData = await axios({
       method: 'get',
-      url: APIPath+'list-class-piece?file='+fileName,
+      url: facesFile,
       crossDomain: true,
     })
-	  .then(function (response) {
-      let responseData = response.data.data;
-      return responseData;
-	  })
-	  .catch(function (error) {
-	  });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
 
-    let file = loadData[0];
+    let thumbnailCount = 0;
+    let dataCount = 0;
+    for (let i = 0; i < responseData.length; i += 1) {
+      const face = responseData[i];
+      if (typeof face.thumbnail !== 'undefined') {
+        thumbnailCount += 1;
+      }
+      if (typeof face.firstName !== 'undefined') {
+        dataCount += 1;
+      }
+    }
+    if (
+      responseData.length === thumbnailCount &&
+      responseData.length === dataCount
+    ) {
+      setState({
+        createThumbnailsBtnText: <span>Re-identify people</span>,
+        identifyStep: 1,
+      });
+    }
+  }, [state]);
+
+  const loadFile = useCallback(async () => {
+    const loadData = await axios({
+      method: 'get',
+      url: `${APIPath}list-class-piece?file=${fileName}`,
+      crossDomain: true,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    const file = loadData[0];
     let analyzeBtnText = <span>Analyze image</span>;
     let createThumbnailsBtnStatus = false;
     let importDataBtnStatus = false;
     let analyzeStep = 0;
-    let context = this;
-    if (file.faces!==null && file.text===null) {
-      this.setState({
-        analyzingText: <div><i>Processing image...</i> <Spinner size="sm" color="secondary" /></div>
-      })
-      setTimeout(()=> {
-        context.loadFile();
-      },5000);
+    if (file.faces !== null && file.text === null) {
+      setState({
+        analyzingText: (
+          <div>
+            <i>Processing image...</i> <Spinner size="sm" color="secondary" />
+          </div>
+        ),
+      });
+      setTimeout(() => {
+        loadFile();
+      }, 5000);
       return false;
     }
-    else {
-      this.setState({
-        analyzingText: []
-      })
-    }
-    if (file.faces!==null) {
+    setState({
+      analyzingText: [],
+    });
+    if (file.faces !== null) {
       analyzeBtnText = <span>Re-analyze image</span>;
       createThumbnailsBtnStatus = true;
       analyzeStep = 1;
     }
-    if (file.facesThumbnails && file.text!==null) {
+    if (file.facesThumbnails && file.text !== null) {
       importDataBtnStatus = true;
     }
-    this.setState({
-      file: file,
+    setState({
+      file,
       loading: false,
-      analyzeBtnText: analyzeBtnText,
-      analyzeStep: analyzeStep,
-      createThumbnailsBtnStatus: createThumbnailsBtnStatus,
-      importDataBtnStatus: importDataBtnStatus
+      analyzeBtnText,
+      analyzeStep,
+      createThumbnailsBtnStatus,
+      importDataBtnStatus,
     });
-    this.loadFaces();
-  }
+    loadFaces();
+    return false;
+  }, [loadFaces, fileName]);
 
-  loadFaces = () => {
-    let facesFile = this.state.file.faces;
-    let context = this;
-    axios({
-        method: 'get',
-        url: facesFile,
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data;
-        let thumbnailCount = 0;
-        let dataCount = 0;
-        for (let i=0;i<responseData.length; i++) {
-          let face = responseData[i];
-          if (typeof face.thumbnail!=="undefined") {
-            thumbnailCount++;
-          }
-          if (typeof face.firstName!=="undefined") {
-            dataCount++;
-          }
-        }
-        if (responseData.length===thumbnailCount && responseData.length===dataCount) {
-          context.setState({
-            createThumbnailsBtnText: <span>Re-identify people</span>,
-            identifyStep: 1
-          })
-        }
-  	  })
-  	  .catch(function (error) {
-  	  });
-  }
+  useEffect(() => {
+    if (loading) {
+      setLoading(false);
+      loadFile();
+    }
+  }, [loading, props, loadFile, loadFaces]);
 
-  analyzeFile = () => {
-    if (this.state.analyzeStatus) {
+  useEffect(() => {
+    if (state.redirect) {
+      setState({ redirect: false });
+    }
+  }, [state.redirect]);
+
+  const analyzeFile = async () => {
+    if (state.analyzeStatus) {
       return false;
     }
     // confirm re-analysis
-    if (this.state.analyzeStep===1 && !this.state.confirmModal) {
-      this.setState({
+    if (state.analyzeStep === 1 && !state.confirmModal) {
+      setState({
         confirmModal: true,
         confirmModalTitle: 'Confirm image re-analysis',
-        confirmModalContent: <p>This classpiece will be submitted to microsoft's computer vision api to be analyzed again.<br/> Continue?</p>,
-        confirmModalAction: this.analyzeFile,
-        confirmModalBtn: <span>Re-analyze image</span>
+        confirmModalContent: (
+          <p>
+            This classpiece will be submitted to microsoft&apos;s computer
+            vision api to be analyzed again.
+            <br /> Continue?
+          </p>
+        ),
+        confirmModalAction: analyzeFile,
+        confirmModalBtn: <span>Re-analyze image</span>,
       });
       return false;
     }
-    this.setState({
-      analyzeBtnText: <span>Analyzing image... <Spinner size="sm" color="secondary" /></span>,
-      analyzeStatus: true
+    setState({
+      analyzeBtnText: (
+        <span>
+          Analyzing image... <Spinner size="sm" color="secondary" />
+        </span>
+      ),
+      analyzeStatus: true,
+    });
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}parse-class-piece?file=${fileName}`,
+      crossDomain: true,
     })
-    let fileName = this.props.match.params.fileName;
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'parse-class-piece?file='+fileName,
-        crossDomain: true,
-      })
-  	  .then(function (response) {
-        let responseData = response.data.data;
-        let file = responseData[0];
-        context.setState({
-          analyzeBtnText:<span>Analysis complete</span>,
-          file: file,
-          loading: false
-        });
-        context.loadFile();
-        setTimeout(function() {
-          context.setState({
-            analyzeBtnText: <span>Analyze image</span>,
-          });
-        },2000);
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    const file = responseData[0];
+    setState({
+      analyzeBtnText: <span>Analysis complete</span>,
+      file,
+      loading: false,
+    });
+    loadFile();
+    setTimeout(() => {
+      setState({
+        analyzeBtnText: <span>Analyze image</span>,
+      });
+    }, 2000);
+    return false;
+  };
 
-  	  })
-  	  .catch(function (error) {
-  	  });
-  }
+  const redirectToIdentify = () => {
+    setState({
+      redirect: true,
+    });
+  };
 
-  confirmReidentify = () => {
+  const confirmReidentify = () => {
     // confirm re-identification
-    if (this.state.identifyStep===1 && !this.state.confirmModal) {
-      this.setState({
+    if (state.identifyStep === 1 && !state.confirmModal) {
+      setState({
         confirmModal: true,
         confirmModalTitle: 'Confirm people re-identification',
-        confirmModalContent: <p>You are about to edit the people identified in this class piece.<br/> Continue?</p>,
-        confirmModalAction: this.redirectToIdentify,
-        confirmModalBtn: <span>Re-identify people</span>
+        confirmModalContent: (
+          <p>
+            You are about to edit the people identified in this class piece.
+            <br /> Continue?
+          </p>
+        ),
+        confirmModalAction: redirectToIdentify,
+        confirmModalBtn: <span>Re-identify people</span>,
       });
       return false;
     }
-  }
+    return false;
+  };
 
-  redirectToIdentify = () => {
-    this.setState({
-      redirect: true
-    })
-  }
-
-  confirmModalToggle = () => {
-    this.setState({
-      confirmModal: !this.state.confirmModal
-    });
-  }
-
-  componentDidMount() {
-    this.loadFile();
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.redirect) {
-      this.setState({
-        redirect: false
-      });
-    }
-  }
-
-  render() {
-    let redirectElem = [];
-    if (this.state.redirect) {
-      redirectElem = <Redirect
+  let redirectElem = [];
+  if (state.redirect) {
+    const redirectPath = `/parse-class-piece-thumbnails/${fileName}`;
+    redirectElem = (
+      <Redirect
         to={{
-          pathname: "/parse-class-piece-thumbnails/"+this.props.match.params.fileName,
-          state: {from: this.props.location}
-        }} />;
-    }
-    let content = <div className="row">
+          pathname: redirectPath,
+          state: { from: props.location },
+        }}
+      />
+    );
+  }
+  let content = (
+    <div className="row">
       <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
+        <div style={{ padding: '40pt', textAlign: 'center' }}>
           <Spinner type="grow" color="info" /> <i>loading...</i>
         </div>
       </div>
     </div>
+  );
 
-    if (!this.state.loading) {
-      let thumbnail = <img src={this.state.file.thumbnail} alt={this.state.file.name} className="img-thumbnail img-responsive" />;
-      let analyzeBtn = [];
-      if (this.state.analyzeBtnStatus) {
-        analyzeBtn = <div><Button outline color="secondary" onClick={this.analyzeFile}>{this.state.analyzeBtnText}</Button></div>
+  if (!state.loading) {
+    const thumbnail = (
+      <img
+        src={state.file.thumbnail}
+        alt={state.file.name}
+        className="img-thumbnail img-responsive"
+      />
+    );
+    const analyzeBtn = state.analyzeBtnStatus ? (
+      <div>
+        <Button outline color="secondary" onClick={analyzeFile}>
+          {state.analyzeBtnText}
+        </Button>
+      </div>
+    ) : (
+      []
+    );
+    let createThumbnailsBtn = [];
+    if (state.createThumbnailsBtnStatus) {
+      if (state.identifyStep === 0) {
+        createThumbnailsBtn = (
+          <div>
+            <Link
+              className="btn btn-outline-secondary"
+              href={`/parse-class-piece-thumbnails/${fileName}`}
+              to={`/parse-class-piece-thumbnails/${fileName}`}
+            >
+              {state.createThumbnailsBtnText}
+            </Link>
+          </div>
+        );
       }
-      let createThumbnailsBtn = [];
-      if (this.state.createThumbnailsBtnStatus) {
-        if (this.state.identifyStep===0) {
-          createThumbnailsBtn = <div><Link className="btn btn-outline-secondary" href={"/parse-class-piece-thumbnails/"+this.props.match.params.fileName} to={"/parse-class-piece-thumbnails/"+this.props.match.params.fileName}>{this.state.createThumbnailsBtnText}</Link></div>
-        }
-        if (this.state.identifyStep===1) {
-          createThumbnailsBtn = <div><button type="button" className="btn btn-outline-secondary" onClick={this.confirmReidentify} >{this.state.createThumbnailsBtnText}</button></div>
-        }
+      if (state.identifyStep === 1) {
+        createThumbnailsBtn = (
+          <div>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={confirmReidentify}
+            >
+              {state.createThumbnailsBtnText}
+            </button>
+          </div>
+        );
       }
-      let importDataBtn = [];
-      if (this.state.importDataBtnStatus) {
-        importDataBtn = <div><Link className="btn btn-outline-secondary" href={"/import-class-piece-to-db/"+this.props.match.params.fileName} to={"/import-class-piece-to-db/"+this.props.match.params.fileName}>{this.state.importDataBtnText}</Link></div>
-      }
-      content = <div className="row">
+    }
+    const importDataBtn = state.importDataBtnStatus ? (
+      <div>
+        <Link
+          className="btn btn-outline-secondary"
+          href={`/import-class-piece-to-db/${fileName}`}
+          to={`/import-class-piece-to-db/${fileName}`}
+        >
+          {state.importDataBtnText}
+        </Link>
+      </div>
+    ) : (
+      []
+    );
+
+    content = (
+      <div className="row">
         <div className="col-xs-12 col-sm-6 col-md-4">{thumbnail}</div>
         <div className="col-xs-12 col-sm-6 col-md-8">
           <div className="classpiece-actions">
-          {analyzeBtn}
-          {this.state.analyzingText}
-          {createThumbnailsBtn}
-          {importDataBtn}
+            {analyzeBtn}
+            {state.analyzingText}
+            {createThumbnailsBtn}
+            {importDataBtn}
           </div>
         </div>
-      </div>
-    }
-
-
-    let fileName = this.props.match.params.fileName;
-    let heading = "Class Piece \""+fileName+"\"";
-    let breadcrumbsItems = [
-      {label: "Parse Class Pieces", icon: "pe-7s-tools", active: false, path: "/parse-class-pieces"},
-      {label: heading, icon: "", active: true, path: ""}
-    ];
-    return(
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
-        <div className="row">
-          <div className="col-12">
-            <h2>{heading}</h2>
-          </div>
-        </div>
-        {redirectElem}
-        {content}
-        <Modal isOpen={this.state.confirmModal} toggle={this.confirmModalToggle}>
-          <ModalHeader toggle={this.confirmModalToggle}>{this.state.confirmModalTitle}</ModalHeader>
-          <ModalBody>{this.state.confirmModalContent}</ModalBody>
-          <ModalFooter>
-            <Button color="primary" onClick={this.state.confirmModalAction}>{this.state.confirmModalBtn}</Button>{' '}
-            <Button color="secondary" onClick={this.confirmModalToggle}>Cancel</Button>
-          </ModalFooter>
-        </Modal>
       </div>
     );
   }
-}
+
+  const heading = `Class Piece "${fileName}"`;
+  const breadcrumbsItems = [
+    {
+      label: 'Parse Class Pieces',
+      icon: 'pe-7s-tools',
+      active: false,
+      path: '/parse-class-pieces',
+    },
+    { label: heading, icon: '', active: true, path: '' },
+  ];
+  return (
+    <div>
+      <Breadcrumbs items={breadcrumbsItems} />
+      <div className="row">
+        <div className="col-12">
+          <h2>{heading}</h2>
+        </div>
+      </div>
+      {redirectElem}
+      {content}
+      <Modal isOpen={state.confirmModal} toggle={confirmModalToggle}>
+        <ModalHeader toggle={confirmModalToggle}>
+          {state.confirmModalTitle}
+        </ModalHeader>
+        <ModalBody>{state.confirmModalContent}</ModalBody>
+        <ModalFooter>
+          <Button color="primary" onClick={state.confirmModalAction}>
+            {state.confirmModalBtn}
+          </Button>{' '}
+          <Button color="secondary" onClick={confirmModalToggle}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </div>
+  );
+};
+
+ParseClassPiece.defaultProps = {
+  location: {},
+  match: {},
+};
+
+ParseClassPiece.propTypes = {
+  location: PropTypes.object,
+  match: PropTypes.shape({
+    params: PropTypes.shape({
+      fileName: PropTypes.string,
+    }),
+  }),
+};
+
+export default ParseClassPiece;

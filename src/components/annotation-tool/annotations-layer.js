@@ -1,84 +1,115 @@
-import React from 'react';
-import Draggable from "./draggable";
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import Draggable from './draggable';
+
 const AnnotationsLayer = (props) => {
-  const parentDimensions = {width: props.width, height: props.height};
+  const {
+    width,
+    height,
+    container: propsContainer,
+    itemContextMenuShow,
+    returnValues,
+  } = props;
+  const parentDimensions = { width, height };
+  const [contextMenuState, setContextMenuState] = useState({});
 
   const contextMenuShow = (e, _id, i) => {
     e.preventDefault();
-    let html = document.querySelector("html");
+    const html = document.querySelector('html');
     let top = e.clientY;
     let left = e.clientX;
-    if (html.classList.contains("nav-open") && window.innerWidth<992) {
+    if (html.classList.contains('nav-open') && window.innerWidth < 992) {
       left -= 260;
-      let container = props.container.current;
-      let rect = container.getBoundingClientRect();
-      let rectTop = rect.top;
-      let offsetTop = container.offsetTop;
-      if (rectTop<0) {
+      const container = propsContainer.current;
+      const rect = container.getBoundingClientRect();
+      const rectTop = rect.top;
+      const { offsetTop } = container;
+      if (rectTop < 0) {
         top += Math.abs(rect.top);
-      }
-      else {
+      } else {
         top -= Math.abs(rect.top);
       }
       top += offsetTop;
     }
-    let state = {
+    const state = {
       visible: true,
-      top: top,
-      left: left,
-      itemId: _id,
-      index: i
+      top,
+      left,
+      itemId: Number(_id),
+      index: i,
     };
-    props.itemContextMenuShow(state);
-  }
+    itemContextMenuShow(state);
+    setContextMenuState(state);
+  };
 
   const contextMenuHide = () => {
-    props.itemContextMenuShow({visible: false});
-  }
+    const stateCopy = contextMenuState;
+    contextMenuState.visible = false;
+    itemContextMenuShow(contextMenuState);
+    setContextMenuState(stateCopy);
+  };
 
   let annotationsLayer = [];
-  let items = props.items;
-  if (typeof items!=="undefined") {
-    let annotationItems = items.map((r,i)=>{
-      let item = r.ref;
-      let metadata = item.metadata;
-      if (typeof metadata!=="undefined" && typeof metadata==="string") {
+  const { items } = props;
+  if (typeof items !== 'undefined') {
+    const annotationItems = items.map((r, i) => {
+      const item = r.ref;
+      let { metadata } = item;
+      if (typeof metadata !== 'undefined' && typeof metadata === 'string') {
         metadata = JSON.parse(metadata);
-        if (typeof metadata==="string") {
+        if (typeof metadata === 'string') {
           metadata = JSON.parse(metadata);
         }
       }
       let layer = [];
-      if (typeof metadata.image!=="undefined") {
-        let defaultMeta = metadata.image.default;
-        layer = <Draggable
-          key={item._id}
-          index={i}
-          className="annotation-item"
-          item={item}
-          draggable={true}
-          resizable={true}
-          rotate={true}
-          width={defaultMeta.width}
-          height={defaultMeta.height}
-          x={defaultMeta.x}
-          y={defaultMeta.y}
-          degree={defaultMeta.rotate}
-          parentConstrain={true}
-          parentRef={props.container}
-          parentDimensions={parentDimensions}
-          contextMenu={contextMenuShow}
-          contextMenuHide={contextMenuHide}
-          onInteractionStop={props.returnValues}
-          ></Draggable>
+      if (typeof metadata.image !== 'undefined') {
+        const defaultMeta = metadata.image.default;
+        layer = (
+          <Draggable
+            key={item._id}
+            index={i}
+            className="annotation-item"
+            item={item}
+            draggable
+            resizable
+            rotate
+            width={defaultMeta.width}
+            height={defaultMeta.height}
+            x={defaultMeta.x}
+            y={defaultMeta.y}
+            degree={defaultMeta.rotate}
+            parentConstrain
+            parentRef={propsContainer}
+            parentDimensions={parentDimensions}
+            contextMenu={contextMenuShow}
+            contextMenuHide={contextMenuHide}
+            onInteractionStop={returnValues}
+          />
+        );
       }
 
       return layer;
     });
-    annotationsLayer = <div className="annotation-items">{annotationItems}</div>;
+    annotationsLayer = (
+      <div className="annotation-items">{annotationItems}</div>
+    );
   }
 
-  return (annotationsLayer)
-}
+  return annotationsLayer;
+};
 
+AnnotationsLayer.defaultProps = {
+  width: 100,
+  height: 100,
+  container: null,
+  itemContextMenuShow: () => {},
+  returnValues: () => {},
+};
+AnnotationsLayer.propTypes = {
+  width: PropTypes.number,
+  height: PropTypes.number,
+  container: PropTypes.object,
+  itemContextMenuShow: PropTypes.func,
+  returnValues: PropTypes.func,
+};
 export default AnnotationsLayer;

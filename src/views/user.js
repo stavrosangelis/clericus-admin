@@ -2,38 +2,83 @@ import React, { Component } from 'react';
 import {
   Spinner,
   Button,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Card, CardTitle,CardBody, CardFooter,
-  Form, FormGroup, Input, Label,
-  UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Card,
+  CardTitle,
+  CardBody,
+  CardFooter,
+  Form,
+  FormGroup,
+  Input,
+  Label,
+  UncontrolledDropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
 } from 'reactstrap';
 import Select from 'react-select';
-import {Breadcrumbs} from '../components/breadcrumbs';
 import crypto from 'crypto-js';
-
 import axios from 'axios';
+import { Redirect } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
-import {Redirect} from 'react-router-dom';
+import Breadcrumbs from '../components/breadcrumbs';
 
-import {connect} from "react-redux";
 const APIPath = process.env.REACT_APP_APIPATH;
 
-class User extends Component {
+export default class User extends Component {
+  static async loadUser(_id) {
+    if (_id === 'new') {
+      return false;
+    }
+    const params = { _id };
+    const userData = await axios({
+      method: 'get',
+      url: `${APIPath}user`,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    return userData;
+  }
+
+  static async loadUsergroups() {
+    const usergroupsData = await axios({
+      method: 'get',
+      url: `${APIPath}user-groups`,
+      crossDomain: true,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    return usergroupsData;
+  }
+
   constructor(props) {
     super(props);
 
     this.state = {
       reload: false,
       loading: true,
-      user:null,
+      user: null,
       redirect: false,
       redirectReload: false,
       deleteModal: false,
       updating: false,
-      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
       errorVisible: false,
       errorText: [],
-      closeUploadModal: false,
       deleteErrorVisible: false,
       deleteErrorText: [],
 
@@ -50,10 +95,15 @@ class User extends Component {
       passwordErrorVisible: false,
       passwordErrorText: [],
       passwordUpdating: false,
-      passwordUpdateBtn: <span><i className="fa fa-save" /> Update</span>,
-    }
+      passwordUpdateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
+    };
     this.load = this.load.bind(this);
-    this.loadUser = this.loadUser.bind(this);
+    this.toggleRedirect = this.toggleRedirect.bind(this);
+    this.toggleRedirectReload = this.toggleRedirectReload.bind(this);
     this.update = this.update.bind(this);
     this.validateUser = this.validateUser.bind(this);
     this.validatePassword = this.validatePassword.bind(this);
@@ -63,35 +113,100 @@ class User extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
     this.toggleEditPassword = this.toggleEditPassword.bind(this);
-    this.loadUsergroups = this.loadUsergroups.bind(this);
     this.usergroupsOptions = this.usergroupsOptions.bind(this);
   }
 
-  async load() {
-    let _id = this.props.match.params._id;
-    let userData = null;
-    if (_id!=="new") {
-      userData = await this.loadUser(_id);
+  componentDidMount() {
+    this.load();
+  }
+
+  componentDidUpdate(prevProps) {
+    const { match } = this.props;
+    const { loading, reload, redirect, redirectReload } = this.state;
+    if (prevProps.match.params._id !== match.params._id) {
+      this.load();
     }
-    let userGroupsData = await this.loadUsergroups();
-    let stateUpdate = {
-      loading: false
+    if (loading) {
+      this.load();
+    }
+    if (reload) {
+      this.load();
+    }
+    if (redirect) {
+      this.toggleRedirect(false);
+    }
+    if (redirectReload) {
+      this.toggleRedirectReload(false);
+    }
+  }
+
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  toggleRedirect(value = null) {
+    const { redirect } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirect;
+    }
+    this.setState({
+      redirect: valueCopy,
+    });
+  }
+
+  toggleRedirectReload(value = null) {
+    const { redirectReload } = this.state;
+    let valueCopy = value;
+    if (valueCopy === null) {
+      valueCopy = !redirectReload;
+    }
+    this.setState({
+      redirectReload: valueCopy,
+    });
+  }
+
+  async load() {
+    const { match } = this.props;
+    const { _id } = match.params;
+    let userData = null;
+    if (_id !== 'new') {
+      userData = await this.constructor.loadUser(_id);
+    }
+    const userGroupsData = await this.constructor.loadUsergroups();
+    const stateUpdate = {
+      loading: false,
     };
     let usergroups = [];
     if (userGroupsData.status) {
       usergroups = userGroupsData.data.data;
       stateUpdate.usergroups = usergroups;
-      if (userData===null) {
-        let defaultUsergroup = usergroups.find(item=>item.isDefault===true);
-        let defaultOption = {value: defaultUsergroup._id, label: defaultUsergroup.label};
+      if (userData === null) {
+        const defaultUsergroup = usergroups.find(
+          (item) => item.isDefault === true
+        );
+        const defaultOption = {
+          value: defaultUsergroup._id,
+          label: defaultUsergroup.label,
+        };
         stateUpdate.usergroup = defaultOption;
       }
     }
-    if (userData!==null && userData.status) {
-      let user = userData.data;
-      if (user.usergroup!==null) {
-        let usergroupValue = usergroups.find(item=>item._id===user.usergroup._id);
-        let usergroupOption = {value: usergroupValue._id, label: usergroupValue.label};
+    if (userData !== null && userData.status) {
+      const user = userData.data;
+      if (user.usergroup !== null) {
+        const usergroupValue = usergroups.find(
+          (item) => item._id === user.usergroup._id
+        );
+        const usergroupOption = {
+          value: usergroupValue._id,
+          label: usergroupValue.label,
+        };
         stateUpdate.usergroup = usergroupOption;
       }
       stateUpdate.user = user;
@@ -101,225 +216,273 @@ class User extends Component {
       stateUpdate.reload = false;
       if (!user.hasPassword) {
         stateUpdate.errorVisible = true;
-        stateUpdate.errorText = <div>This user account will not be usable until you set a password.</div>;
+        stateUpdate.errorText = (
+          <div>
+            This user account will not be usable until you set a password.
+          </div>
+        );
       }
     }
     this.setState(stateUpdate);
   }
 
-  async loadUser(_id) {
-    if (_id==="new") {
-      return false;
-    }
-    let params = {_id: _id};
-    let userData = await axios({
-      method: 'get',
-      url: APIPath+'user',
-      crossDomain: true,
-      params: params
-    })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-	  });
-    return userData;
-  }
-
   async update(e) {
     e.preventDefault();
-    if (this.state.updating) {
+    const { updating, firstName, lastName, email, usergroup } = this.state;
+    if (updating) {
       return false;
     }
     this.setState({
       updating: true,
-      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner color="info" size="sm" />
+        </span>
+      ),
     });
-    let postData = {
-      firstName: this.state.firstName,
-      lastName: this.state.lastName,
-      email: this.state.email,
-      usergroup: this.state.usergroup.value,
-    }
-    let _id = this.props.match.params._id;
-    if (_id!=="new") {
+    const postData = {
+      firstName,
+      lastName,
+      email,
+      usergroup: usergroup.value,
+    };
+    const { match } = this.props;
+    const { _id } = match.params;
+    if (_id !== 'new') {
       postData._id = _id;
     }
-    let isValid = this.validateUser(postData);
+    const isValid = this.validateUser(postData);
     if (isValid) {
-      let updateData = await axios({
+      const updateData = await axios({
         method: 'put',
-        url: APIPath+'user',
+        url: `${APIPath}user`,
         crossDomain: true,
-        data: postData
+        data: postData,
       })
-      .then(function (response) {
-        return response.data;
-      })
-      .catch(function (error) {
-      });
+        .then((response) => response.data)
+        .catch((error) => {
+          console.log(error);
+        });
       let newState = {};
       if (updateData.status) {
         newState = {
           updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update success{' '}
+              <i className="fa fa-check" />
+            </span>
+          ),
         };
-        if (_id==="new") {
+        if (_id === 'new') {
           newState.redirectReload = true;
           newState.newId = updateData.data._id;
           newState.reload = true;
         }
-      }
-      else {
-        let errorText = <div><b>{updateData.error.name}</b>: {updateData.error.code}</div>;
+      } else {
+        const errorText = (
+          <div>
+            <b>{updateData.error.name}</b>: {updateData.error.code}
+          </div>
+        );
         newState = {
           updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>,
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update error{' '}
+              <i className="fa fa-times" />
+            </span>
+          ),
           errorVisible: true,
-          errorText: errorText,
+          errorText,
         };
       }
 
       this.setState(newState);
-      let context = this;
-      setTimeout(function() {
+      const context = this;
+      setTimeout(() => {
         context.setState({
-          updateBtn: <span><i className="fa fa-save" /> Update</span>
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update
+            </span>
+          ),
         });
-      },2000);
+      }, 2000);
     }
+    return false;
   }
 
-  updatePassword() {
-    if (this.state.passwordUpdating) {
+  async updatePassword() {
+    const { passwordUpdating, password, passwordRepeat } = this.state;
+    if (passwordUpdating) {
       return false;
     }
     this.setState({
       passwordUpdating: true,
-      passwordUpdateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
+      passwordUpdateBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner color="info" size="sm" />
+        </span>
+      ),
     });
-    let _id = this.props.match.params._id;
-    let isValid = this.validatePassword(this.state.password, this.state.passwordRepeat);
+    const { match } = this.props;
+    const { _id } = match.params;
+    const isValid = this.validatePassword(password, passwordRepeat);
     if (isValid) {
-      let cryptoPass = crypto.SHA1(this.state.password).toString();
-      let cryptoPassRepeat = crypto.SHA1(this.state.passwordRepeat).toString();
-      let postData = {
-        _id: _id,
+      const cryptoPass = crypto.SHA1(password).toString();
+      const cryptoPassRepeat = crypto.SHA1(passwordRepeat).toString();
+      const postData = {
+        _id,
         password: cryptoPass,
         passwordRepeat: cryptoPassRepeat,
-      }
-      let context = this;
-      axios({
+      };
+      const context = this;
+      const responseData = await axios({
         method: 'post',
-        url: APIPath+'user-password',
+        url: `${APIPath}user-password`,
         crossDomain: true,
         data: postData,
       })
-      .then(function (response) {
-        let responseData = response.data.data;
-        if(response.data.status) {
-          let newState = {
-            passwordUpdating: false,
-            passwordUpdateBtn: <span><i className="fa fa-save" /> Update success <i className="fa fa-check" /></span>,
-            reload: true,
-            editPasswordVisible: false,
-            loading: true
-          };
-          context.setState(newState);
-          setTimeout(function() {
-            context.setState({
-              passwordUpdateBtn: <span><i className="fa fa-save" /> Update</span>
-            });
-          },2000);
-        }
-        else {
-          let newState = {
-            passwordUpdating: false,
-            passwordErrorVisible: true,
-            passwordErrorText: responseData.error,
-            passwordUpdateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
-          }
-          context.setState(newState);
-        }
+        .then((response) => response.data.data)
+        .catch((error) => {
+          console.log(error);
+        });
 
-      })
-      .catch(function (error) {
-      });
+      if (responseData.data.status) {
+        const newState = {
+          passwordUpdating: false,
+          passwordUpdateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update success{' '}
+              <i className="fa fa-check" />
+            </span>
+          ),
+          reload: true,
+          editPasswordVisible: false,
+          loading: true,
+        };
+        context.setState(newState);
+        setTimeout(() => {
+          context.setState({
+            passwordUpdateBtn: (
+              <span>
+                <i className="fa fa-save" /> Update
+              </span>
+            ),
+          });
+        }, 2000);
+      } else {
+        const newState = {
+          passwordUpdating: false,
+          passwordErrorVisible: true,
+          passwordErrorText: responseData.error,
+          passwordUpdateBtn: (
+            <span>
+              <i className="fa fa-save" /> Update error{' '}
+              <i className="fa fa-times" />
+            </span>
+          ),
+        };
+        context.setState(newState);
+      }
     }
+    return false;
   }
 
   validateUser(postData) {
-    let emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     if (!emailRegex.test(String(postData.email).toLowerCase())) {
       this.setState({
         updating: false,
         errorVisible: true,
         errorText: <div>Please provide a valid email</div>,
-        updateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
     this.setState({
       updating: false,
       errorVisible: false,
-      errorText: []
-    })
+      errorText: [],
+    });
     return true;
   }
 
   validatePassword(password, passwordRepeat) {
-    if (password.length<6) {
+    if (password.length < 6) {
       this.setState({
         passwordUpdating: false,
         passwordErrorVisible: true,
-        passwordErrorText: <div>The user password must contain at least 6 characters</div>,
-        passwordUpdateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        passwordErrorText: (
+          <div>The user password must contain at least 6 characters</div>
+        ),
+        passwordUpdateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
-    if (password!==passwordRepeat) {
+    if (password !== passwordRepeat) {
       this.setState({
         passwordUpdating: false,
         passwordErrorVisible: true,
-        passwordErrorText: <div>The user password and password repeat don't match.</div>,
-        passwordUpdateBtn: <span><i className="fa fa-save" /> Update error <i className="fa fa-times" /></span>
+        passwordErrorText: (
+          <div>The user password and password repeat don&apos;t match.</div>
+        ),
+        passwordUpdateBtn: (
+          <span>
+            <i className="fa fa-save" /> Update error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
       });
       return false;
     }
     this.setState({
       passwordUpdating: false,
       passwordErrorVisible: false,
-      passwordErrorText: []
-    })
+      passwordErrorText: [],
+    });
     return true;
   }
 
   toggleDeleteModal() {
+    const { deleteModal } = this.state;
     this.setState({
-      deleteModal: !this.state.deleteModal
-    })
+      deleteModal: !deleteModal,
+    });
   }
 
   async delete() {
-    let _id = this.props.match.params._id;
-    let params = {_id: _id};
-    let deleteUser = await axios({
+    const { match } = this.props;
+    const { _id } = match.params;
+    const params = { _id };
+    const deleteUser = await axios({
       method: 'delete',
-      url: APIPath+'user',
+      url: `${APIPath}user`,
       crossDomain: true,
-      data: params
+      data: params,
     })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-	  });
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
     if (deleteUser.status) {
       this.setState({
-        redirect: true
+        redirect: true,
       });
-    }
-    else {
+    } else {
       this.setState({
         deleteErrorVisible: true,
         deleteErrorText: deleteUser.error[0],
@@ -328,106 +491,81 @@ class User extends Component {
   }
 
   toggleEditPassword() {
+    const { editPasswordVisible } = this.state;
     this.setState({
-      editPasswordVisible: !this.state.editPasswordVisible
-    })
+      editPasswordVisible: !editPasswordVisible,
+    });
   }
 
   reload() {
     this.setState({
-      reload: true
-    })
-  }
-
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    this.setState({
-      [name]:value
+      reload: true,
     });
   }
 
-  select2Change(selectedOption, element=null) {
-    if (element===null) {
+  select2Change(selectedOption, element = null) {
+    if (element === null) {
       return false;
     }
     this.setState({
-      [element]: selectedOption
+      [element]: selectedOption,
     });
-  }
-
-  async loadUsergroups() {
-    let usergroupsData = await axios({
-      method: 'get',
-      url: APIPath+'user-groups',
-      crossDomain: true,
-    })
-	  .then(function (response) {
-      return response.data;
-	  })
-	  .catch(function (error) {
-      console.log(error)
-	  });
-    return usergroupsData;
+    return false;
   }
 
   usergroupsOptions() {
-    let options = [];
-    let usergroups = this.state.usergroups;
-    for (let i=0; i<usergroups.length; i++) {
-      let usergroup = usergroups[i];
-      let option = {value: usergroup._id, label: usergroup.label};
+    const options = [];
+    const { usergroups } = this.state;
+    for (let i = 0; i < usergroups.length; i += 1) {
+      const usergroup = usergroups[i];
+      const option = { value: usergroup._id, label: usergroup.label };
       options.push(option);
     }
     return options;
   }
 
-  componentDidMount() {
-    this.load();
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if(prevProps.match.params._id!==this.props.match.params._id){
-      this.load();
-    }
-    if (this.state.loading) {
-      this.load();
-    }
-    if (this.state.reload) {
-      this.loadUser(this.props.match.params._id);
-    }
-    if (this.state.redirect) {
-      this.setState({
-        redirect: false
-      })
-    }
-    if (this.state.redirectReload) {
-      this.setState({
-        redirectReload: false
-      })
-    }
-  }
-
   render() {
+    const {
+      user,
+      loading,
+      errorVisible,
+      deleteErrorVisible,
+      errorText,
+      deleteErrorText,
+      firstName,
+      lastName,
+      email,
+      usergroup,
+      updateBtn,
+      redirect,
+      redirectReload: stateRedirectReload,
+      newId,
+      deleteModal: stateDeleteModal,
+      passwordErrorVisible,
+      passwordErrorText,
+      editPasswordVisible,
+      password,
+      passwordRepeat,
+      passwordUpdateBtn,
+    } = this.state;
+    const { match } = this.props;
     let label = '';
-    if (this.state.user!==null && typeof this.state.user.firstName!=="undefined") {
-      label = this.state.user.firstName;
-      if (this.state.user.lastName!=="") {
-        label += " "+this.state.user.lastName;
+    if (user !== null && typeof user.firstName !== 'undefined') {
+      label = user.firstName;
+      if (user.lastName !== '') {
+        label += ` ${user.lastName}`;
       }
-    }
-    else if (this.state.user!==null && typeof this.state.user.email!=="undefined") {
-      label = this.state.user.email;
+    } else if (user !== null && typeof user.email !== 'undefined') {
+      label = user.email;
     }
 
-    let heading = "User \""+label+"\"";
-    if (this.props.match.params._id==="new") {
-      heading = "Add new user";
+    let heading = `User "${label}"`;
+    if (match.params._id === 'new') {
+      heading = 'Add new user';
     }
-    let breadcrumbsItems = [
-      {label: "Users", icon: "pe-7s-user", active: false, path: "/users"},
-      {label: heading, icon: "pe-7s-user", active: true, path: ""}
+    const breadcrumbsItems = [
+      { label: 'Users', icon: 'pe-7s-user', active: false, path: '/users' },
+      { label: heading, icon: 'pe-7s-user', active: true, path: '' },
     ];
 
     let redirectElem = [];
@@ -435,141 +573,233 @@ class User extends Component {
     let deleteModal = [];
     let editPasswordModal = [];
 
-    let content = <div className="row">
-      <div className="col-12">
-        <div style={{padding: '40pt',textAlign: 'center'}}>
-          <Spinner type="grow" color="info" /> <i>loading...</i>
-        </div>
-      </div>
-    </div>
-
-    if (!this.state.loading) {
-
-      let errorContainerClass = " hidden";
-      if (this.state.errorVisible) {
-        errorContainerClass = "";
-      }
-      let deleteErrorContainerClass = " hidden";
-      if (this.state.deleteErrorVisible) {
-        deleteErrorContainerClass = "";
-      }
-      let usergroupsOptions = this.usergroupsOptions();
-
-      let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
-
-      let deleteErrorContainer = <div className={"error-container"+deleteErrorContainerClass}>{this.state.deleteErrorText}</div>
-
-      let editPasswordToggle = [];
-      let deleteBtn = [];
-      if (this.state.user!==null) {
-        editPasswordToggle = <div className="pull-right">
-          <UncontrolledDropdown direction="right">
-            <DropdownToggle className="more-toggle" outline>
-              <i className="fa fa-ellipsis-v" />
-            </DropdownToggle>
-            <DropdownMenu>
-              <DropdownItem onClick={()=>this.toggleEditPassword()}>Edit password</DropdownItem>
-            </DropdownMenu>
-          </UncontrolledDropdown>
-        </div>;
-
-        deleteBtn = <Button color="danger" size="sm" outline onClick={()=>this.toggleDeleteModal()}><i className="fa fa-trash-o" /> Delete</Button>;
-      }
-      content = <div className="row">
-        <div className="col">
-          <div className="item-details">
-            <Card>
-              <CardBody>
-                <CardTitle>Edit User
-                  {editPasswordToggle}
-                </CardTitle>
-
-                {errorContainer}
-                <Form onSubmit={this.update}>
-                  <FormGroup>
-                    <Label for="firstName">First Name</Label>
-                    <Input type="text" name="firstName" id="firstName" placeholder="First Name..." value={this.state.firstName} onChange={this.handleChange}/>
-                  </FormGroup>
-                  <FormGroup>
-                    <Label for="lastName">Last Name</Label>
-                    <Input type="text" name="lastName" id="lastName" placeholder="Last Name..." value={this.state.lastName} onChange={this.handleChange}/>
-                  </FormGroup>
-                  <FormGroup>
-                    <Label for="email">Email</Label>
-                    <Input type="email" name="email" id="email" placeholder="Email..." value={this.state.email} onChange={this.handleChange}/>
-                  </FormGroup>
-                  <FormGroup>
-                    <Label>User group</Label>
-                    <Select
-                      value={this.state.usergroup}
-                      onChange={(selectedOption)=>this.select2Change(selectedOption, "usergroup")}
-                      options={usergroupsOptions}
-                    />
-                  </FormGroup>
-
-                </Form>
-              </CardBody>
-              <CardFooter>
-                {deleteBtn}
-                <Button color="info" className="pull-right" size="sm" outline onClick={(e)=>this.update(e)}>{this.state.updateBtn}</Button>
-              </CardFooter>
-            </Card>
+    let content = (
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
           </div>
         </div>
       </div>
+    );
 
-      if (this.state.redirect) {
+    if (!loading) {
+      const errorContainerClass = errorVisible ? '' : ' hidden';
+      const deleteErrorContainerClass = deleteErrorVisible ? '' : ' hidden';
+      const usergroupsOptions = this.usergroupsOptions();
+
+      const errorContainer = (
+        <div className={`error-container${errorContainerClass}`}>
+          {errorText}
+        </div>
+      );
+
+      const deleteErrorContainer = (
+        <div className={`error-container${deleteErrorContainerClass}`}>
+          {deleteErrorText}
+        </div>
+      );
+
+      let editPasswordToggle = [];
+      let deleteBtn = [];
+      if (user !== null) {
+        editPasswordToggle = (
+          <div className="pull-right">
+            <UncontrolledDropdown direction="right">
+              <DropdownToggle className="more-toggle" outline>
+                <i className="fa fa-ellipsis-v" />
+              </DropdownToggle>
+              <DropdownMenu>
+                <DropdownItem onClick={() => this.toggleEditPassword()}>
+                  Edit password
+                </DropdownItem>
+              </DropdownMenu>
+            </UncontrolledDropdown>
+          </div>
+        );
+
+        deleteBtn = (
+          <Button
+            color="danger"
+            size="sm"
+            outline
+            onClick={() => this.toggleDeleteModal()}
+          >
+            <i className="fa fa-trash-o" /> Delete
+          </Button>
+        );
+      }
+      content = (
+        <div className="row">
+          <div className="col">
+            <div className="item-details">
+              <Card>
+                <CardBody>
+                  <CardTitle>
+                    Edit User
+                    {editPasswordToggle}
+                  </CardTitle>
+
+                  {errorContainer}
+                  <Form onSubmit={this.update}>
+                    <FormGroup>
+                      <Label for="firstName">First Name</Label>
+                      <Input
+                        type="text"
+                        name="firstName"
+                        id="firstName"
+                        placeholder="First Name..."
+                        value={firstName}
+                        onChange={this.handleChange}
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="lastName">Last Name</Label>
+                      <Input
+                        type="text"
+                        name="lastName"
+                        id="lastName"
+                        placeholder="Last Name..."
+                        value={lastName}
+                        onChange={this.handleChange}
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="email">Email</Label>
+                      <Input
+                        type="email"
+                        name="email"
+                        id="email"
+                        placeholder="Email..."
+                        value={email}
+                        onChange={this.handleChange}
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>User group</Label>
+                      <Select
+                        value={usergroup}
+                        onChange={(selectedOption) =>
+                          this.select2Change(selectedOption, 'usergroup')
+                        }
+                        options={usergroupsOptions}
+                      />
+                    </FormGroup>
+                  </Form>
+                </CardBody>
+                <CardFooter>
+                  {deleteBtn}
+                  <Button
+                    color="info"
+                    className="pull-right"
+                    size="sm"
+                    outline
+                    onClick={(e) => this.update(e)}
+                  >
+                    {updateBtn}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+
+      if (redirect) {
         redirectElem = <Redirect to="/users" />;
       }
-      if (this.state.redirectReload) {
-        redirectReload = <Redirect to={"/user/"+this.state.newId} />;
+      if (stateRedirectReload) {
+        redirectReload = <Redirect to={`/user/${newId}`} />;
       }
 
-      deleteModal = <Modal isOpen={this.state.deleteModal} toggle={this.toggleDeleteModal}>
-          <ModalHeader toggle={this.toggleDeleteModal}>Delete "{label}"</ModalHeader>
+      deleteModal = (
+        <Modal isOpen={stateDeleteModal} toggle={this.toggleDeleteModal}>
+          <ModalHeader toggle={this.toggleDeleteModal}>
+            Delete &quot;{label}&quot;
+          </ModalHeader>
           <ModalBody>
             {deleteErrorContainer}
-            <p>The user "{label}" will be deleted. Continue?</p>
+            <p>The user &quot;{label}&quot; will be deleted. Continue?</p>
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button size="sm" color="danger" outline onClick={()=>this.delete()}><i className="fa fa-trash-o" /> Delete</Button>
-            <Button size="sm" className="pull-left" color="secondary" onClick={this.toggleDeleteModal}>Cancel</Button>
+            <Button
+              size="sm"
+              color="danger"
+              outline
+              onClick={() => this.delete()}
+            >
+              <i className="fa fa-trash-o" /> Delete
+            </Button>
+            <Button
+              size="sm"
+              className="pull-left"
+              color="secondary"
+              onClick={this.toggleDeleteModal}
+            >
+              Cancel
+            </Button>
           </ModalFooter>
-        </Modal>;
+        </Modal>
+      );
 
-      let passwordErrorContainerClass = " hidden";
-      if (this.state.passwordErrorVisible) {
-        passwordErrorContainerClass = "";
-      }
+      const passwordErrorContainerClass = passwordErrorVisible ? '' : ' hidden';
 
-      let passwordErrorContainer = <div className={"error-container"+passwordErrorContainerClass}>{this.state.passwordErrorText}</div>
+      const passwordErrorContainer = (
+        <div className={`error-container${passwordErrorContainerClass}`}>
+          {passwordErrorText}
+        </div>
+      );
 
-      editPasswordModal = <Modal isOpen={this.state.editPasswordVisible} toggle={this.toggleEditPassword}>
-          <ModalHeader toggle={this.toggleEditPassword}>Update password</ModalHeader>
+      editPasswordModal = (
+        <Modal isOpen={editPasswordVisible} toggle={this.toggleEditPassword}>
+          <ModalHeader toggle={this.toggleEditPassword}>
+            Update password
+          </ModalHeader>
           <ModalBody>
             {passwordErrorContainer}
-            <Form onSubmit={()=>this.updatePassword()}>
+            <Form onSubmit={() => this.updatePassword()}>
               <FormGroup>
                 <Label for="password">Password</Label>
-                <Input type="password" name="password" id="password" placeholder="Password..." value={this.state.password} onChange={this.handleChange}/>
+                <Input
+                  type="password"
+                  name="password"
+                  id="password"
+                  placeholder="Password..."
+                  value={password}
+                  onChange={this.handleChange}
+                />
               </FormGroup>
 
               <FormGroup>
                 <Label for="passwordRepeat">Password repeat</Label>
-                <Input type="password" name="passwordRepeat" id="passwordRepeat" placeholder="Password repeat..." value={this.state.passwordRepeat} onChange={this.handleChange}/>
+                <Input
+                  type="password"
+                  name="passwordRepeat"
+                  id="passwordRepeat"
+                  placeholder="Password repeat..."
+                  value={passwordRepeat}
+                  onChange={this.handleChange}
+                />
               </FormGroup>
             </Form>
           </ModalBody>
           <ModalFooter className="text-right">
-            <Button color="secondary" size="sm" onClick={()=>this.updatePassword()}>{this.state.passwordUpdateBtn}</Button>
+            <Button
+              color="secondary"
+              size="sm"
+              onClick={() => this.updatePassword()}
+            >
+              {passwordUpdateBtn}
+            </Button>
           </ModalFooter>
-        </Modal>;
+        </Modal>
+      );
     }
-    return(
+    return (
       <div>
-      {redirectElem}
-      {redirectReload}
-      <Breadcrumbs items={breadcrumbsItems} />
+        {redirectElem}
+        {redirectReload}
+        <Breadcrumbs items={breadcrumbsItems} />
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>
@@ -582,4 +812,10 @@ class User extends Component {
     );
   }
 }
-export default User = connect(null, [])(User);
+
+User.defaultProps = {
+  match: null,
+};
+User.propTypes = {
+  match: PropTypes.object,
+};

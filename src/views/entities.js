@@ -1,31 +1,60 @@
-import React from "react";
+import React from 'react';
 import axios from 'axios';
 import {
-  Card,CardBody,
+  Card,
+  CardBody,
   Collapse,
   Button,
-  Form, FormGroup, Label, Input,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  Spinner
-} from "reactstrap";
-import {Breadcrumbs} from '../components/breadcrumbs';
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Spinner,
+} from 'reactstrap';
 import Select from 'react-select';
-import {connect} from "react-redux";
-import {addGenericReference} from '../helpers/helpers';
+import { connect } from 'react-redux';
+import { compose } from 'redux';
+import PropTypes from 'prop-types';
+import Breadcrumbs from '../components/breadcrumbs';
+import { addGenericReference } from '../helpers';
 
-import {
-  loadDefaultEntities
-} from "../redux/actions/main-actions";
+import { loadDefaultEntities } from '../redux/actions';
 
 function mapDispatchToProps(dispatch) {
   return {
     loadDefaultEntities: () => dispatch(loadDefaultEntities()),
-  }
+  };
 }
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
 class Entities extends React.Component {
+  static entitiesList(entities) {
+    const options = [];
+    const defaultValue = { value: '', label: '--' };
+    options.push(defaultValue);
+    for (let i = 0; i < entities.length; i += 1) {
+      const entity = entities[i];
+      const option = { value: entity._id, label: entity.label };
+      options.push(option);
+    }
+    return options;
+  }
+
+  static termsList(terms, sep = '') {
+    const options = [];
+    for (let i = 0; i < terms.length; i += 1) {
+      const term = terms[i];
+      const option = { value: term._id, label: `${sep} ${term.label}` };
+      options.push(option);
+    }
+    return options;
+  }
+
   constructor(props) {
     super(props);
 
@@ -37,7 +66,6 @@ class Entities extends React.Component {
       entityExample: '',
       entityLabel: '',
       entityParent: null,
-      taxonomy: [],
       taxonomyTerms: [],
       detailsOpen: true,
       propertiesOpen: true,
@@ -48,12 +76,20 @@ class Entities extends React.Component {
       propertySaving: false,
       propertyErrorVisible: false,
       propertyErrorText: [],
-      propertySaveBtn: <span><i className="fa fa-save"/> Save</span>,
+      propertySaveBtn: (
+        <span>
+          <i className="fa fa-save" /> Save
+        </span>
+      ),
       updating: false,
-      updateBtn: <span><i className="fa fa-save" /> Update</span>,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> Update
+        </span>
+      ),
       errorVisible: false,
       errorText: [],
-    }
+    };
 
     this.load = this.load.bind(this);
     this.loadEntity = this.loadEntity.bind(this);
@@ -63,436 +99,10 @@ class Entities extends React.Component {
     this.deleteProperty = this.deleteProperty.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.select2Change = this.select2Change.bind(this);
-    this.entitiesList = this.entitiesList.bind(this);
     this.propertiesList = this.propertiesList.bind(this);
     this.loadTaxonomy = this.loadTaxonomy.bind(this);
-    this.termsList = this.termsList.bind(this);
     this.list = this.list.bind(this);
     this.togglePropertyModal = this.togglePropertyModal.bind(this);
-  }
-
-  load() {
-    let context = this;
-    axios({
-        method: 'get',
-        url: APIPath+'entities',
-        crossDomain: true,
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      context.setState({
-        loading: false,
-        entities: responseData.data,
-      })
-    })
-    .catch(function (error) {
-    });
-  }
-
-  loadEntity(_id=null) {
-    if (_id===null) {
-      return false;
-    }
-    let context = this;
-    let params = {_id: _id}
-    axios({
-        method: 'get',
-        url: APIPath+'entity',
-        crossDomain: true,
-        params: params
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      let entityDefinition = '';
-      let entityExample = '';
-      let entityLabel = '';
-      let entityParent = null;
-      if (responseData.definition!==null) {
-        entityDefinition = responseData.definition;
-      }
-      if (responseData.example!==null) {
-        entityExample = responseData.example;
-      }
-      if (responseData.label!==null) {
-        entityLabel = responseData.label;
-      }
-      if (responseData.parent!==null) {
-        entityParent = responseData.parent;
-      }
-      context.setState({
-        entity: responseData,
-        entityDefinition: entityDefinition,
-        entityExample: entityExample,
-        entityLabel: entityLabel,
-        entityParent: entityParent,
-      })
-    })
-    .catch(function (error) {
-    });
-  }
-
-  toggleCollapse(name) {
-    let value = true;
-    if (this.state[name]==="undefined" || this.state[name]) {
-      value = false
-    }
-    this.setState({
-      [name]: value
-    });
-  }
-
-
-  formSubmit(e) {
-    e.preventDefault();
-    if (this.state.updating) {
-      return false;
-    }
-    this.setState({
-      updating: true,
-      updateBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner color="info" size="sm"/></span>
-    });
-    let postData = {
-      _id: this.state.entity._id,
-      label: this.state.entityLabel,
-      labelId: this.state.entity.labelId,
-      definition: this.state.entityDefinition,
-      example: this.state.entityExample,
-      properties: this.state.entity.properties
-    }
-    let parentValue = null;
-    if (this.state.entityParent!==null && this.state.entityParent.value!=='') {
-      parentValue = this.state.entityParent.value;
-    }
-    postData.parent = parentValue;
-    let context = this;
-    if (this.label==="") {
-      this.setState({
-        errorVisible: true,
-        errorText: <div>Please add a label to continue</div>,
-        updating: false,
-        updateBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-      });
-      setTimeout(function() {
-        context.setState({
-          updateBtn: <span><i className="fa fa-save" /> Save</span>
-        });
-      },2000);
-      return false;
-    }
-
-    axios({
-        method: 'put',
-        url: APIPath+'entity',
-        crossDomain: true,
-        data: postData,
-      })
-    .then(function (response) {
-      let responseData = response.data;
-      if (responseData.status) {
-        context.setState({
-          errorVisible: false,
-          errorText: [],
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>,
-        });
-        context.load();
-        context.loadEntity(context.state.entity._id);
-        context.props.loadDefaultEntities();
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },1000);
-      }
-      else {
-        let error = responseData.error;
-        let errorText = [];
-        for (let i=0; i<error.length; i++) {
-          errorText.push(<div key={i}>{error[i]}</div>);
-        }
-        context.setState({
-          errorVisible: true,
-          errorText: errorText,
-          updating: false,
-          updateBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-        });
-        setTimeout(function() {
-          context.setState({
-            updateBtn: <span><i className="fa fa-save" /> Save</span>
-          });
-        },2000);
-      }
-
-    })
-    .catch(function (error) {
-    });
-  }
-
-  async propertySubmit(e) {
-    e.preventDefault();
-    let context = this;
-    if (this.state.propertySaving) {
-      return false;
-    }
-    this.setState({
-      propertySaving: true,
-      propertySaveBtn: <span><i className="fa fa-save" /> <i>Saving...</i> <Spinner size="sm" color="info" /></span>
-    })
-    if (this.state.propertyTerm==="" || this.state.propertyTerm.value==="") {
-      this.setState({
-        propertySaving: false,
-        propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-        propertyErrorVisible: true,
-        propertyErrorText: <div>Please select a Relation to continue</div>
-      });
-      setTimeout(function() {
-        context.setState({
-          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-        });
-      },2000);
-      return false;
-    }
-    if (this.state.propertyEntityRef==="" || this.state.propertyEntityRef.value==="") {
-      this.setState({
-        propertySaving: false,
-        propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-        propertyErrorVisible: true,
-        propertyErrorText: <div>Please select a Referenced Entity to continue</div>
-      });
-      setTimeout(function() {
-        context.setState({
-          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-        });
-      },2000);
-      return false;
-    }
-    this.setState({
-      propertySaving: false,
-    });
-
-    let newReference = {
-      items: [
-        {_id: this.state.entity._id, type: "Entity"},
-        {_id: this.state.propertyEntityRef.value, type: "Entity"}
-      ],
-      taxonomyTermId: this.state.propertyTerm.value,
-    }
-    let addReference = await addGenericReference(newReference);
-    if (addReference.data.status) {
-      this.setState({
-        propertySaving: false,
-        propertySaveBtn: <span><i className="fa fa-save" /> Save success <i className="fa fa-check" /> </span>,
-        propertyModalVisible: false
-      });
-      this.loadEntity(this.state.entity._id);
-      this.props.loadDefaultEntities();
-      setTimeout(function() {
-        context.setState({
-          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-        });
-      },1000);
-    }
-    else {
-      let error = addReference.error;
-      let errorText = [];
-      for (let i=0; i<error.length; i++) {
-        errorText.push(<div key={i}>{error[i]}</div>);
-      }
-      this.setState({
-        propertySaving: false,
-        propertySaveBtn: <span><i className="fa fa-save" /> Save error <i className="fa fa-times" /></span>,
-        propertyErrorVisible: true,
-        propertyErrorText: errorText
-      });
-      setTimeout(function() {
-        context.setState({
-          propertySaveBtn: <span><i className="fa fa-save" /> Save</span>
-        });
-      },2000);
-    }
-  }
-
-  deleteProperty() {
-    let context = this;
-    let newReference = {
-      items: [
-        {_id: this.state.entity._id, type: "Entity"},
-        {_id: this.state.propertyEntityRef.value, type: "Entity"}
-      ],
-      taxonomyTermId: this.state.propertyTerm.value,
-    }
-    if (this.state.property.term.direction==="to") {
-      newReference = {
-        items: [
-          {_id: this.state.propertyEntityRef.value, type: "Entity"},
-          {_id: this.state.entity._id, type: "Entity"}
-        ],
-        taxonomyTermId: this.state.propertyTerm.value,
-      }
-    }
-    axios({
-        method: 'delete',
-        url: APIPath+'reference',
-        crossDomain: true,
-        data: newReference,
-      })
-    .then(function (response) {
-      let responseData = response.data;
-      if (responseData.status) {
-        context.setState({
-          property: null,
-          propertyModalVisible: false
-        });
-
-        context.loadEntity(context.state.entity._id);
-        context.props.loadDefaultEntities();
-      }
-      else {
-        let error = responseData.data.error;
-        let errorText = [];
-        for (let i=0; i<error.length; i++) {
-          errorText.push(<div key={i}>{error[i]}</div>);
-        }
-        context.setState({
-          propertyErrorVisible: true,
-          propertyErrorText: errorText
-        });
-      }
-
-    })
-    .catch(function (error) {
-    });
-  }
-
-  handleChange(e){
-    let target = e.target;
-    let value = target.type === 'checkbox' ? target.checked : target.value;
-    let name = target.name;
-    this.setState({
-      [name]: value
-    });
-  }
-
-  select2Change(selectedOption, element=null) {
-    if (element===null) {
-      return false;
-    }
-    this.setState({
-      [element]: selectedOption
-    });
-  }
-
-  entitiesList(entities) {
-    let options = [];
-    let defaultValue = {value: '', label: '--'};
-    options.push(defaultValue);
-    for (let i=0; i<entities.length; i++) {
-      let entity = entities[i];
-      let option = {value: entity._id, label: entity.label};
-      options.push(option);
-    }
-    return options;
-  }
-
-  list(entities, parentKey=null) {
-    let output = [];
-    for (let i=0; i<entities.length; i++) {
-      let entity = entities[i];
-      let item = <li key={i} onClick={()=>this.loadEntity(entity._id)}>{entity.label}</li>;
-      output.push(item);
-      if (typeof entity.children!=="undefined" && entity.children.length>0) {
-        let children = this.list(entity.children, i);
-        output.push(children);
-      }
-    }
-    let itemKey = 0;
-    if (parentKey!==null) {
-      itemKey = parentKey;
-    }
-    return <ul className="entities-list" key={"list-"+itemKey}>{output}</ul>;
-  }
-
-  togglePropertyModal(property=null) {
-    let visible = !this.state.propertyModalVisible;
-    let update = {propertyModalVisible: visible};
-    if (visible) {
-      let propertyTerm = '';
-      let propertyEntityRef = '';
-      if (property!==null) {
-        propertyTerm = {label: property.term.label, value: property.term._id};
-        propertyEntityRef = {label: property.entityRef.label, value: property.entityRef._id};
-      }
-      update.property = property;
-      update.propertyTerm = propertyTerm;
-      update.propertyEntityRef = propertyEntityRef;
-    }
-    else {
-      update.property = null;
-      update.propertyTerm = '';
-      update.propertyEntityRef = '';
-    }
-    this.setState(update);
-  }
-
-  loadTaxonomy() {
-    let context = this;
-    let params = {
-      systemType: "relationsTypes"
-    }
-    axios({
-        method: 'get',
-        url: APIPath+'taxonomy',
-        crossDomain: true,
-        params: params
-      })
-    .then(function (response) {
-      let responseData = response.data.data;
-      context.setState({
-        loading: false,
-        taxonomy: responseData,
-        taxonomyTerms: responseData.taxonomyterms
-      })
-    })
-    .catch(function (error) {
-    });
-  }
-
-  termsList(terms, sep="") {
-    let options = [];
-    for (let i=0; i<terms.length; i++) {
-      let term = terms[i];
-      let option = {value: term._id, label: sep+" "+term.label};
-      options.push(option);
-    }
-    return options;
-  }
-
-  propertiesList(entity) {
-    let output = [];
-    if (entity!==null) {
-      for (let i=0; i<entity.properties.length; i++) {
-        let property = entity.properties[i];
-        let labelId = property.term.label;
-        let taxonomyTerm = this.state.taxonomyTerms.find(item=>item.labelId===labelId);
-        let label = "";
-        property.term.direction = "from";
-        if (typeof taxonomyTerm==="undefined") {
-          taxonomyTerm = this.state.taxonomyTerms.find(item=>item.inverseLabelId===labelId);
-          property.term.direction = "to";
-          label = taxonomyTerm.inverseLabel;
-        }
-        if (typeof taxonomyTerm!=="undefined") {
-          property.term._id = taxonomyTerm._id;
-          label = taxonomyTerm.label;
-        }
-        let item = <li key={i} onClick={()=>this.togglePropertyModal(property)}><span className="property-term">{label}</span> <span className="property-entity">{property.entityRef.label}</span></li>;
-        output.push(item);
-      }
-      if (entity.properties.length>0) {
-        output = <ul className="entity-properties">{output}</ul>
-      }
-    }
-    return output;
   }
 
   componentDidMount() {
@@ -500,65 +110,643 @@ class Entities extends React.Component {
     this.loadTaxonomy();
   }
 
+  handleChange(e) {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
+  async load() {
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}entities`,
+      crossDomain: true,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    this.setState({
+      loading: false,
+      entities: responseData.data,
+    });
+  }
+
+  async loadEntity(_id = null) {
+    if (_id === null) {
+      return false;
+    }
+    const params = { _id };
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}entity`,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+
+    let entityDefinition = '';
+    let entityExample = '';
+    let entityLabel = '';
+    let entityParent = null;
+    if (responseData.definition !== null) {
+      entityDefinition = responseData.definition;
+    }
+    if (responseData.example !== null) {
+      entityExample = responseData.example;
+    }
+    if (responseData.label !== null) {
+      entityLabel = responseData.label;
+    }
+    if (responseData.parent !== null) {
+      entityParent = responseData.parent;
+    }
+    this.setState({
+      entity: responseData,
+      entityDefinition,
+      entityExample,
+      entityLabel,
+      entityParent,
+    });
+    return false;
+  }
+
+  toggleCollapse(name) {
+    const { [name]: value } = this.state;
+    this.setState({
+      [name]: !value,
+    });
+  }
+
+  async formSubmit(e) {
+    e.preventDefault();
+    const { loadDefaultEntities: loadDefaultEntitiesFn } = this.props;
+    const {
+      updating,
+      entity,
+      entityLabel,
+      entityDefinition,
+      entityExample,
+      entityParent,
+    } = this.state;
+    if (updating) {
+      return false;
+    }
+    this.setState({
+      updating: true,
+      updateBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner color="info" size="sm" />
+        </span>
+      ),
+    });
+    const postData = {
+      _id: entity._id,
+      label: entityLabel,
+      labelId: entity.labelId,
+      definition: entityDefinition,
+      example: entityExample,
+      properties: entity.properties,
+    };
+    let parentValue = null;
+    if (entityParent !== null && entityParent.value !== '') {
+      parentValue = entityParent.value;
+    }
+    postData.parent = parentValue;
+    const context = this;
+    if (this.label === '') {
+      this.setState({
+        errorVisible: true,
+        errorText: <div>Please add a label to continue</div>,
+        updating: false,
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Save error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+      });
+      setTimeout(() => {
+        context.setState({
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 2000);
+      return false;
+    }
+
+    const responseData = await axios({
+      method: 'put',
+      url: `${APIPath}entity`,
+      crossDomain: true,
+      data: postData,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+
+    if (responseData.status) {
+      this.setState({
+        errorVisible: false,
+        errorText: [],
+        updating: false,
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Save success{' '}
+            <i className="fa fa-check" />{' '}
+          </span>
+        ),
+      });
+      this.load();
+      this.loadEntity(context.state.entity._id);
+      loadDefaultEntitiesFn();
+      setTimeout(() => {
+        context.setState({
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 1000);
+    } else {
+      const { error } = responseData;
+      const errorText = [];
+      for (let i = 0; i < error.length; i += 1) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        errorVisible: true,
+        errorText,
+        updating: false,
+        updateBtn: (
+          <span>
+            <i className="fa fa-save" /> Save error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+      });
+      setTimeout(() => {
+        context.setState({
+          updateBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 2000);
+    }
+    return false;
+  }
+
+  async propertySubmit(e) {
+    e.preventDefault();
+    const {
+      propertySaving,
+      propertyTerm,
+      propertyEntityRef,
+      entity,
+    } = this.state;
+    const context = this;
+    if (propertySaving) {
+      return false;
+    }
+    this.setState({
+      propertySaving: true,
+      propertySaveBtn: (
+        <span>
+          <i className="fa fa-save" /> <i>Saving...</i>{' '}
+          <Spinner size="sm" color="info" />
+        </span>
+      ),
+    });
+    if (propertyTerm === '' || propertyTerm.value === '') {
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: (
+          <span>
+            <i className="fa fa-save" /> Save error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+        propertyErrorVisible: true,
+        propertyErrorText: <div>Please select a Relation to continue</div>,
+      });
+      setTimeout(() => {
+        context.setState({
+          propertySaveBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 2000);
+      return false;
+    }
+    if (propertyEntityRef === '' || propertyEntityRef.value === '') {
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: (
+          <span>
+            <i className="fa fa-save" /> Save error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+        propertyErrorVisible: true,
+        propertyErrorText: (
+          <div>Please select a Referenced Entity to continue</div>
+        ),
+      });
+      setTimeout(() => {
+        context.setState({
+          propertySaveBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 2000);
+      return false;
+    }
+    this.setState({
+      propertySaving: false,
+    });
+
+    const newReference = {
+      items: [
+        { _id: entity._id, type: 'Entity' },
+        { _id: propertyEntityRef.value, type: 'Entity' },
+      ],
+      taxonomyTermId: propertyTerm.value,
+    };
+    const addReference = await addGenericReference(newReference);
+    if (addReference.data.status) {
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: (
+          <span>
+            <i className="fa fa-save" /> Save success{' '}
+            <i className="fa fa-check" />{' '}
+          </span>
+        ),
+        propertyModalVisible: false,
+      });
+      await this.loadEntity(entity._id);
+      loadDefaultEntities();
+      setTimeout(() => {
+        context.setState({
+          propertySaveBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 1000);
+    } else {
+      const { error } = addReference;
+      const errorText = [];
+      for (let i = 0; i < error.length; i += 1) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        propertySaving: false,
+        propertySaveBtn: (
+          <span>
+            <i className="fa fa-save" /> Save error{' '}
+            <i className="fa fa-times" />
+          </span>
+        ),
+        propertyErrorVisible: true,
+        propertyErrorText: errorText,
+      });
+      setTimeout(() => {
+        context.setState({
+          propertySaveBtn: (
+            <span>
+              <i className="fa fa-save" /> Save
+            </span>
+          ),
+        });
+      }, 2000);
+    }
+    return false;
+  }
+
+  async deleteProperty() {
+    const { entity, propertyEntityRef, propertyTerm, property } = this.state;
+    let newReference = {
+      items: [
+        { _id: entity._id, type: 'Entity' },
+        { _id: propertyEntityRef.value, type: 'Entity' },
+      ],
+      taxonomyTermId: propertyTerm.value,
+    };
+    if (property.term.direction === 'to') {
+      newReference = {
+        items: [
+          { _id: propertyEntityRef.value, type: 'Entity' },
+          { _id: entity._id, type: 'Entity' },
+        ],
+        taxonomyTermId: propertyTerm.value,
+      };
+    }
+    const responseData = await axios({
+      method: 'delete',
+      url: `${APIPath}reference`,
+      crossDomain: true,
+      data: newReference,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (responseData.status) {
+      this.setState({
+        property: null,
+        propertyModalVisible: false,
+      });
+
+      await this.loadEntity(entity._id);
+      loadDefaultEntities();
+    } else {
+      const { error } = responseData.data;
+      const errorText = [];
+      for (let i = 0; i < error.length; i += 1) {
+        errorText.push(<div key={i}>{error[i]}</div>);
+      }
+      this.setState({
+        propertyErrorVisible: true,
+        propertyErrorText: errorText,
+      });
+    }
+    return false;
+  }
+
+  select2Change(selectedOption, element = null) {
+    if (element === null) {
+      return false;
+    }
+    this.setState({
+      [element]: selectedOption,
+    });
+    return false;
+  }
+
+  list(entities, parentKey = null) {
+    const output = [];
+    for (let i = 0; i < entities.length; i += 1) {
+      const entity = entities[i];
+      const item = (
+        <li key={entity._id}>
+          <div
+            onClick={() => this.loadEntity(entity._id)}
+            onKeyDown={() => false}
+            role="button"
+            tabIndex={0}
+            aria-label="load entity"
+          >
+            {entity.label}
+          </div>
+        </li>
+      );
+      output.push(item);
+      if (
+        typeof entity.children !== 'undefined' &&
+        entity.children.length > 0
+      ) {
+        const children = this.list(entity.children, i);
+        output.push(children);
+      }
+    }
+    let itemKey = 0;
+    if (parentKey !== null) {
+      itemKey = parentKey;
+    }
+    return (
+      <ul className="entities-list" key={`list-${itemKey}`}>
+        {output}
+      </ul>
+    );
+  }
+
+  togglePropertyModal(property = null) {
+    const { propertyModalVisible } = this.state;
+    const visible = !propertyModalVisible;
+    const update = { propertyModalVisible: visible };
+    if (visible) {
+      let propertyTerm = '';
+      let propertyEntityRef = '';
+      if (property !== null) {
+        propertyTerm = { label: property.term.label, value: property.term._id };
+        propertyEntityRef = {
+          label: property.entityRef.label,
+          value: property.entityRef._id,
+        };
+      }
+      update.property = property;
+      update.propertyTerm = propertyTerm;
+      update.propertyEntityRef = propertyEntityRef;
+    } else {
+      update.property = null;
+      update.propertyTerm = '';
+      update.propertyEntityRef = '';
+    }
+    this.setState(update);
+  }
+
+  async loadTaxonomy() {
+    const params = {
+      systemType: 'relationsTypes',
+    };
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}taxonomy`,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    this.setState({
+      loading: false,
+      taxonomyTerms: responseData.taxonomyterms,
+    });
+  }
+
+  propertiesList(entity) {
+    const { taxonomyTerms } = this.state;
+    let output = [];
+    if (entity !== null) {
+      for (let i = 0; i < entity.properties.length; i += 1) {
+        const property = entity.properties[i];
+        const labelId = property.term.label;
+        let taxonomyTerm = taxonomyTerms.find(
+          (item) => item.labelId === labelId
+        );
+        let label = '';
+        property.term.direction = 'from';
+        if (typeof taxonomyTerm === 'undefined') {
+          taxonomyTerm = taxonomyTerms.find(
+            (item) => item.inverseLabelId === labelId
+          );
+          property.term.direction = 'to';
+          label = taxonomyTerm.inverseLabel;
+        }
+        if (typeof taxonomyTerm !== 'undefined') {
+          property.term._id = taxonomyTerm._id;
+          label = taxonomyTerm.label;
+        }
+        const item = (
+          <li key={property._id}>
+            <div
+              onClick={() => this.togglePropertyModal(property)}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="toggle property modal"
+            >
+              <span className="property-term">{label}</span>{' '}
+              <span className="property-entity">
+                {property.entityRef.label}
+              </span>
+            </div>
+          </li>
+        );
+        output.push(item);
+      }
+      if (entity.properties.length > 0) {
+        output = <ul className="entity-properties">{output}</ul>;
+      }
+    }
+    return output;
+  }
+
   render() {
-    let heading = "Entities";
-    let breadcrumbsItems = [
-      {label: heading, icon: "pe-7s-share", active: true, path: ""}
+    const {
+      loading,
+      detailsOpen,
+      propertiesOpen,
+      entities,
+      entity,
+      taxonomyTerms,
+      property,
+      propertyErrorVisible,
+      propertyErrorText,
+      propertySaveBtn: statePropertySaveBtn,
+      propertyModalVisible,
+      propertyTerm,
+      propertyEntityRef,
+      errorVisible,
+      errorText,
+      entityParent,
+      entityLabel,
+      entityDefinition,
+      entityExample,
+      updateBtn,
+    } = this.state;
+    const { className } = this.props;
+    const heading = 'Entities';
+    const breadcrumbsItems = [
+      { label: heading, icon: 'pe-7s-share', active: true, path: '' },
     ];
 
-    let content = <div>
-      <div className="row">
-        <div className="col-12">
-          <div style={{padding: '40pt',textAlign: 'center'}}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
+    let content = (
+      <div>
+        <div className="row">
+          <div className="col-12">
+            <div style={{ padding: '40pt', textAlign: 'center' }}>
+              <Spinner type="grow" color="info" /> <i>loading...</i>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    if (!this.state.loading) {
-      let detailsOpenActive = " active";
-      if (!this.state.detailsOpen) {
-        detailsOpenActive = "";
+    );
+    if (!loading) {
+      let detailsOpenActive = ' active';
+      if (!detailsOpen) {
+        detailsOpenActive = '';
       }
-      let propertiesOpenActive = " active";
-      if (!this.state.propertiesOpen) {
-        propertiesOpenActive = "";
-      }
-
-      let entitiesHTML = this.list(this.state.entities);
-
-      let entityVisible = "hidden";
-      if (this.state.entity!==null) {
-        entityVisible = "";
+      let propertiesOpenActive = ' active';
+      if (!propertiesOpen) {
+        propertiesOpenActive = '';
       }
 
-      let entitiesList = this.entitiesList(this.state.entities);
-      let defaultValue = {value: '', label: '--'};
-      let termsList = this.termsList(this.state.taxonomyTerms);
+      const entitiesHTML = this.list(entities);
+
+      let entityVisible = 'hidden';
+      if (entity !== null) {
+        entityVisible = '';
+      }
+
+      const entitiesList = this.constructor.entitiesList(entities);
+      const defaultValue = { value: '', label: '--' };
+      const termsList = this.constructor.termsList(taxonomyTerms);
       termsList.unshift(defaultValue);
 
-      let propertiesList = this.propertiesList(this.state.entity);
+      const propertiesList = this.propertiesList(entity);
 
-      let propertyModalTitle = "Edit property";
-      if (this.state.property===null) {
-        propertyModalTitle = "Add new property";
+      let propertyModalTitle = 'Edit property';
+      if (property === null) {
+        propertyModalTitle = 'Add new property';
       }
-      let propertyErrorContainerClass = " hidden";
-      if (this.state.propertyErrorVisible) {
-        propertyErrorContainerClass = "";
+      let propertyErrorContainerClass = ' hidden';
+      if (propertyErrorVisible) {
+        propertyErrorContainerClass = '';
       }
-      let propertyErrorContainer = <div className={"error-container"+propertyErrorContainerClass}>{this.state.propertyErrorText}</div>
+      const propertyErrorContainer = (
+        <div className={`error-container${propertyErrorContainerClass}`}>
+          {propertyErrorText}
+        </div>
+      );
 
       let deleteBtn = [];
-      if (this.state.property!==null) {
-        deleteBtn = <Button color="danger" outline onClick={this.deleteProperty} className="pull-left" size="sm"><i className="fa fa-trash-o" /> Delete</Button>
+      if (property !== null) {
+        deleteBtn = (
+          <Button
+            color="danger"
+            outline
+            onClick={this.deleteProperty}
+            className="pull-left"
+            size="sm"
+          >
+            <i className="fa fa-trash-o" /> Delete
+          </Button>
+        );
       }
       let propertySaveBtn = [];
-      if(this.state.property===null) {
-        propertySaveBtn = <Button color="primary" outline size="sm" onClick={this.propertySubmit}>{this.state.propertySaveBtn}</Button>
+      if (property === null) {
+        propertySaveBtn = (
+          <Button
+            color="primary"
+            outline
+            size="sm"
+            onClick={this.propertySubmit}
+          >
+            {statePropertySaveBtn}
+          </Button>
+        );
       }
-      let propertyModal = <Modal isOpen={this.state.propertyModalVisible} toggle={()=>this.togglePropertyModal(null)} className={this.props.className}>
-          <ModalHeader toggle={()=>this.togglePropertyModal(null)}>{propertyModalTitle}</ModalHeader>
+      const propertyModal = (
+        <Modal
+          isOpen={propertyModalVisible}
+          toggle={() => this.togglePropertyModal(null)}
+          className={className}
+        >
+          <ModalHeader toggle={() => this.togglePropertyModal(null)}>
+            {propertyModalTitle}
+          </ModalHeader>
           <ModalBody>
             {propertyErrorContainer}
             <Form onSubmit={this.propertySubmit}>
@@ -566,8 +754,10 @@ class Entities extends React.Component {
                 <Label>Relation</Label>
                 <Select
                   name="term"
-                  value={this.state.propertyTerm}
-                  onChange={(selectedOption)=>this.select2Change(selectedOption, "propertyTerm")}
+                  value={propertyTerm}
+                  onChange={(selectedOption) =>
+                    this.select2Change(selectedOption, 'propertyTerm')
+                  }
                   options={termsList}
                 />
               </FormGroup>
@@ -575,8 +765,10 @@ class Entities extends React.Component {
                 <Label>Referenced Entity</Label>
                 <Select
                   name="entityRef"
-                  value={this.state.propertyEntityRef}
-                  onChange={(selectedOption)=>this.select2Change(selectedOption, "propertyEntityRef")}
+                  value={propertyEntityRef}
+                  onChange={(selectedOption) =>
+                    this.select2Change(selectedOption, 'propertyEntityRef')
+                  }
                   options={entitiesList}
                 />
               </FormGroup>
@@ -587,81 +779,163 @@ class Entities extends React.Component {
             {deleteBtn}
           </ModalFooter>
         </Modal>
+      );
 
-      let errorContainerClass = " hidden";
-      if (this.state.errorVisible) {
-        errorContainerClass = "";
+      let errorContainerClass = ' hidden';
+      if (errorVisible) {
+        errorContainerClass = '';
       }
-      let errorContainer = <div className={"error-container"+errorContainerClass}>{this.state.errorText}</div>
+      const errorContainer = (
+        <div className={`error-container${errorContainerClass}`}>
+          {errorText}
+        </div>
+      );
 
-      let entityParentValue = entitiesList.find(el=>el.value===this.state.entityParent);
+      const entityParentValue = entitiesList.find(
+        (el) => el.value === entityParent
+      );
 
-      content = <div>
-        <div className="row">
-          <div className="col-12">
-            <Card>
-              <CardBody>
-                <div className="row">
+      content = (
+        <div>
+          <div className="row">
+            <div className="col-12">
+              <Card>
+                <CardBody>
+                  <div className="row">
+                    <div className="col-xs-12 col-sm-6">{entitiesHTML}</div>
 
-                  <div className="col-xs-12 col-sm-6">
-                    {entitiesHTML}
-                  </div>
-
-                  <div className="col-xs-12 col-sm-6">
-                    <div className={entityVisible}>
-                      <div onClick={this.toggleCollapse.bind(this, 'detailsOpen')}><b>Details</b> <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+detailsOpenActive} /></Button></div>
-                      <Collapse isOpen={this.state.detailsOpen}>
-                        <div style={{padding: "10px 0"}}>
-                          {errorContainer}
-                          <Form onSubmit={this.formSubmit}>
-                            <FormGroup>
-                              <Label for="labelInput">Label</Label>
-                              <Input type="text" name="entityLabel" id="labelInput" placeholder="Entity label..." value={this.state.entityLabel} onChange={this.handleChange}/>
-                            </FormGroup>
-                            <FormGroup>
-                              <Label for="definitionInput">Definition</Label>
-                              <Input type="textarea" name="entityDefinition" id="definitionInput" placeholder="Entity definition..." value={this.state.entityDefinition} onChange={this.handleChange}/>
-                            </FormGroup>
-                            <FormGroup>
-                              <Label for="exampleInput">Example</Label>
-                              <Input type="textarea" name="entityExample" id="exampleInput" placeholder="Entity example..." value={this.state.entityExample} onChange={this.handleChange}/>
-                            </FormGroup>
-                            <FormGroup>
-                              <Label>Parent Entity</Label>
-                              <Select
-                                name="parent"
-                                value={entityParentValue}
-                                onChange={(selectedOption)=>this.select2Change(selectedOption, "entityParent")}
-                                options={entitiesList}
-                              />
-                            </FormGroup>
-                            <div className="text-right">
-                              <Button outline color="info" size="sm" type="submit">{this.state.updateBtn}</Button>
-                            </div>
-                          </Form>
+                    <div className="col-xs-12 col-sm-6">
+                      <div className={entityVisible}>
+                        <div
+                          onClick={() => this.toggleCollapse('detailsOpen')}
+                          onKeyDown={() => false}
+                          role="button"
+                          tabIndex={0}
+                          aria-label="toggle details collapse"
+                        >
+                          <b>Details</b>{' '}
+                          <Button
+                            type="button"
+                            className="pull-right"
+                            color="secondary"
+                            outline
+                            size="xs"
+                          >
+                            <i
+                              className={`collapse-toggle fa fa-angle-left${detailsOpenActive}`}
+                            />
+                          </Button>
                         </div>
-                      </Collapse>
-                      <hr style={{margin: "10px 0"}} />
-                      <div onClick={this.toggleCollapse.bind(this, 'propertiesOpen')}><b>Properties</b> <Button type="button" className="pull-right" color="secondary" outline size="xs"><i className={"collapse-toggle fa fa-angle-left"+propertiesOpenActive} /></Button></div>
-                      <Collapse isOpen={this.state.propertiesOpen}>
-                        <div style={{padding: "10px 0"}}>
-                          {propertiesList}
-                          <div className="footer-box">
-                            <Button outline color="info" size="sm" onClick={()=>this.togglePropertyModal(null)}>Add new property <i className="fa fa-plus" /></Button>
+                        <Collapse isOpen={detailsOpen}>
+                          <div style={{ padding: '10px 0' }}>
+                            {errorContainer}
+                            <Form onSubmit={this.formSubmit}>
+                              <FormGroup>
+                                <Label for="labelInput">Label</Label>
+                                <Input
+                                  type="text"
+                                  name="entityLabel"
+                                  id="labelInput"
+                                  placeholder="Entity label..."
+                                  value={entityLabel}
+                                  onChange={this.handleChange}
+                                />
+                              </FormGroup>
+                              <FormGroup>
+                                <Label for="definitionInput">Definition</Label>
+                                <Input
+                                  type="textarea"
+                                  name="entityDefinition"
+                                  id="definitionInput"
+                                  placeholder="Entity definition..."
+                                  value={entityDefinition}
+                                  onChange={this.handleChange}
+                                />
+                              </FormGroup>
+                              <FormGroup>
+                                <Label for="exampleInput">Example</Label>
+                                <Input
+                                  type="textarea"
+                                  name="entityExample"
+                                  id="exampleInput"
+                                  placeholder="Entity example..."
+                                  value={entityExample}
+                                  onChange={this.handleChange}
+                                />
+                              </FormGroup>
+                              <FormGroup>
+                                <Label>Parent Entity</Label>
+                                <Select
+                                  name="parent"
+                                  value={entityParentValue}
+                                  onChange={(selectedOption) =>
+                                    this.select2Change(
+                                      selectedOption,
+                                      'entityParent'
+                                    )
+                                  }
+                                  options={entitiesList}
+                                />
+                              </FormGroup>
+                              <div className="text-right">
+                                <Button
+                                  outline
+                                  color="info"
+                                  size="sm"
+                                  type="submit"
+                                >
+                                  {updateBtn}
+                                </Button>
+                              </div>
+                            </Form>
                           </div>
-
+                        </Collapse>
+                        <hr style={{ margin: '10px 0' }} />
+                        <div
+                          onClick={() => this.toggleCollapse('propertiesOpen')}
+                          onKeyDown={() => false}
+                          role="button"
+                          tabIndex={0}
+                          aria-label="toggle properties collapse"
+                        >
+                          <b>Properties</b>{' '}
+                          <Button
+                            type="button"
+                            className="pull-right"
+                            color="secondary"
+                            outline
+                            size="xs"
+                          >
+                            <i
+                              className={`collapse-toggle fa fa-angle-left${propertiesOpenActive}`}
+                            />
+                          </Button>
                         </div>
-                      </Collapse>
+                        <Collapse isOpen={propertiesOpen}>
+                          <div style={{ padding: '10px 0' }}>
+                            {propertiesList}
+                            <div className="footer-box">
+                              <Button
+                                outline
+                                color="info"
+                                size="sm"
+                                onClick={() => this.togglePropertyModal(null)}
+                              >
+                                Add new property <i className="fa fa-plus" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Collapse>
+                      </div>
                     </div>
                   </div>
-
-                </div>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+            </div>
           </div>
+          {propertyModal}
         </div>
-        {propertyModal}
-      </div>
+      );
     }
     return (
       <div>
@@ -676,4 +950,13 @@ class Entities extends React.Component {
     );
   }
 }
-export default Entities = connect(null, mapDispatchToProps)(Entities);
+
+Entities.defaultProps = {
+  className: '',
+  loadDefaultEntities: () => {},
+};
+Entities.propTypes = {
+  className: PropTypes.string,
+  loadDefaultEntities: PropTypes.func,
+};
+export default compose(connect(null, mapDispatchToProps))(Entities);

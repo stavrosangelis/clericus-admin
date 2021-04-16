@@ -38,7 +38,18 @@
   max-width: 100%;
 }
 .sa-dnd-resizable-anchor {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
   position: absolute;
+}
+.sa-dnd-resizable-anchor:focus {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  outline: 0 none;
 }
 .sa-dnd-resizable-anchor.tl {
   width: 20px;
