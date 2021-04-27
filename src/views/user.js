@@ -350,8 +350,7 @@ export default class User extends Component {
         .catch((error) => {
           console.log(error);
         });
-
-      if (responseData.data.status) {
+      if (responseData.status) {
         const newState = {
           passwordUpdating: false,
           passwordUpdateBtn: (
