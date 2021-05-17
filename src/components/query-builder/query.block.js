@@ -12,9 +12,10 @@ import {
   toggleQueryBuilderSubmit,
   toggleQueryBuilderSearching,
   toggleClearQueryBuildResults,
+  setPaginationParams,
 } from '../../redux/actions';
 
-import { outputDate } from '../../helpers';
+import { outputDate, queryDate } from '../../helpers';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -177,14 +178,28 @@ const QueryBlock = () => {
     setFilterBlockOpen(false);
   }, [modalMainOpen]);
 
+  const parseDates = (data) => {
+    for (let i = 0; i < data.length; i += 1) {
+      const block = data[i];
+      if (block.elementStartValue !== '') {
+        block.elementStartValue = queryDate(block.elementStartValue);
+      }
+      if (block.elementEndValue !== '') {
+        block.elementEndValue = queryDate(block.elementEndValue);
+      }
+    }
+    return data;
+  };
+
   const submit = useCallback(async () => {
     dispatch(toggleClearQueryBuildResults(true));
     dispatch(setQueryBuildResults([]));
     dispatch(toggleQueryBuilderSearching(true));
+
     const orderDirection = !paginationParams.orderDesc ? 'ASC' : 'DESC';
     const params = {
       entityType,
-      main: queryBlocks,
+      main: parseDates(queryBlocks),
       events: queryBlocksEvent,
       organisations: queryBlocksOrganisation,
       resources: queryBlocksResource,
@@ -211,6 +226,12 @@ const QueryBlock = () => {
       });
     dispatch(setQueryBuildResults(responseData.data));
     dispatch(toggleQueryBuilderSearching(false));
+    if (responseData.data.currentPage > responseData.data.totalPages) {
+      const paginationParamsCopy = { ...paginationParams };
+      paginationParamsCopy.page = responseData.data.totalPages;
+      dispatch(setPaginationParams('queryBuilder', paginationParamsCopy));
+    }
+
     return false;
   }, [
     dispatch,

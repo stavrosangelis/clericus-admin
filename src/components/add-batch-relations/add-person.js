@@ -431,6 +431,7 @@ export default class AddPerson extends Component {
     let selectedItems = [];
     if (type === 'Person') {
       selectedItems = items.map((item) => {
+        console.log(item);
         let name = '';
         if (
           typeof item.honorificPrefix !== 'undefined' &&
@@ -441,7 +442,11 @@ export default class AddPerson extends Component {
         if (typeof item.firstName !== 'undefined' && item.firstName !== '') {
           name += `${item.firstName} `;
         }
-        if (typeof item.middleName !== 'undefined' && item.middleName !== '') {
+        if (
+          typeof item.middleName !== 'undefined' &&
+          item.middleName !== '' &&
+          item.middleName !== 'undefined'
+        ) {
           name += `${item.middleName} `;
         }
         if (typeof item.lastName !== 'undefined' && item.lastName !== '') {

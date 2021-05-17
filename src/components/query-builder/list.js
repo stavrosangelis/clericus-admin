@@ -133,9 +133,11 @@ const List = () => {
     setItems(newItems);
   };
 
+  const selectedItems = items.filter((item) => item.checked);
+
   const batchActions = (
     <BatchActions
-      items={items}
+      items={selectedItems}
       removeSelected={removeSelected}
       type={entityType}
       relationProperties={[]}

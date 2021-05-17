@@ -40,11 +40,20 @@ const ElementBlock = (props) => {
       const element = elements.find(
         (e) => e.name === defaultValues.elementLabel
       );
+      // normalize date values
+      let newElementStartValue = defaultValues.elementStartValue;
+      if (newElementStartValue instanceof Date === false) {
+        newElementStartValue = new Date(newElementStartValue);
+      }
+      let newElementEndValue = defaultValues.elementEndValue;
+      if (newElementEndValue instanceof Date === false) {
+        newElementEndValue = new Date(newElementEndValue);
+      }
       setElementName(defaultValues.elementLabel);
       setElementType(element.type);
       setElementValue(defaultValues.elementValue);
-      setElementStartValue(defaultValues.elementStartValue);
-      setElementEndValue(defaultValues.elementEndValue);
+      setElementStartValue(newElementStartValue);
+      setElementEndValue(newElementEndValue);
       setQualifier(defaultValues.qualifier);
       setBoolean(defaultValues.boolean);
     }

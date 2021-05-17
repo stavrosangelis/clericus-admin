@@ -148,7 +148,7 @@ class Login extends Component {
                           name="email"
                           id="email"
                           placeholder="Email..."
-                          onChange={this.handleChange}
+                          onChange={(e) => this.handleChange(e)}
                           invalid={emailValid}
                         />
                       </FormGroup>
@@ -159,7 +159,7 @@ class Login extends Component {
                           name="password"
                           id="password"
                           placeholder="Password..."
-                          onChange={this.handleChange}
+                          onChange={(e) => this.handleChange(e)}
                         />
                       </FormGroup>
                     </CardBody>
@@ -187,7 +187,7 @@ Login.defaultProps = {
 };
 Login.propTypes = {
   loginError: PropTypes.bool,
-  loginErrorText: PropTypes.array,
+  loginErrorText: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   sessionActive: PropTypes.bool,
   login: PropTypes.func,
 };

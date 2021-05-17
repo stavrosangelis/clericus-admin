@@ -307,9 +307,24 @@ export const capitalizeOnlyFirst = (str) => {
   return firstLetter + restOfString;
 };
 
-export const outputDate = (date) => {
+export const outputDate = (dateParam) => {
+  let date = dateParam;
+  if (date instanceof Date === false) {
+    date = new Date(date);
+  }
   const d = date.getDate();
   const m = date.getMonth() + 1;
   const y = date.getFullYear();
   return `${d}/${m}/${y}`;
+};
+
+export const queryDate = (dateParam) => {
+  let date = dateParam;
+  if (date instanceof Date === false) {
+    date = new Date(date);
+  }
+  const d = date.getDate();
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear();
+  return `${y}-${m}-${d}`;
 };

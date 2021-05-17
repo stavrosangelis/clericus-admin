@@ -165,9 +165,9 @@ const QueryModalMain = (props) => {
     setAlertModal(!alertModal);
   };
 
-  const updateEntityTypeConfirm = () => {
+  const updateEntityTypeConfirm = async () => {
     // clear results list
-    dispatch(setQueryBuildResults([]));
+    await dispatch(setQueryBuildResults([]));
     dispatch(toggleClearQueryBuildResults(true));
     // reset pagination
     const paginationParams = {
