@@ -41,12 +41,16 @@ const Article = (props) => {
   );
   const [stateError, setError] = useState({ visible: false, text: [] });
   const defaultForm = {
-    _id: null,
-    label: '',
-    category: 0,
-    teaser: '',
+    category: [],
     content: '',
+    featuredImage: null,
+    highlight: false,
+    highlightOrder: 0,
+    label: '',
+    permalink: '',
     status: 'private',
+    teaser: '',
+    _id: null,
   };
   const [formData, setFormdata] = useState(defaultForm);
   const [newId, setNewId] = useState(null);
@@ -131,7 +135,6 @@ const Article = (props) => {
       if (_id === 'new') {
         return false;
       }
-
       const params = { _id };
       const responseData = await axios({
         method: 'get',
@@ -144,12 +147,15 @@ const Article = (props) => {
           console.log(error);
         });
       const data = {
-        _id: responseData._id,
-        label: responseData.label,
         category: prepareCategoriesOutput(responseData.category),
-        teaser: responseData.teaser,
         content: responseData.content,
+        highlight: responseData.highlight,
+        highlightOrder: responseData.highlightOrder,
+        label: responseData.label,
+        permalink: responseData.permalink,
         status: responseData.status,
+        teaser: responseData.teaser,
+        _id: responseData._id,
       };
       setFormdata(data);
       prevFeaturedImage.current = responseData.featuredImage;
@@ -536,7 +542,7 @@ const Article = (props) => {
               key={0}
               className="show-featured-image btn btn-outline-primary"
             >
-              <i className="fa fa-eye" />
+              <i className="fa fa-external-link-square" />
             </a>
             <img
               src={thumbPath}

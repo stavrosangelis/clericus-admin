@@ -207,7 +207,7 @@ const ArticleImageBrowser = (props) => {
             rel="noopener noreferrer"
             className="show-featured-image btn btn-outline-primary"
           >
-            <i className="fa fa-eye" />
+            <i className="fa fa-external-link-square" />
           </a>
           <div
             style={{ display: 'inline-block' }}

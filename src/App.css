@@ -2613,6 +2613,10 @@ textarea.form-control {
   top: 2px;
   right: 2px;
 }
+.show-featured-image > i {
+  margin-top: -2px;
+  font-size: 22px;
+}
 .uploaded-files-modal-body {
   padding: 0;
 }
