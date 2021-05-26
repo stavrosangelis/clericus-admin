@@ -19,6 +19,7 @@ import axios from 'axios';
 import { Redirect } from 'react-router-dom';
 import { Editor } from '@tinymce/tinymce-react';
 import PropTypes from 'prop-types';
+import Select from 'react-select';
 import Breadcrumbs from '../components/breadcrumbs';
 import ArticleImageBrowser from '../components/article-image-browser';
 
@@ -59,12 +60,31 @@ const Article = (props) => {
   const [featuredImageDetails, setFeaturedImageDetails] = useState(null);
   const prevFeaturedImage = useRef(null);
   const toggleFeatured = () => setFeaturedModal(!featuredModal);
+  const [categoryOptions, setCategoryOptions] = useState([]);
 
   const toggleDeleteModal = () => {
     setDeleteModalVisible(!deleteModalVisible);
   };
 
-  const [categories, setCategories] = useState([]);
+  const prepareCategories = useCallback((items, sepParam = '') => {
+    let newItems = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      const sepOutput = `${sepParam} `;
+      const output = {
+        _id: item._id,
+        label: `${sepOutput}${item.label}`,
+        clean: item.label,
+      };
+      newItems.push(output);
+      if (item.children.length > 0) {
+        let sep = sepParam;
+        sep += '-';
+        newItems = [...newItems, ...prepareCategories(item.children, sep)];
+      }
+    }
+    return newItems;
+  }, []);
 
   const loadCategories = useCallback(async () => {
     const loadData = async () => {
@@ -81,11 +101,31 @@ const Article = (props) => {
       return responseData;
     };
     const newData = await loadData();
-    setCategories(newData);
-  }, []);
+    const categories = prepareCategories(newData);
+    const options = [{ value: '', label: '-- select category --' }];
+    for (let i = 0; i < categories.length; i += 1) {
+      const c = categories[i];
+      options.push({ value: c._id, label: c.label });
+    }
+    setCategoryOptions(options);
+  }, [prepareCategories]);
 
   useEffect(() => {
     const load = async () => {
+      const prepareCategoriesOutput = (values) => {
+        if (typeof values === 'object') {
+          const newValues =
+            values.map((v) => {
+              const category =
+                categoryOptions.find((c) => Number(c.value) === Number(v)) ||
+                null;
+              const label = category !== null ? category.label : '';
+              return { value: Number(v), label };
+            }) || [];
+          return newValues;
+        }
+        return [];
+      };
       const { _id } = match.params;
       setLoading(false);
       if (_id === 'new') {
@@ -106,7 +146,7 @@ const Article = (props) => {
       const data = {
         _id: responseData._id,
         label: responseData.label,
-        category: responseData.category,
+        category: prepareCategoriesOutput(responseData.category),
         teaser: responseData.teaser,
         content: responseData.content,
         status: responseData.status,
@@ -120,9 +160,11 @@ const Article = (props) => {
     };
     if (loading) {
       loadCategories();
-      load();
+      if (categoryOptions.length > 0) {
+        load();
+      }
     }
-  }, [loading, match.params, loadCategories]);
+  }, [loading, match.params, loadCategories, categoryOptions]);
 
   useEffect(() => {
     if (redirect) {
@@ -201,6 +243,15 @@ const Article = (props) => {
     setFormdata(form);
   };
 
+  const select2Change = (selectedOption, element = null) => {
+    if (element === null) {
+      return false;
+    }
+    const form = { ...formData };
+    form[element] = selectedOption;
+    return setFormdata(form);
+  };
+
   const updateStatus = (value) => {
     const form = { ...formData };
     form.status = value;
@@ -247,6 +298,10 @@ const Article = (props) => {
 
   const formSubmit = useCallback(
     async (e) => {
+      const preparePostCategories = (values) => {
+        const newValues = values.map((v) => Number(v.value)) || [];
+        return newValues;
+      };
       if (typeof e !== 'undefined') {
         e.preventDefault();
       }
@@ -264,6 +319,7 @@ const Article = (props) => {
       } else {
         delete postData._id;
       }
+      postData.category = preparePostCategories(postData.category);
       const isValid = validateForm(postData);
       if (isValid) {
         const update = await axios({
@@ -397,8 +453,8 @@ const Article = (props) => {
         const input = document.createElement('input');
         input.setAttribute('type', 'file');
         input.setAttribute('accept', 'image/*');
-        input.onchange = (value) => {
-          const [file] = value;
+        input.onchange = () => {
+          const [file] = input.files;
           const reader = new FileReader();
           reader.onload = () => {
             const id = `blobid${new Date().getTime()}`;
@@ -512,35 +568,6 @@ const Article = (props) => {
       </div>
     );
 
-    let categoryOptionItems = [
-      <option value="0" key={0}>
-        -- Select category --
-      </option>,
-    ];
-
-    const categoryOptions = (category, sep = '') => {
-      const options = [
-        <option value={category._id} key={category._id}>
-          {sep} {category.label}
-        </option>,
-      ];
-      let sepCopy = sep;
-      if (category.children.length > 0) {
-        for (let j = 0; j < category.children.length; j += 1) {
-          sepCopy += '-';
-          const child = category.children[j];
-          options.push(categoryOptions(child, sepCopy));
-        }
-      }
-      return options;
-    };
-
-    for (let i = 0; i < categories.length; i += 1) {
-      const category = categories[i];
-      const options = categoryOptions(category, '');
-      categoryOptionItems = [...categoryOptionItems, ...options];
-    }
-
     let featuredImgBlock = [];
     if (match.params._id !== 'new') {
       featuredImgBlock = (
@@ -598,14 +625,16 @@ const Article = (props) => {
                   </FormGroup>
                   <FormGroup>
                     <Label>Category</Label>
-                    <Input
+                    <Select
                       type="select"
                       name="category"
                       value={formData.category}
-                      onChange={handleChange}
-                    >
-                      {categoryOptionItems}
-                    </Input>
+                      onChange={(selectedOption) =>
+                        select2Change(selectedOption, 'category')
+                      }
+                      options={categoryOptions}
+                      isMulti
+                    />
                   </FormGroup>
                 </div>
                 <div className="col-xs-12 col-sm-6">{featuredImgBlock}</div>

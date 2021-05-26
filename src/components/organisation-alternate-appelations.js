@@ -124,7 +124,12 @@ class OrganisationAppelations extends Component {
       });
       return false;
     }
-
+    if (
+      typeof newItem.language !== 'undefined' &&
+      newItem.language.label === '-- select language --'
+    ) {
+      delete newItem.language;
+    }
     update(activeIndex, newItem);
     this.closeEdit();
     return false;

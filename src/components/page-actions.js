@@ -602,7 +602,7 @@ export default class PageActions extends Component {
             {classpieces}
             {sortDropdown}
           </div>
-          <div className="page-actions">
+          <div className="page-actions pull-right">
             <MainPagination
               currentPage={currentPage}
               totalPages={totalPages}

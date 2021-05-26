@@ -64,6 +64,7 @@ class Articles extends Component {
     this.loadTypes = this.loadTypes.bind(this);
     this.setActiveType = this.setActiveType.bind(this);
     this.tableRows = this.tableRows.bind(this);
+    this.flattenArticleCategories = this.flattenArticleCategories.bind(this);
     this.toggleSelected = this.toggleSelected.bind(this);
     this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
     this.updateStorePagination = this.updateStorePagination.bind(this);
@@ -409,8 +410,32 @@ class Articles extends Component {
     });
   }
 
+  flattenArticleCategories(items) {
+    let newItems = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.children.length > 0) {
+        for (let c = 0; c < item.children.length; c += 1) {
+          const child = item.children[c];
+          if (child.children.length > 0) {
+            newItems = [
+              ...newItems,
+              ...this.flattenArticleCategories(child.children),
+            ];
+          }
+          newItems.push(child);
+        }
+      }
+      newItems.push(item);
+    }
+    return newItems;
+  }
+
   tableRows() {
-    const { items, page, limit } = this.state;
+    const { items, page, limit, articleCategories } = this.state;
+    const flatArticleCategories = this.flattenArticleCategories(
+      articleCategories
+    );
     const rows = items.map((item, i) => {
       const countPage = parseInt(page, 10) - 1;
       const count = i + 1 + countPage * limit;
@@ -419,6 +444,22 @@ class Articles extends Component {
         icon = <i className="pe-7s-check" />;
       }
       const key = `a${i}`;
+      let categoryLabels = '';
+      for (let ic = 0; ic < item.category.length; ic += 1) {
+        const itemCat = item.category[ic];
+        const findCategory =
+          flatArticleCategories.find(
+            (a) => Number(a._id) === Number(itemCat)
+          ) || null;
+        const categoryLabel = findCategory !== null ? findCategory.label : '';
+        if (categoryLabel !== null) {
+          if (categoryLabels !== '') {
+            categoryLabels += ', ';
+          }
+          categoryLabels += categoryLabel;
+        }
+      }
+
       const row = (
         <tr key={key}>
           <td>
@@ -445,6 +486,7 @@ class Articles extends Component {
               {item.label}
             </Link>
           </td>
+          <td>{categoryLabels}</td>
           <td className="text-center">{icon}</td>
           <td>
             <Link
@@ -502,6 +544,7 @@ class Articles extends Component {
       searchInput,
       totalItems,
     } = this.state;
+
     const heading = 'Articles';
     const breadcrumbsItems = [
       { label: heading, icon: 'pe-7s-news-paper', active: true, path: '' },
@@ -627,6 +670,7 @@ class Articles extends Component {
                         >
                           Label {labelOrderIcon}
                         </th>
+                        <th>Categories</th>
                         <th
                           style={{ width: '100px' }}
                           className="ordering-label"
@@ -664,6 +708,7 @@ class Articles extends Component {
                         >
                           Label {labelOrderIcon}
                         </th>
+                        <th>Categories</th>
                         <th
                           className="ordering-label"
                           onClick={() => this.updateOrdering('published')}
