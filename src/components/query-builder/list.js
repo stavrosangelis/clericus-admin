@@ -44,8 +44,8 @@ const List = () => {
   const [allChecked, setAllChecked] = useState(false);
 
   // temp
-  const { page } = paginationParams;
-  const { limit } = paginationParams;
+  const { page: pageParam, limit } = paginationParams;
+  const page = pageParam !== 0 ? pageParam : 1;
 
   useEffect(() => {
     if (nodes.length > 0) {
@@ -89,8 +89,28 @@ const List = () => {
     };
     let url;
     switch (entityType) {
+      case 'Event': {
+        url = `${APIPath}events`;
+        break;
+      }
+      case 'Organisation': {
+        url = `${APIPath}organisations`;
+        break;
+      }
       case 'Person': {
         url = `${APIPath}people`;
+        break;
+      }
+      case 'Resource': {
+        url = `${APIPath}resources`;
+        break;
+      }
+      case 'Spatial': {
+        url = `${APIPath}spatials`;
+        break;
+      }
+      case 'Temporal': {
+        url = `${APIPath}temporals`;
         break;
       }
       default: {

@@ -431,7 +431,6 @@ export default class AddPerson extends Component {
     let selectedItems = [];
     if (type === 'Person') {
       selectedItems = items.map((item) => {
-        console.log(item);
         let name = '';
         if (
           typeof item.honorificPrefix !== 'undefined' &&

@@ -226,7 +226,10 @@ const QueryBlock = () => {
       });
     dispatch(setQueryBuildResults(responseData.data));
     dispatch(toggleQueryBuilderSearching(false));
-    if (responseData.data.currentPage > responseData.data.totalPages) {
+    if (
+      responseData.data.currentPage > responseData.data.totalPages ||
+      paginationParams.page > responseData.data.totalPages
+    ) {
       const paginationParamsCopy = { ...paginationParams };
       paginationParamsCopy.page = responseData.data.totalPages;
       dispatch(setPaginationParams('queryBuilder', paginationParamsCopy));
