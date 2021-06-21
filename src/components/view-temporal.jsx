@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Card,
   CardTitle,
@@ -12,7 +12,9 @@ import {
 } from 'reactstrap';
 import InputMask from 'react-input-mask';
 import PropTypes from 'prop-types';
-import RelatedEntitiesBlock from './related-entities-block';
+import { renderLoader } from '../helpers';
+
+const RelatedEntitiesBlock = lazy(() => import('./related-entities-block'));
 
 export default class ViewTemporal extends Component {
   static normalizeDate(date = '') {
@@ -263,11 +265,13 @@ export default class ViewTemporal extends Component {
         </div>
         <div className="col-xs-12 col-sm-6">
           <div className="item-details">
-            <RelatedEntitiesBlock
-              item={item}
-              itemType="Temporal"
-              reload={reload}
-            />
+            <Suspense fallback={renderLoader()}>
+              <RelatedEntitiesBlock
+                item={item}
+                itemType="Temporal"
+                reload={reload}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

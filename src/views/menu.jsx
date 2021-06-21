@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import {
   Button,
   Card,
@@ -15,8 +15,9 @@ import {
   Spinner,
 } from 'reactstrap';
 import axios from 'axios';
-import Breadcrumbs from '../components/breadcrumbs';
-import MenuItems from '../components/menu-items-block';
+
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const MenuItems = lazy(() => import('../components/menu-items-block'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -571,7 +572,9 @@ const Menu = () => {
   let menuItems = [];
   if (menu !== null && menu.menuItems.length > 0) {
     menuItems = (
-      <MenuItems items={menu.menuItems} toggle={toggleMenuItemModal} />
+      <Suspense fallback={[]}>
+        <MenuItems items={menu.menuItems} toggle={toggleMenuItemModal} />
+      </Suspense>
     );
   }
   let menuItemModalTitle = 'Add new menu item';
@@ -977,7 +980,9 @@ const Menu = () => {
 
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>{heading}</h2>

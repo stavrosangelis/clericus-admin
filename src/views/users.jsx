@@ -1,436 +1,408 @@
-import React, { Component } from 'react';
-import { Table, Card, CardBody, Spinner } from 'reactstrap';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useReducer,
+  useRef,
+  Suspense,
+  lazy,
+} from 'react';
+import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-
-import axios from 'axios';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
-
-import Breadcrumbs from '../components/breadcrumbs';
-import PageActions from '../components/page-actions';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const APIPath = process.env.REACT_APP_APIPATH;
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const PageActions = lazy(() => import('../components/Page.actions'));
+const List = lazy(() => import('../components/List'));
 
-const mapStateToProps = (state) => ({
-  usersPagination: state.usersPagination,
-});
+const heading = 'Users';
+const breadcrumbsItems = [
+  { label: heading, icon: 'fa fa-user', active: true, path: '' },
+];
+const columns = [
+  {
+    props: ['#'],
+    label: '#',
+    link: null,
+    order: false,
+    orderLabel: '',
+    width: 40,
+  },
+  {
+    props: ['label'],
+    label: 'User',
+    link: { element: 'self', path: 'user' },
+    order: true,
+    orderLabel: 'firstName',
+  },
+  {
+    props: ['email'],
+    label: 'Email',
+    link: { element: 'self', path: 'user' },
+    order: true,
+    orderLabel: 'email',
+  },
+  {
+    props: ['edit'],
+    label: 'Edit',
+    link: { element: 'self', path: 'user' },
+    order: false,
+    align: 'center',
+  },
+];
 
-function mapDispatchToProps(dispatch) {
-  return {
-    setPaginationParams: (type, params) =>
-      dispatch(setPaginationParams(type, params)),
+const Users = () => {
+  // redux
+  const dispatch = useDispatch();
+
+  const limit = useSelector((state) => state.usersPagination.limit);
+  const page = useSelector((state) => state.usersPagination.page);
+  const orderField = useSelector((state) => state.usersPagination.orderField);
+  const orderDesc = useSelector((state) => state.usersPagination.orderDesc);
+  const searchInput = useSelector((state) => state.usersPagination.searchInput);
+  const mounted = useRef(true);
+
+  // state
+  const defaultState = {
+    limit,
+    page,
+    gotoPage: page,
+    searchInput,
   };
-}
+  const [state, setState] = useReducer(
+    (curState, newState) => ({ ...curState, ...newState }),
+    defaultState
+  );
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allChecked, setAllChecked] = useState(false);
+  const [prevLimit, setPrevLimit] = useState(25);
+  const [prevPage, setPrevPage] = useState(1);
+  const [prevActiveType, setPrevActiveType] = useState(null);
+  const [prevStatus, setPrevStatus] = useState(null);
+  const [prevOrderField, setPrevOrderField] = useState('label');
+  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
+  const [reLoading, setReLoading] = useState(false);
+  const [prevReLoading, setPrevReLoading] = useState(false);
 
-class Users extends Component {
-  constructor(props) {
-    super(props);
-
-    const { usersPagination } = this.props;
-    const { orderField, orderDesc, page, limit } = usersPagination;
-
-    this.state = {
-      loading: true,
-      tableLoading: true,
-      users: [],
-      orderField,
-      orderDesc,
-      page,
-      gotoPage: page,
-      limit,
-      totalPages: 0,
-    };
-    this.load = this.load.bind(this);
-    this.updateOrdering = this.updateOrdering.bind(this);
-    this.updatePage = this.updatePage.bind(this);
-    this.updateLimit = this.updateLimit.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.usersTableRows = this.usersTableRows.bind(this);
-    this.updateStorePagination = this.updateStorePagination.bind(this);
-
-    // hack to kill load promise on unmount
-    this.cancelLoad = false;
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentWillUnmount() {
-    this.cancelLoad = true;
-  }
-
-  handleChange(e) {
+  const handleChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-    this.setState({
+    setState({
       [name]: value,
     });
-  }
+  };
 
-  async load() {
-    const { page, limit, orderField, orderDesc } = this.state;
-    this.setState({
-      tableLoading: true,
-    });
+  const prepareItems = useCallback((itemsParam) => {
+    const newItems = [];
+    for (let i = 0; i < itemsParam.length; i += 1) {
+      const item = itemsParam[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    return newItems;
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
     const params = {
-      page,
-      limit,
+      page: state.page,
+      limit: state.limit,
       orderField,
       orderDesc,
+      status: state.status,
     };
-    const url = `${APIPath}users`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (this.cancelLoad) {
-      return false;
+    if (state.searchInput !== '') {
+      params.label = state.searchInput;
     }
-    const users = responseData.data;
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
+    const responseData = await getData(`users`, params);
+    if (mounted.current) {
+      const { data: newData } = responseData;
+      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      const newItems = await prepareItems(newData.data);
+      setItems(newItems);
+      setTableLoading(false);
+      setState({ page: currentPage });
+      setTotalPages(newData.totalPages);
+      setTotalItems(newData.totalItems);
     }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        users,
-      });
-    }
-    return false;
-  }
 
-  updateOrdering(orderField = '') {
-    const {
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let orderDesc = false;
-    if (orderField === stateOrderField) {
-      orderDesc = !stateOrderDesc;
-    }
-    this.updateStorePagination({ orderField, orderDesc });
-    this.setState(
-      {
-        orderField,
-        orderDesc,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+    return true;
+  }, [state, prepareItems, orderDesc, orderField, mounted]);
 
-  updatePage(value) {
-    const { page } = this.state;
-    if (value > 0 && value !== page) {
-      this.updateStorePagination({ page: value });
-      this.setState(
-        {
-          page: value,
-          gotoPage: value,
-        },
-        () => {
-          this.load();
-        }
-      );
-    }
-  }
-
-  updateStorePagination(
-    limit = null,
-    page = null,
-    orderField = '',
-    orderDesc = false
-  ) {
-    const {
-      limit: stateLimit,
-      page: statePage,
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let limitCopy = limit;
-    let pageCopy = page;
-    let orderFieldCopy = orderField;
-    let orderDescCopy = orderDesc;
-    if (limit === null) {
-      limitCopy = stateLimit;
-    }
-    if (page === null) {
-      pageCopy = statePage;
-    }
-    if (orderField === '') {
-      orderFieldCopy = stateOrderField;
-    }
-    if (orderDesc === false) {
-      orderDescCopy = stateOrderDesc;
-    }
-    const payload = {
-      limit: limitCopy,
-      page: pageCopy,
-      orderField: orderFieldCopy,
-      orderDesc: orderDescCopy,
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
     };
-    const { setPaginationParams: setPaginationParamsFn } = this.props;
-    setPaginationParamsFn('users', payload);
-  }
+  }, []);
 
-  gotoPage(e) {
-    e.preventDefault();
-    const { page } = this.state;
-    let { gotoPage } = this.state;
-    gotoPage = parseInt(gotoPage, 10);
-    if (gotoPage > 0 && gotoPage !== page) {
-      this.updateStorePagination({ page: gotoPage });
-      this.setState(
-        {
-          page: gotoPage,
-        },
-        () => {
-          this.load();
-        }
-      );
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      activeTypeParam = null,
+      orderFieldParam = '',
+      orderDescParam = false,
+      statusParam = null,
+      searchInputParam = '',
+    }) => {
+      const limitCopy = limitParam === null ? state.limit : limitParam;
+      const pageCopy = pageParam === null ? state.page : pageParam;
+      const activeTypeCopy =
+        activeTypeParam === null ? state.activeType : activeTypeParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? state.orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? state.orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? state.status : statusParam;
+      const searchInputCopy =
+        searchInputParam === null ? state.searchInput : searchInputParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        activeType: activeTypeCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        status: statusCopy,
+        searchInput: searchInputCopy,
+      };
+      dispatch(setPaginationParams('users', payload));
+    },
+    [
+      dispatch,
+      state.activeType,
+      state.limit,
+      state.orderDesc,
+      state.orderField,
+      state.page,
+      state.searchInput,
+      state.status,
+    ]
+  );
+
+  const clearSearch = () => {
+    setState({ searchInput: '' });
+    updateStorePagination({ searchInput: '' });
+    setLoading(true);
+  };
+
+  const updatePage = (value) => {
+    if (value > 0 && value !== state.page) {
+      updateStorePagination({ page: value });
+      setState({
+        page: value,
+        gotoPage: value,
+      });
     }
-  }
+  };
 
-  updateLimit(limit) {
-    this.updateStorePagination({ limit });
-    this.setState(
-      {
-        limit,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  usersTableRows() {
-    const { users, page, limit } = this.state;
-    const rows = [];
-    for (let i = 0; i < users.length; i += 1) {
-      const user = users[i];
-      const countPage = parseInt(page, 10) - 1;
-      const count = i + 1 + countPage * limit;
-      let label = user.firstName;
-      if (user.lastName !== '') {
-        label += ` ${user.lastName}`;
-      }
-      const row = (
-        <tr key={i}>
-          <td>{count}</td>
-          <td>
-            <Link href={`/user/${user._id}`} to={`/user/${user._id}`}>
-              {label}
-            </Link>
-          </td>
-          <td>
-            <Link href={`/user/${user._id}`} to={`/user/${user._id}`}>
-              {user.email}
-            </Link>
-          </td>
-          <td>
-            <Link
-              href={`/user/${user._id}`}
-              to={`/user/${user._id}`}
-              className="edit-item"
-            >
-              <i className="fa fa-pencil" />
-            </Link>
-          </td>
-        </tr>
-      );
-      rows.push(row);
+  const gotoPage = () => {
+    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
+      updateStorePagination({ page: state.gotoPage });
+      setState({ page: Number(state.gotoPage) });
     }
-    return rows;
-  }
+  };
 
-  render() {
-    const {
-      page,
-      gotoPage,
-      limit,
-      totalPages,
-      loading,
-      tableLoading,
-      orderField,
-      orderDesc,
-    } = this.state;
-    const heading = 'Users';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-user', active: true, path: '' },
-    ];
+  const updateLimit = (value) => {
+    updateStorePagination({ limit: value });
+    setState({ limit: value });
+  };
 
-    const pageActions = (
+  const toggleSelected = (i) => {
+    const index = i - (Number(state.page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
+
+  const toggleSelectedAll = () => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
+    }
+    setAllChecked(newAllChecked);
+  };
+
+  const clearSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    setAllChecked(false);
+  }, [items]);
+
+  const reload = () => {
+    setReLoading(true);
+  };
+
+  useEffect(() => {
+    if (prevLimit !== state.limit) {
+      setPrevLimit(state.limit);
+      clearSelectedAll();
+      load();
+    }
+    if (prevPage !== state.page) {
+      setPrevPage(state.page);
+      clearSelectedAll();
+      load();
+    }
+    if (prevActiveType !== state.activeType) {
+      setPrevActiveType(state.activeType);
+      clearSelectedAll();
+      load();
+    }
+    if (prevStatus !== state.status) {
+      setPrevStatus(state.status);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderField !== orderField) {
+      setPrevOrderField(orderField);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderDesc !== orderDesc) {
+      setPrevOrderDesc(orderDesc);
+      clearSelectedAll();
+      load();
+    }
+    if (reLoading && !prevReLoading) {
+      setPrevReLoading(reLoading);
+      clearSelectedAll();
+      load();
+    }
+  }, [
+    clearSelectedAll,
+    load,
+    orderField,
+    orderDesc,
+    prevLimit,
+    prevPage,
+    prevActiveType,
+    prevStatus,
+    prevOrderField,
+    prevOrderDesc,
+    prevReLoading,
+    reLoading,
+    state.limit,
+    state.page,
+    state.activeType,
+    state.status,
+  ]);
+
+  const pageActions = (
+    <Suspense fallback={renderLoader()}>
       <PageActions
-        current_page={page}
-        gotoPage={this.gotoPage}
-        gotoPageValue={gotoPage}
-        handleChange={this.handleChange}
-        limit={limit}
+        clearSearch={clearSearch}
+        current_page={state.page}
+        defaultLimit={25}
+        gotoPage={gotoPage}
+        gotoPageValue={state.gotoPage}
+        handleChange={handleChange}
+        limit={state.limit}
+        page={state.page}
         pageType="users"
-        total_pages={totalPages}
-        updateLimit={this.updateLimit}
-        updatePage={this.updatePage}
+        reload={reload}
+        searchInput={state.searchInput}
+        totalPages={totalPages}
+        types={[]}
+        updateLimit={updateLimit}
+        updatePage={updatePage}
       />
-    );
-    let content = (
-      <div>
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <div style={{ padding: '40pt', textAlign: 'center' }}>
-              <Spinner type="grow" color="info" /> <i>loading...</i>
-            </div>
-          </div>
-        </div>
-        {pageActions}
-      </div>
-    );
-    if (!loading) {
-      const addNewBtn = (
-        <Link
-          className="btn btn-outline-secondary add-new-item-btn"
-          to="/user/new"
-          href="/user/new"
-        >
-          <i className="fa fa-plus" />
-        </Link>
-      );
+    </Suspense>
+  );
 
-      const tableLoadingSpinner = (
-        <tr>
-          <td colSpan={6}>
+  let content = (
+    <div>
+      {pageActions}
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
             <Spinner type="grow" color="info" /> <i>loading...</i>
-          </td>
-        </tr>
-      );
-      let usersRows = [];
-      if (tableLoading) {
-        usersRows = tableLoadingSpinner;
-      } else {
-        usersRows = this.usersTableRows();
-      }
-
-      // ordering
-      let firstNameOrderIcon = [];
-      let emailOrderIcon = [];
-      if (orderField === 'firstName' || orderField === '') {
-        if (orderDesc) {
-          firstNameOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          firstNameOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'email' || orderField === '') {
-        if (orderDesc) {
-          emailOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          emailOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-
-      content = (
-        <div className="people-container">
-          {pageActions}
-          <div className="row">
-            <div className="col-12">
-              <Card>
-                <CardBody>
-                  <Table hover>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('firstName')}
-                        >
-                          User {firstNameOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('email')}
-                        >
-                          Email {emailOrderIcon}
-                        </th>
-                        <th style={{ width: '40px' }} aria-label="edit" />
-                      </tr>
-                    </thead>
-                    <tbody>{usersRows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('firstName')}
-                        >
-                          User {firstNameOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('email')}
-                        >
-                          Email {emailOrderIcon}
-                        </th>
-                        <th aria-label="edit" />
-                      </tr>
-                    </tfoot>
-                  </Table>
-                </CardBody>
-              </Card>
-            </div>
           </div>
-          {pageActions}
-          {addNewBtn}
         </div>
-      );
-    }
+      </div>
+      {pageActions}
+    </div>
+  );
 
-    return (
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+  if (!loading) {
+    const listIndex = (Number(state.page) - 1) * limit;
+    const addNewBtn = (
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+        href="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
+    );
+
+    const table = tableLoading ? (
+      <div style={{ padding: '40pt', textAlign: 'center' }}>
+        <Spinner type="grow" color="info" /> <i>loading...</i>
+      </div>
+    ) : (
+      <Suspense fallback={renderLoader()}>
+        <List
+          columns={columns}
+          items={items}
+          listIndex={listIndex}
+          type="users"
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          toggleSelected={toggleSelected}
+        />
+      </Suspense>
+    );
+
+    content = (
+      <div className="users-container">
+        {pageActions}
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <Card>
+              <CardBody className="users-card">{table}</CardBody>
+            </Card>
           </div>
         </div>
-        {content}
+        {pageActions}
+        {addNewBtn}
       </div>
     );
   }
-}
 
-Users.defaultProps = {
-  usersPagination: null,
-  setPaginationParams: () => {},
+  return (
+    <div>
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>
+            {heading} <small>({totalItems})</small>
+          </h2>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 };
-Users.propTypes = {
-  usersPagination: PropTypes.object,
-  setPaginationParams: PropTypes.func,
-};
-export default compose(connect(mapStateToProps, mapDispatchToProps))(Users);
+export default Users;

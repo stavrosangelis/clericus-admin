@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import {
   UncontrolledDropdown,
   DropdownToggle,
@@ -6,11 +6,12 @@ import {
   DropdownItem,
 } from 'reactstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import MainPagination from '../pagination';
 import {
   setPaginationParams,
   toggleQueryBuilderSubmit,
 } from '../../redux/actions';
+
+const MainPagination = lazy(() => import('../pagination'));
 
 const PageActions = () => {
   // redux store
@@ -61,11 +62,13 @@ const PageActions = () => {
   };
 
   const paginationHTML = (
-    <MainPagination
-      currentPage={paginationParams.page}
-      totalPages={totalPages}
-      pagination_function={updatePage}
-    />
+    <Suspense fallback={[]}>
+      <MainPagination
+        currentPage={paginationParams.page}
+        totalPages={totalPages}
+        pagination_function={updatePage}
+      />
+    </Suspense>
   );
 
   // limit filter

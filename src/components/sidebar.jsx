@@ -68,15 +68,16 @@ class Sidebar extends React.Component {
                   activeChildClass = ' active';
                 }
                 const childNavItem = (
-                  <NavLink
-                    to={child.path}
-                    key={`${i}.${c}`}
-                    className="nav-link"
-                    activeClassName={activeChildClass}
-                  >
-                    <i className={child.icon} />
-                    <p>{child.name}</p>
-                  </NavLink>
+                  <li key={`${i}.${c}`}>
+                    <NavLink
+                      to={child.path}
+                      className="nav-link"
+                      activeClassName={activeChildClass}
+                    >
+                      <i className={child.icon} />
+                      <p>{child.name}</p>
+                    </NavLink>
+                  </li>
                 );
                 childrenNav.push(childNavItem);
               }

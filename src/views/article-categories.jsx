@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import axios from 'axios';
 import {
   Card,
@@ -15,8 +15,11 @@ import {
   ModalFooter,
   Spinner,
 } from 'reactstrap';
-import ArticleCategoriesItems from '../components/article-categories-block';
-import Breadcrumbs from '../components/breadcrumbs';
+
+const ArticleCategoriesItems = lazy(() =>
+  import('../components/article-categories-block')
+);
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -294,7 +297,11 @@ const ArticleCategories = () => {
   );
   let itemsHTML = [];
   if (items.length > 0) {
-    itemsHTML = <ArticleCategoriesItems items={items} toggle={loadItem} />;
+    itemsHTML = (
+      <Suspense fallback={[]}>
+        <ArticleCategoriesItems items={items} toggle={loadItem} />
+      </Suspense>
+    );
   }
 
   let statusPublic = 'secondary';
@@ -454,7 +461,9 @@ const ArticleCategories = () => {
   }
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>{heading}</h2>

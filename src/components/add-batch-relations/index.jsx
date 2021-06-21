@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   UncontrolledButtonDropdown,
   DropdownMenu,
@@ -9,12 +9,7 @@ import {
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import PropTypes from 'prop-types';
-import AddEventModal from './add-event';
-import AddOrganisationModal from './add-organisation';
-import AddPersonModal from './add-person';
-import AddResourceModal from './add-resource';
-import AddTemporalModal from './add-temporal';
-import AddSpatialModal from './add-spatial';
+import AddItem from './add-item';
 import DeleteMany from './delete-many';
 import { parseReferenceLabels, parseReferenceTypes } from '../../helpers';
 import Notification from '../notification';
@@ -30,7 +25,31 @@ const BatchActions = (props) => {
     className: extraClassName,
     selectAll,
     deleteSelected,
+    reload,
   } = props;
+
+  const events = useSelector((state) => state.relationsEvents);
+  const eventsLoading = useSelector((state) => state.relationsEventsLoading);
+
+  const organisations = useSelector((state) => state.relationsOrganisations);
+  const organisationsLoading = useSelector(
+    (state) => state.relationsOrganisationsLoading
+  );
+
+  const people = useSelector((state) => state.relationsPeople);
+  const peopleLoading = useSelector((state) => state.relationsPeopleLoading);
+
+  const resources = useSelector((state) => state.relationsResources);
+  const resourcesLoading = useSelector(
+    (state) => state.relationsResourcesLoading
+  );
+
+  const spatial = useSelector((state) => state.relationsSpatial);
+  const spatialLoading = useSelector((state) => state.relationsSpatialLoading);
+  const temporal = useSelector((state) => state.relationsTemporal);
+  const temporalLoading = useSelector(
+    (state) => state.relationsTemporalLoading
+  );
 
   const mainEntity = useSelector((state) => {
     if (type === 'Resource') {
@@ -92,7 +111,7 @@ const BatchActions = (props) => {
       temporalModal: false,
       spatialModal: false,
     };
-    newModalsVisible[modal] = !newModalsVisible[modal];
+    newModalsVisible[modal] = !modalsVisible[modal];
     setModalsVisible(newModalsVisible);
     return false;
   };
@@ -136,71 +155,112 @@ const BatchActions = (props) => {
   let resourceVisible = '';
   let temporalVisible = '';
   let spatialVisible = '';
-
   let eventModalHTML = (
-    <AddEventModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.eventModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="events"
+        items={items}
+        loading={eventsLoading}
+        modalItems={events}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="eventModal"
+        visible={modalsVisible.eventModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   let organisationModalHTML = (
-    <AddOrganisationModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.organisationModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="organisations"
+        items={items}
+        loading={organisationsLoading}
+        modalItems={organisations}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="organisationModal"
+        visible={modalsVisible.organisationModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   let personModalHTML = (
-    <AddPersonModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.personModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="people"
+        items={items}
+        loading={peopleLoading}
+        modalItems={people}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="personModal"
+        visible={modalsVisible.personModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   let resourceModalHTML = (
-    <AddResourceModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.resourceModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="resources"
+        items={items}
+        loading={resourcesLoading}
+        modalItems={resources}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="resourceModal"
+        visible={modalsVisible.resourceModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   let temporalModalHTML = (
-    <AddTemporalModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.temporalModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="temporal"
+        items={items}
+        loading={temporalLoading}
+        modalItems={temporal}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="temporalModal"
+        visible={modalsVisible.temporalModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   let spatialModalHTML = (
-    <AddSpatialModal
-      items={items}
-      type={type}
-      refTypes={referencesTypes}
-      toggleModal={toggleModal}
-      visible={modalsVisible.spatialModal}
-      removeSelected={removeSelected}
-    />
+    <Suspense fallback={[]}>
+      <AddItem
+        itemsType="spatial"
+        items={items}
+        loading={spatialLoading}
+        modalItems={spatial}
+        type={type}
+        refTypes={referencesTypes}
+        toggleModal={toggleModal}
+        modalType="spatialModal"
+        visible={modalsVisible.spatialModal}
+        removeSelected={removeSelected}
+        reload={reload}
+      />
+    </Suspense>
   );
 
   if (referencesLabels.indexOf('Event') === -1) {
@@ -317,7 +377,13 @@ const BatchActions = (props) => {
         direction="down"
         className={`table-actions-dropdown ${extraClassName}`}
       >
-        <DropdownToggle caret color="secondary" outline size="sm">
+        <DropdownToggle
+          caret
+          color="secondary"
+          outline
+          size="sm"
+          className="btn-bg-white"
+        >
           actions
         </DropdownToggle>
         <DropdownMenu className="right">
@@ -390,6 +456,7 @@ const BatchActions = (props) => {
     </div>
   );
 };
+
 BatchActions.defaultProps = {
   type: '',
   items: [],
@@ -408,5 +475,6 @@ BatchActions.propTypes = {
   className: PropTypes.string,
   selectAll: PropTypes.func,
   deleteSelected: PropTypes.func,
+  reload: PropTypes.func.isRequired,
 };
 export default BatchActions;

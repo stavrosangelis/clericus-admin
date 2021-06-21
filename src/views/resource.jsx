@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import {
   Spinner,
   Button,
@@ -12,11 +12,15 @@ import { Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
+import {
+  parseReferenceLabels,
+  parseReferenceTypes,
+  renderLoader,
+} from '../helpers';
 
-import Breadcrumbs from '../components/breadcrumbs';
-import ViewResource from '../components/view-resource';
-import AddRelation from '../components/add-relations';
-import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const ViewResource = lazy(() => import('../components/view-resource'));
+const AddRelation = lazy(() => import('../components/add-relations'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 const mapStateToProps = (state) => ({
@@ -417,19 +421,21 @@ class Resource extends Component {
     );
     if (!loading) {
       const viewComponent = (
-        <ViewResource
-          closeUploadModal={closeUploadModal}
-          delete={this.toggleDeleteModal}
-          errorText={errorText}
-          errorVisible={errorVisible}
-          reload={this.reload}
-          resource={resource}
-          systemType={systemType}
-          update={this.update}
-          updateBtn={updateBtn}
-          uploadResponse={this.uploadResponse}
-          setRedirect={this.setRedirect}
-        />
+        <Suspense fallback={renderLoader()}>
+          <ViewResource
+            closeUploadModal={closeUploadModal}
+            delete={this.toggleDeleteModal}
+            errorText={errorText}
+            errorVisible={errorVisible}
+            reload={this.reload}
+            resource={resource}
+            systemType={systemType}
+            update={this.update}
+            updateBtn={updateBtn}
+            uploadResponse={this.uploadResponse}
+            setRedirect={this.setRedirect}
+          />
+        </Suspense>
       );
       content = <div className="resources-container">{viewComponent}</div>;
       if (redirect) {
@@ -479,21 +485,25 @@ class Resource extends Component {
     let addRelation = [];
     if (resource !== null) {
       addRelation = (
-        <AddRelation
-          reload={this.reload}
-          reference={relationReference}
-          item={resource}
-          referencesLabels={referencesLabels}
-          referencesTypes={referencesTypes}
-          type="resource"
-        />
+        <Suspense fallback={[]}>
+          <AddRelation
+            reload={this.reload}
+            reference={relationReference}
+            item={resource}
+            referencesLabels={referencesLabels}
+            referencesTypes={referencesTypes}
+            type="resource"
+          />
+        </Suspense>
       );
     }
     return (
       <div>
         {redirectElem}
         {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>Resource &quot;{heading}&quot;</h2>

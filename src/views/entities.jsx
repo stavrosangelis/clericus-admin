@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import axios from 'axios';
 import {
   Card,
@@ -19,10 +19,11 @@ import Select from 'react-select';
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
-import Breadcrumbs from '../components/breadcrumbs';
 import { addGenericReference } from '../helpers';
 
 import { loadDefaultEntities } from '../redux/actions';
+
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 
 function mapDispatchToProps(dispatch) {
   return {
@@ -32,7 +33,7 @@ function mapDispatchToProps(dispatch) {
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-class Entities extends React.Component {
+class Entities extends Component {
   static entitiesList(entities) {
     const options = [];
     const defaultValue = { value: '', label: '--' };
@@ -939,7 +940,9 @@ class Entities extends React.Component {
     }
     return (
       <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

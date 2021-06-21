@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Spinner,
   Button,
@@ -13,11 +13,15 @@ import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
 
-import Breadcrumbs from '../components/breadcrumbs';
-import ViewEvent from '../components/view-event';
-import AddRelation from '../components/add-relations';
+import {
+  parseReferenceLabels,
+  parseReferenceTypes,
+  renderLoader,
+} from '../helpers';
 
-import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const ViewEvent = lazy(() => import('../components/view-event'));
+const AddRelation = lazy(() => import('../components/add-relations'));
 
 const mapStateToProps = (state) => ({
   entitiesLoaded: state.entitiesLoaded,
@@ -371,16 +375,18 @@ class Event extends Component {
     );
     if (!loading) {
       const viewComponent = (
-        <ViewEvent
-          delete={this.toggleDeleteModal}
-          errorText={errorText}
-          errorVisible={errorVisible}
-          eventTypes={eventTypes}
-          item={item}
-          reload={this.reload}
-          update={this.update}
-          updateBtn={updateBtn}
-        />
+        <Suspense fallback={renderLoader()}>
+          <ViewEvent
+            delete={this.toggleDeleteModal}
+            errorText={errorText}
+            errorVisible={errorVisible}
+            eventTypes={eventTypes}
+            item={item}
+            reload={this.reload}
+            update={this.update}
+            updateBtn={updateBtn}
+          />
+        </Suspense>
       );
       content = <div className="items-container">{viewComponent}</div>;
       if (redirect) {
@@ -425,21 +431,25 @@ class Event extends Component {
     let addRelation = [];
     if (item !== null) {
       addRelation = (
-        <AddRelation
-          reload={this.reload}
-          reference={relationReference}
-          item={item}
-          referencesLabels={referencesLabels}
-          referencesTypes={referencesTypes}
-          type="event"
-        />
+        <Suspense fallback={[]}>
+          <AddRelation
+            reload={this.reload}
+            reference={relationReference}
+            item={item}
+            referencesLabels={referencesLabels}
+            referencesTypes={referencesTypes}
+            type="event"
+          />
+        </Suspense>
       );
     }
     return (
       <div>
         {redirectElem}
         {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

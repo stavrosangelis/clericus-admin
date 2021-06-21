@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Card,
   CardTitle,
@@ -13,7 +13,9 @@ import {
 } from 'reactstrap';
 import Select from 'react-select';
 import PropTypes from 'prop-types';
-import RelatedEntitiesBlock from './related-entities-block';
+import { renderLoader } from '../helpers';
+
+const RelatedEntitiesBlock = lazy(() => import('./related-entities-block'));
 
 export default class ViewEvent extends Component {
   constructor(props) {
@@ -279,11 +281,13 @@ export default class ViewEvent extends Component {
         </div>
         <div className="col-xs-12 col-sm-6">
           <div className="item-details">
-            <RelatedEntitiesBlock
-              item={item}
-              itemType="Event"
-              reload={reload}
-            />
+            <Suspense fallback={renderLoader()}>
+              <RelatedEntitiesBlock
+                item={item}
+                itemType="Event"
+                reload={reload}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

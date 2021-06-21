@@ -1,1095 +1,677 @@
-import React, { Component } from 'react';
-import { Label, Table, Card, CardBody, Spinner } from 'reactstrap';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useReducer,
+  useRef,
+  Suspense,
+  lazy,
+} from 'react';
+import { Label, Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-
-import axios from 'axios';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
-
-import Breadcrumbs from '../components/breadcrumbs';
-import PageActions from '../components/page-actions';
-import { getThumbnailURL, getResourceThumbnailURL } from '../helpers';
-import BatchActions from '../components/add-batch-relations';
-import defaultThumbnail from '../assets/img/spcc.jpg';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  deleteData,
+  getData,
+  getResourceThumbnailURL,
+  renderLoader,
+} from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const APIPath = process.env.REACT_APP_APIPATH;
-const mapStateToProps = (state) => ({
-  peoplePagination: state.peoplePagination,
-  resourcesTypes: state.resourcesTypes,
-  personTypes: state.personTypes,
-});
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const PageActions = lazy(() => import('../components/Page.actions'));
+const BatchActions = lazy(() => import('../components/add-batch-relations'));
+const List = lazy(() => import('../components/List'));
 
-function mapDispatchToProps(dispatch) {
-  return {
-    setPaginationParams: (type, params) =>
-      dispatch(setPaginationParams(type, params)),
+const heading = 'People';
+const breadcrumbsItems = [
+  { label: heading, icon: 'pe-7s-users', active: true, path: '' },
+];
+const columns = [
+  {
+    props: ['checked'],
+    label: 'checked',
+    link: false,
+    order: false,
+    align: 'center',
+    width: 80,
+  },
+  {
+    props: ['#'],
+    label: '#',
+    link: null,
+    order: false,
+    orderLabel: '',
+    width: 40,
+  },
+  {
+    props: ['thumbnail'],
+    label: 'Thumbnail',
+    link: { element: 'self', path: 'person' },
+    order: false,
+    align: 'center',
+  },
+  {
+    props: ['firstName'],
+    label: 'First Name',
+    link: { element: 'self', path: 'person' },
+    order: true,
+    orderLabel: 'firstName',
+  },
+  {
+    props: ['lastName'],
+    label: 'Last Name',
+    link: { element: 'self', path: 'person' },
+    order: true,
+    orderLabel: 'lastName',
+  },
+  {
+    props: ['organisations'],
+    label: 'Organisations',
+    link: {
+      element: 'organisations',
+      key: '_id',
+      path: 'organisation',
+      type: 'array',
+    },
+    order: false,
+  },
+  {
+    props: ['status'],
+    label: 'Status',
+    link: null,
+    order: true,
+    orderLabel: 'status',
+    align: 'center',
+  },
+  {
+    props: ['createdAt'],
+    label: 'Created',
+    link: null,
+    order: true,
+    orderLabel: 'createdAt',
+  },
+  {
+    props: ['updatedAt'],
+    label: 'Updated',
+    link: null,
+    order: true,
+    orderLabel: 'updatedAt',
+  },
+  {
+    props: ['edit'],
+    label: 'Edit',
+    link: { element: 'self', path: 'person' },
+    order: false,
+    align: 'center',
+  },
+];
+const searchElements = [
+  { element: 'firstName', label: 'First name' },
+  { element: 'lastName', label: 'Last name' },
+  { element: 'fnameSoundex', label: 'First name soundex' },
+  { element: 'lnameSoundex', label: 'Last name soundex' },
+  { element: 'description', label: 'Description' },
+];
+
+const People = () => {
+  // redux
+  const dispatch = useDispatch();
+  const resourcesTypes = useSelector((state) => state.resourcesTypes);
+  const personTypes = useSelector((state) => state.personTypes);
+  const limit = useSelector((state) => state.peoplePagination.limit);
+  const activeType = useSelector((state) => state.peoplePagination.activeType);
+  const page = useSelector((state) => state.peoplePagination.page);
+  const orderField = useSelector((state) => state.peoplePagination.orderField);
+  const orderDesc = useSelector((state) => state.peoplePagination.orderDesc);
+  const status = useSelector((state) => state.peoplePagination.status);
+  const searchInput = useSelector(
+    (state) => state.peoplePagination.searchInput
+  );
+  const advancedSearchInputs = useSelector(
+    (state) => state.peoplePagination.advancedSearchInputs
+  );
+  const mounted = useRef(true);
+
+  // state
+  const defaultState = {
+    limit,
+    activeType,
+    page,
+    gotoPage: page,
+    status,
+    searchInput,
+    advancedSearchInputs,
+    classpieceSearchInput: '',
   };
-}
+  const [state, setState] = useReducer(
+    (curState, newState) => ({ ...curState, ...newState }),
+    defaultState
+  );
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allChecked, setAllChecked] = useState(false);
+  const [advancedSearch, setAdvancedSearch] = useState(false);
+  const [classpieceItems, setClasspieceItems] = useState([]);
+  const [classpieceId, setClasspieceId] = useState(null);
 
-class People extends Component {
-  constructor(props) {
-    super(props);
+  const [prevLimit, setPrevLimit] = useState(25);
+  const [prevPage, setPrevPage] = useState(1);
+  const [prevActiveType, setPrevActiveType] = useState(null);
+  const [prevStatus, setPrevStatus] = useState(null);
+  const [prevOrderField, setPrevOrderField] = useState('firstName');
+  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
+  const [prevClasspieceId, setPrevClasspieceId] = useState(null);
+  const [reLoading, setReLoading] = useState(false);
+  const [prevReLoading, setPrevReLoading] = useState(false);
 
-    const { peoplePagination } = this.props;
-    const {
-      orderField,
-      orderDesc,
-      page,
-      limit,
-      status,
-      searchInput,
-      advancedSearchInputs,
-    } = peoplePagination;
-
-    this.state = {
-      loading: true,
-      tableLoading: true,
-      people: [],
-      orderField,
-      orderDesc,
-      page,
-      gotoPage: page,
-      limit,
-      status,
-      totalPages: 0,
-      totalItems: 0,
-      allChecked: false,
-
-      searchInput,
-      advancedSearchInputs,
-      advancedSearch: false,
-      classpieceSearchInput: '',
-      classpieceItems: [],
-      classpieceId: null,
-    };
-    this.load = this.load.bind(this);
-    this.updateOrdering = this.updateOrdering.bind(this);
-    this.updatePage = this.updatePage.bind(this);
-    this.updateLimit = this.updateLimit.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.setActiveType = this.setActiveType.bind(this);
-    this.setStatus = this.setStatus.bind(this);
-    this.peopleTableRows = this.peopleTableRows.bind(this);
-    this.toggleSelected = this.toggleSelected.bind(this);
-    this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
-    this.deleteSelected = this.deleteSelected.bind(this);
-    this.updateStorePagination = this.updateStorePagination.bind(this);
-    this.simpleSearch = this.simpleSearch.bind(this);
-    this.advancedSearch = this.advancedSearch.bind(this);
-    this.clearSearch = this.clearSearch.bind(this);
-    this.classpieceClearSearch = this.classpieceClearSearch.bind(this);
-    this.classpieceSearch = this.classpieceSearch.bind(this);
-    this.selectClasspiece = this.selectClasspiece.bind(this);
-    this.clearAdvancedSearch = this.clearAdvancedSearch.bind(this);
-    this.updateAdvancedSearchInputs = this.updateAdvancedSearchInputs.bind(
-      this
-    );
-    this.removeSelected = this.removeSelected.bind(this);
-
-    // hack to kill load promise on unmount
-    this.cancelLoad = false;
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentWillUnmount() {
-    this.cancelLoad = true;
-  }
-
-  handleChange(e) {
+  const handleChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-    this.setState({
+    setState({
       [name]: value,
     });
-  }
+  };
 
-  setActiveType(type) {
-    this.updateStorePagination({ activeType: type });
-    this.setState(
-      {
-        activeType: type,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const prepareItems = useCallback((itemsParam) => {
+    const newItems = [];
+    for (let i = 0; i < itemsParam.length; i += 1) {
+      const item = itemsParam[i];
+      item.checked = false;
+      item.organisations = item.affiliations;
+      delete item.affiliations;
+      newItems.push(item);
+    }
+    return newItems;
+  }, []);
 
-  setStatus(status = null) {
-    this.updateStorePagination({ status });
-    this.setState(
-      {
-        status,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  async load() {
-    const {
-      page,
-      limit,
-      activeType,
-      orderField,
-      orderDesc,
-      status,
-      searchInput: stateSearchInput,
-      advancedSearch,
-      classpieceId,
-      search,
-      advancedSearchInputs,
-    } = this.state;
-    this.setState({
-      tableLoading: true,
-    });
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
     const params = {
-      page,
-      limit,
+      page: state.page,
+      limit: state.limit,
       orderField,
       orderDesc,
-      status,
+      status: state.status,
     };
     if (classpieceId !== null) {
       params.classpieceId = classpieceId;
     }
-    if (stateSearchInput !== '' && !advancedSearch) {
-      params.label = stateSearchInput;
-    } else if (advancedSearchInputs.length > 0 && !search) {
-      for (let i = 0; i < advancedSearchInputs.length; i += 1) {
-        const searchInput = advancedSearchInputs[i];
-        params[searchInput.select] = searchInput.input;
+    if (state.searchInput !== '' && !advancedSearch) {
+      params.label = state.searchInput;
+    } else if (state.advancedSearchInputs.length > 0 && advancedSearch) {
+      for (let i = 0; i < state.advancedSearchInputs.length; i += 1) {
+        const advancedSearchInput = state.advancedSearchInputs[i];
+        params[advancedSearchInput.select] = advancedSearchInput.input;
       }
     }
-    const url = `${APIPath}people`;
-    if (activeType !== null) {
-      params.personType = activeType;
+    if (state.activeType !== null) {
+      params.personType = state.activeType;
     }
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (this.cancelLoad) {
-      return false;
+    const responseData = await getData(`people`, params);
+    if (mounted.current) {
+      const { data: newData } = responseData;
+      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      const newItems = await prepareItems(newData.data);
+      setItems(newItems);
+      setTableLoading(false);
+      setState({ page: currentPage });
+      setTotalPages(newData.totalPages);
+      setTotalItems(newData.totalItems);
     }
-    const people = responseData.data.map((person) => {
-      const personCopy = person;
-      personCopy.checked = false;
-      return personCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        people,
-      });
-    }
-    return false;
-  }
 
-  async simpleSearch(e) {
-    e.preventDefault();
-    const {
-      page,
-      limit,
-      activeType,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    } = this.state;
-    if (searchInput < 2) {
-      return false;
-    }
-    this.updateStorePagination({ searchInput });
-    this.setState({
-      tableLoading: true,
-    });
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-      label: searchInput,
+    return true;
+  }, [
+    state,
+    advancedSearch,
+    classpieceId,
+    prepareItems,
+    orderDesc,
+    orderField,
+    mounted,
+  ]);
+
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
     };
-    if (activeType !== null) {
-      params.personType = activeType;
-    }
-    const url = `${APIPath}people`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
+  }, []);
 
-    const people = responseData.data;
-    const newPeople = people.map((person) => {
-      const personCopy = person;
-      personCopy.checked = false;
-      return personCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        people: newPeople,
-        advancedSearch: false,
-      });
-    }
-    return false;
-  }
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      activeTypeParam = null,
+      orderFieldParam = '',
+      orderDescParam = false,
+      statusParam = null,
+      searchInputParam = '',
+      advancedSearchInputsParam = [],
+    }) => {
+      const limitCopy = limitParam === null ? state.limit : limitParam;
+      const pageCopy = pageParam === null ? state.page : pageParam;
+      const activeTypeCopy =
+        activeTypeParam === null ? state.activeType : activeTypeParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? state.orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? state.orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? state.status : statusParam;
+      const searchInputCopy =
+        searchInputParam === null ? state.searchInput : searchInputParam;
+      const advancedSearchInputsCopy =
+        advancedSearchInputsParam === null
+          ? state.advancedSearchInputs
+          : advancedSearchInputsParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        activeType: activeTypeCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        status: statusCopy,
+        searchInput: searchInputCopy,
+        advancedSearchInputs: advancedSearchInputsCopy,
+      };
+      dispatch(setPaginationParams('people', payload));
+    },
+    [
+      dispatch,
+      state.activeType,
+      state.advancedSearchInputs,
+      state.limit,
+      state.orderDesc,
+      state.orderField,
+      state.page,
+      state.searchInput,
+      state.status,
+    ]
+  );
 
-  async advancedSearch(e) {
-    const {
-      advancedSearchInputs,
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-    } = this.state;
-    e.preventDefault();
-    this.updateStorePagination({
-      advancedSearchInputs,
+  const setActiveType = (type) => {
+    updateStorePagination({ activeType: type });
+    setState({
+      activeType: type,
     });
-    this.setState({
-      tableLoading: true,
-    });
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-    };
-    for (let i = 0; i < advancedSearchInputs.length; i += 1) {
-      const searchInput = advancedSearchInputs[i];
-      params[searchInput.select] = searchInput.input;
-    }
-    const url = `${APIPath}people`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    const people = responseData.data;
-    const newPeople = people.map((person) => {
-      const personCopy = person;
-      personCopy.checked = false;
-      return personCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        people: newPeople,
-        advancedSearch: true,
-      });
-    }
-    return false;
-  }
+  };
 
-  clearSearch() {
-    return new Promise((resolve) => {
-      this.setState({
-        searchInput: '',
-      });
-      this.updateStorePagination({ searchInput: '' });
-      resolve(true);
-    }).then(() => {
-      this.load();
+  const setStatus = (statusParam = null) => {
+    updateStorePagination({ status: statusParam });
+    setState({
+      status: statusParam,
     });
-  }
+  };
 
-  async classpieceSearch(e) {
-    e.preventDefault();
-    const { resourcesTypes } = this.props;
-    const { classpieceSearchInput } = this.state;
-    let classpieceType = '';
-    if (resourcesTypes.length > 0) {
-      classpieceType = resourcesTypes.find((t) => t.labelId === 'Classpiece')
-        ._id;
-    }
-    if (classpieceSearchInput < 2) {
-      return false;
-    }
-    const params = {
-      page: 1,
-      limit: 25,
-      label: classpieceSearchInput,
-      systemType: classpieceType,
-    };
-    const url = `${APIPath}resources`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (responseData.status) {
-      const items = responseData.data.data.map((item) => {
-        let thumbnailImage = (
-          <img
-            src={defaultThumbnail}
-            alt={item.label}
-            className="person-default-thumbnail"
-          />
-        );
-        const thumbnailPath = getResourceThumbnailURL(item);
-        if (thumbnailPath !== null) {
-          thumbnailImage = <img src={thumbnailPath} alt={item.label} />;
-        }
-        return (
-          <div
-            className="classpiece-result"
-            key={item._id}
-            onClick={() => this.selectClasspiece(item._id)}
-            onKeyDown={() => false}
-            role="button"
-            tabIndex={0}
-            aria-label="select classpiece"
-          >
-            {thumbnailImage} <Label>{item.label}</Label>
-          </div>
-        );
-      });
-      this.setState({
-        classpieceItems: items,
-      });
-    }
-    return false;
-  }
+  const clearSearch = () => {
+    setState({ searchInput: '' });
+    updateStorePagination({ searchInput: '' });
+    setLoading(true);
+  };
 
-  selectClasspiece(classpieceId) {
-    return new Promise((resolve) => {
-      this.setState({
-        classpieceId,
-      });
-      resolve(true);
-    }).then(() => {
-      this.load();
-    });
-  }
+  const selectClasspiece = (value) => {
+    setClasspieceId(value);
+  };
 
-  classpieceClearSearch() {
-    return new Promise((resolve) => {
-      this.setState({
-        classpieceSearchInput: '',
-        classpieceItems: [],
-        classpieceId: null,
-      });
-      resolve(true);
-    }).then(() => {
-      this.load();
-    });
-  }
-
-  clearAdvancedSearch() {
-    return new Promise((resolve) => {
-      this.setState({
-        advancedSearchInputs: [],
-        advancedSearch: false,
-      });
-      this.updateStorePagination({ advancedSearchInputs: [] });
-      resolve(true);
-    }).then(() => {
-      this.load();
-    });
-  }
-
-  updateAdvancedSearchInputs(advancedSearchInputs) {
-    this.setState({
-      advancedSearchInputs,
-    });
-  }
-
-  updateOrdering(orderField = '') {
-    const {
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let orderDesc = false;
-    if (orderField === stateOrderField) {
-      orderDesc = !stateOrderDesc;
-    }
-    this.updateStorePagination({ orderField, orderDesc });
-    this.setState(
-      {
-        orderField,
-        orderDesc,
-      },
-      () => {
-        this.load();
+  const classpieceSearch = useCallback(
+    async (e) => {
+      e.preventDefault();
+      mounted.current = true;
+      const classpieceType =
+        resourcesTypes.length > 0
+          ? resourcesTypes.find((t) => t.labelId === 'Classpiece')._id
+          : '';
+      if (state.classpieceSearchInput < 2) {
+        return false;
       }
-    );
-  }
-
-  updatePage(value) {
-    const { page } = this.state;
-    if (value > 0 && value !== page) {
-      this.updateStorePagination({ page: value });
-      this.setState(
-        {
-          page: value,
-          gotoPage: value,
-        },
-        () => {
-          this.load();
-        }
-      );
-    }
-  }
-
-  updateStorePagination({
-    limit = null,
-    page = null,
-    activeType = null,
-    orderField = '',
-    orderDesc = false,
-    status = null,
-    searchInput = '',
-    advancedSearchInputs = [],
-  }) {
-    const {
-      limit: stateLimit,
-      page: statePage,
-      activeType: stateActiveType,
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-      status: stateStatus,
-      searchInput: stateSearchInput,
-      advancedSearchInputs: stateAdvancedSearchInputs,
-    } = this.state;
-    let limitCopy = limit;
-    let pageCopy = page;
-    let activeTypeCopy = activeType;
-    let orderFieldCopy = orderField;
-    let orderDescCopy = orderDesc;
-    let statusCopy = status;
-    let searchInputCopy = searchInput;
-    let advancedSearchInputsCopy = stateAdvancedSearchInputs;
-    if (limit === null) {
-      limitCopy = stateLimit;
-    }
-    if (page === null) {
-      pageCopy = statePage;
-    }
-    if (activeType === null) {
-      activeTypeCopy = stateActiveType;
-    }
-    if (orderField === '') {
-      orderFieldCopy = stateOrderField;
-    }
-    if (orderDesc === false) {
-      orderDescCopy = stateOrderDesc;
-    }
-    if (status === null) {
-      statusCopy = stateStatus;
-    }
-    if (searchInput === null) {
-      searchInputCopy = stateSearchInput;
-    }
-    if (advancedSearchInputs.length === 0) {
-      advancedSearchInputsCopy = stateAdvancedSearchInputs;
-    }
-    const payload = {
-      limit: limitCopy,
-      page: pageCopy,
-      activeType: activeTypeCopy,
-      orderField: orderFieldCopy,
-      orderDesc: orderDescCopy,
-      status: statusCopy,
-      searchInput: searchInputCopy,
-      advancedSearchInputs: advancedSearchInputsCopy,
-    };
-    const { setPaginationParams: setPaginationParamsFn } = this.props;
-    setPaginationParamsFn('people', payload);
-  }
-
-  gotoPage(e) {
-    e.preventDefault();
-    const { page } = this.state;
-    let { gotoPage } = this.state;
-    gotoPage = parseInt(gotoPage, 10);
-    if (gotoPage > 0 && gotoPage !== page) {
-      this.updateStorePagination({ page: gotoPage });
-      this.setState(
-        {
-          page: gotoPage,
-        },
-        () => {
-          this.load();
-        }
-      );
-    }
-  }
-
-  updateLimit(limit) {
-    this.updateStorePagination({ limit });
-    this.setState(
-      {
-        limit,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  peopleTableRows() {
-    const { people, page, limit } = this.state;
-    const rows = [];
-    for (let i = 0; i < people.length; i += 1) {
-      const person = people[i];
-      const countPage = parseInt(page, 10) - 1;
-      const count = i + 1 + countPage * limit;
-      let label = person.firstName;
-      if (person.lastName !== '') {
-        label += ` ${person.lastName}`;
-      }
-      let thumbnailImage = (
-        <img
-          src={defaultThumbnail}
-          alt={label}
-          className="person-default-thumbnail"
-        />
-      );
-      const thumbnailURL = getThumbnailURL(person);
-      if (thumbnailURL !== null) {
-        thumbnailImage = (
-          <img
-            src={thumbnailURL}
-            className="people-list-thumbnail img-fluid img-thumbnail"
-            alt={label}
-          />
-        );
-      }
-      let affiliation = null;
-      let organisation = '';
-      if (
-        person.affiliations.length > 0 &&
-        typeof person.affiliations[0].ref !== 'undefined'
-      ) {
-        affiliation = person.affiliations[0].ref;
-        organisation = (
-          <Link
-            href={`/organisation/${affiliation._id}`}
-            to={`/organisation/${affiliation._id}`}
-          >
-            {affiliation.label}
-          </Link>
-        );
-      }
-      const createdAt = (
-        <div>
-          <small>{person.createdAt.split('T')[0]}</small>
-          <br />
-          <small>{person.createdAt.split('T')[1]}</small>
-        </div>
-      );
-      const updatedAt = (
-        <div>
-          <small>{person.updatedAt.split('T')[0]}</small>
-          <br />
-          <small>{person.updatedAt.split('T')[1]}</small>
-        </div>
-      );
-      const row = (
-        <tr key={i}>
-          <td>
-            <div className="select-checkbox-container">
-              <input
-                type="checkbox"
-                value={i}
-                checked={person.checked}
-                onChange={() => false}
-              />
-              <span
-                className="select-checkbox"
-                onClick={() => this.toggleSelected(i)}
-                onKeyDown={() => false}
-                role="button"
-                tabIndex={0}
-                aria-label="toggle selected"
-              />
-            </div>
-          </td>
-          <td>{count}</td>
-          <td>
-            <Link href={`/person/${person._id}`} to={`/person/${person._id}`}>
-              {thumbnailImage}
-            </Link>
-          </td>
-          <td>
-            <Link href={`/person/${person._id}`} to={`/person/${person._id}`}>
-              {person.firstName}
-            </Link>
-          </td>
-          <td>
-            <Link href={`/person/${person._id}`} to={`/person/${person._id}`}>
-              {person.lastName}
-            </Link>
-          </td>
-          <td>{organisation}</td>
-          <td>{createdAt}</td>
-          <td>{updatedAt}</td>
-          <td>
-            <Link
-              href={`/person/${person._id}`}
-              to={`/person/${person._id}`}
-              className="edit-item"
+      const params = {
+        page: 1,
+        limit: 25,
+        label: state.classpieceSearchInput,
+        systemType: classpieceType,
+      };
+      const responseData = await getData(`resources`, params);
+      if (mounted.current && responseData.status) {
+        const data = responseData.data.data.map((item) => {
+          let thumbnailImage = [];
+          const thumbnailPath = getResourceThumbnailURL(item);
+          if (thumbnailPath !== null) {
+            thumbnailImage = <img src={thumbnailPath} alt={item.label} />;
+          }
+          return (
+            <div
+              className="classpiece-result"
+              key={item._id}
+              onClick={() => selectClasspiece(item._id)}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="select classpiece"
             >
-              <i className="fa fa-pencil" />
-            </Link>
-          </td>
-        </tr>
-      );
-      rows.push(row);
+              {thumbnailImage} <Label>{item.label}</Label>
+            </div>
+          );
+        });
+        setClasspieceItems(data);
+      }
+      return true;
+    },
+    [state.classpieceSearchInput, resourcesTypes]
+  );
+
+  const classpieceClearSearch = () => {
+    setState({ classpieceSearchInput: '' });
+    setClasspieceItems([]);
+    setClasspieceId(null);
+    setLoading(true);
+  };
+
+  const clearAdvancedSearch = () => {
+    setState({ advancedSearchInputs: [] });
+    setAdvancedSearch(false);
+    updateStorePagination({ advancedSearchInputs: [] });
+    setLoading(true);
+  };
+
+  const updateAdvancedSearchInputs = (value) => {
+    setState({ advancedSearchInputs: value });
+  };
+
+  /* const updateOrdering = (orderFieldParam = '') => {
+    if (orderFieldParam !== '') {
+      const orderDescending =
+        orderFieldParam === state.orderField ? !state.orderDesc : false;
+      updateStorePagination({
+        orderField: orderFieldParam,
+        orderDesc: orderDescending,
+      });
     }
-    return rows;
-  }
+  }; */
 
-  toggleSelected(i) {
-    const { people } = this.state;
-    const newPersonChecked = !people[i].checked;
-    people[i].checked = newPersonChecked;
-    this.setState({
-      people,
-    });
-  }
-
-  toggleSelectedAll() {
-    const { allChecked: stateAllChecked, people } = this.state;
-    const allChecked = !stateAllChecked;
-    const newPeople = [];
-    for (let i = 0; i < people.length; i += 1) {
-      const person = people[i];
-      person.checked = allChecked;
-      newPeople.push(person);
+  const updatePage = (value) => {
+    if (value > 0 && value !== state.page) {
+      updateStorePagination({ page: value });
+      setState({
+        page: value,
+        gotoPage: value,
+      });
     }
-    this.setState({
-      people: newPeople,
-      allChecked,
-    });
-  }
+  };
 
-  async deleteSelected() {
-    const { people } = this.state;
-    const selectedPeople = people
+  const gotoPage = () => {
+    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
+      updateStorePagination({ page: state.gotoPage });
+      setState({ page: Number(state.gotoPage) });
+    }
+  };
+
+  const updateLimit = (value) => {
+    updateStorePagination({ limit: value });
+    setState({ limit: value });
+  };
+
+  const toggleSelected = (i) => {
+    const index = i - (Number(state.page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
+
+  const toggleSelectedAll = () => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
+    }
+    setAllChecked(newAllChecked);
+  };
+
+  const clearSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    setAllChecked(false);
+  }, [items]);
+
+  const reload = () => {
+    setReLoading(true);
+  };
+
+  useEffect(() => {
+    if (prevLimit !== state.limit) {
+      setPrevLimit(state.limit);
+      clearSelectedAll();
+      load();
+    }
+    if (prevPage !== state.page) {
+      setPrevPage(state.page);
+      clearSelectedAll();
+      load();
+    }
+    if (prevActiveType !== state.activeType) {
+      setPrevActiveType(state.activeType);
+      clearSelectedAll();
+      load();
+    }
+    if (prevStatus !== state.status) {
+      setPrevStatus(state.status);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderField !== orderField) {
+      setPrevOrderField(orderField);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderDesc !== orderDesc) {
+      setPrevOrderDesc(orderDesc);
+      clearSelectedAll();
+      load();
+    }
+    if (prevClasspieceId !== classpieceId) {
+      setPrevClasspieceId(classpieceId);
+      clearSelectedAll();
+      load();
+    }
+    if (reLoading && !prevReLoading) {
+      setPrevReLoading(reLoading);
+      clearSelectedAll();
+      load();
+    }
+  }, [
+    classpieceId,
+    clearSelectedAll,
+    load,
+    orderField,
+    orderDesc,
+    prevLimit,
+    prevPage,
+    prevActiveType,
+    prevStatus,
+    prevOrderField,
+    prevOrderDesc,
+    prevClasspieceId,
+    prevReLoading,
+    reLoading,
+    state.limit,
+    state.page,
+    state.activeType,
+    state.status,
+  ]);
+
+  const deleteSelected = async () => {
+    const selectedItems = items
       .filter((item) => item.checked)
       .map((item) => item._id);
     const data = {
-      _ids: selectedPeople,
+      _ids: selectedItems,
     };
-    const url = `${APIPath}people`;
-    const responseData = await axios({
-      method: 'delete',
-      url,
-      crossDomain: true,
-      data,
-    })
-      .then(() => true)
-      .catch((error) => {
-        console.log(error);
-      });
+    const responseData = await deleteData(`people`, data);
     if (responseData) {
-      this.setState({
-        allChecked: false,
-      });
-      this.load();
+      setAllChecked(false);
+      setReLoading(true);
     }
-  }
+    return true;
+  };
 
-  removeSelected(_id = null) {
+  const removeSelected = (_id = null) => {
     if (_id == null) {
       return false;
     }
-    const { people } = this.state;
-    const newPeople = people.map((item) => {
+    const copy = [...items];
+    const newItems = copy.map((item) => {
       const itemCopy = item;
       if (itemCopy._id === _id) {
         itemCopy.checked = false;
       }
       return itemCopy;
     });
-    this.setState({
-      people: newPeople,
-    });
-    return false;
-  }
+    setItems(newItems);
+    return true;
+  };
 
-  render() {
-    const {
-      page,
-      gotoPage,
-      totalPages,
-      limit,
-      loading,
-      tableLoading,
-      allChecked: stateAllChecked,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-      totalItems,
-      people,
-      classpieceSearchInput,
-      classpieceItems,
-    } = this.state;
-    const { personTypes } = this.props;
-    const heading = 'People';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-users', active: true, path: '' },
-    ];
-    const searchElements = [
-      { element: 'firstName', label: 'First name' },
-      { element: 'lastName', label: 'Last name' },
-      { element: 'fnameSoundex', label: 'First name soundex' },
-      { element: 'lnameSoundex', label: 'Last name soundex' },
-      { element: 'description', label: 'Description' },
-    ];
-    const pageActions = (
+  const pageActions = (
+    <Suspense fallback={renderLoader()}>
       <PageActions
-        advancedSearch={this.advancedSearch}
-        classpieceClearSearch={this.classpieceClearSearch}
+        activeType={state.activeType}
+        advancedSearch={advancedSearch}
+        classpieceClearSearch={classpieceClearSearch}
         classpieceItems={classpieceItems}
-        classpieceSearch={this.classpieceSearch}
-        classpieceSearchInput={classpieceSearchInput}
-        clearAdvancedSearch={this.clearAdvancedSearch}
-        clearSearch={this.clearSearch}
-        current_page={page}
-        gotoPage={this.gotoPage}
-        gotoPageValue={gotoPage}
-        handleChange={this.handleChange}
-        limit={limit}
+        classpieceSearch={classpieceSearch}
+        classpieceSearchInput={state.classpieceSearchInput}
+        clearAdvancedSearch={clearAdvancedSearch}
+        clearSearch={clearSearch}
+        current_page={state.page}
+        defaultLimit={25}
+        gotoPage={gotoPage}
+        gotoPageValue={state.gotoPage}
+        handleChange={handleChange}
+        limit={state.limit}
+        page={state.page}
         pageType="people"
+        reload={reload}
         searchElements={searchElements}
-        searchInput={searchInput}
-        setActiveType={this.setActiveType}
-        setStatus={this.setStatus}
-        status={status}
-        simpleSearch={this.simpleSearch}
-        total_pages={totalPages}
+        searchInput={state.searchInput}
+        setActiveType={setActiveType}
+        setAdvancedSearch={setAdvancedSearch}
+        setStatus={setStatus}
+        status={state.status}
+        totalPages={totalPages}
         types={personTypes}
-        updateLimit={this.updateLimit}
-        updatePage={this.updatePage}
-        updateAdvancedSearchInputs={this.updateAdvancedSearchInputs}
+        updateLimit={updateLimit}
+        updatePage={updatePage}
+        updateAdvancedSearchInputs={updateAdvancedSearchInputs}
       />
-    );
+    </Suspense>
+  );
 
-    let content = (
-      <div>
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <div style={{ padding: '40pt', textAlign: 'center' }}>
-              <Spinner type="grow" color="info" /> <i>loading...</i>
-            </div>
+  let content = (
+    <div>
+      {pageActions}
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
           </div>
         </div>
-        {pageActions}
       </div>
+      {pageActions}
+    </div>
+  );
+
+  if (!loading) {
+    const listIndex = (Number(state.page) - 1) * limit;
+    const addNewBtn = (
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+        href="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
     );
-    if (!loading) {
-      const addNewBtn = (
-        <Link
-          className="btn btn-outline-secondary add-new-item-btn"
-          to="/person/new"
-          href="/person/new"
-        >
-          <i className="fa fa-plus" />
-        </Link>
-      );
+    const selectedItems = items.filter((item) => item.checked);
 
-      const tableLoadingSpinner = (
-        <tr>
-          <td colSpan={8}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </td>
-        </tr>
-      );
-      let peopleRows = [];
-      if (tableLoading) {
-        peopleRows = tableLoadingSpinner;
-      } else {
-        peopleRows = this.peopleTableRows();
-      }
-      const allChecked = stateAllChecked ? 'checked' : '';
-
-      const selectedPeople = people.filter((item) => item.checked);
-
-      const batchActions = (
+    const batchActions = (
+      <Suspense fallback={[]}>
         <BatchActions
-          items={selectedPeople}
-          removeSelected={this.removeSelected}
+          items={selectedItems}
+          removeSelected={removeSelected}
           type="Person"
           relationProperties={[]}
-          deleteSelected={this.deleteSelected}
-          selectAll={this.toggleSelectedAll}
-          allChecked={stateAllChecked}
+          deleteSelected={deleteSelected}
+          selectAll={toggleSelectedAll}
+          allChecked={allChecked}
+          reload={reload}
         />
-      );
+      </Suspense>
+    );
+    const table = tableLoading ? (
+      <div style={{ padding: '40pt', textAlign: 'center' }}>
+        <Spinner type="grow" color="info" /> <i>loading...</i>
+      </div>
+    ) : (
+      <Suspense fallback={renderLoader()}>
+        <List
+          columns={columns}
+          items={items}
+          listIndex={listIndex}
+          type="people"
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          toggleSelected={toggleSelected}
+        />
+      </Suspense>
+    );
 
-      // ordering
-      let firstNameOrderIcon = [];
-      let lastNameOrderIcon = [];
-      let createdOrderIcon = [];
-      let updatedOrderIcon = [];
-      if (orderField === 'firstName' || orderField === '') {
-        if (orderDesc) {
-          firstNameOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          firstNameOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'lastName') {
-        if (orderDesc) {
-          lastNameOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          lastNameOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'createdAt') {
-        if (orderDesc) {
-          createdOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          createdOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'updatedAt') {
-        if (orderDesc) {
-          updatedOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          updatedOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-
-      content = (
-        <div className="people-container">
-          {pageActions}
-          <div className="row">
-            <div className="col-12">
-              <Card>
-                <CardBody className="people-card">
-                  <div className="pull-right">{batchActions}</div>
-                  <Table hover className="people-table" responsive>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '30px' }}>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th>Thumbnail</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('firstName')}
-                        >
-                          First Name {firstNameOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('lastName')}
-                        >
-                          Last Name {lastNameOrderIcon}
-                        </th>
-                        <th>Organisation</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th style={{ width: '30px' }} aria-label="edit" />
-                      </tr>
-                    </thead>
-                    <tbody>{peopleRows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th>#</th>
-                        <th>Thumbnail</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('firstName')}
-                        >
-                          First Name {firstNameOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('lastName')}
-                        >
-                          Last Name {lastNameOrderIcon}
-                        </th>
-                        <th>Organisation</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th aria-label="edit" />
-                      </tr>
-                    </tfoot>
-                  </Table>
-                  <div className="pull-right">{batchActions}</div>
-                </CardBody>
-              </Card>
-            </div>
-          </div>
-          {pageActions}
-          {addNewBtn}
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+    content = (
+      <div className="people-container">
+        {pageActions}
         <div className="row">
           <div className="col-12">
-            <h2>
-              {heading} <small>({totalItems})</small>
-            </h2>
+            <Card>
+              <CardBody className="people-card">
+                <div className="pull-right">{batchActions}</div>
+                {table}
+                <div className="pull-right">{batchActions}</div>
+              </CardBody>
+            </Card>
           </div>
         </div>
-        {content}
+        {pageActions}
+        {addNewBtn}
       </div>
     );
   }
-}
 
-People.defaultProps = {
-  peoplePagination: null,
-  resourcesTypes: [],
-  personTypes: [],
-  setPaginationParams: () => {},
+  return (
+    <div>
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>
+            {heading} <small>({totalItems})</small>
+          </h2>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 };
-People.propTypes = {
-  peoplePagination: PropTypes.object,
-  resourcesTypes: PropTypes.array,
-  personTypes: PropTypes.array,
-  setPaginationParams: PropTypes.func,
-};
-export default compose(connect(mapStateToProps, mapDispatchToProps))(People);
+export default People;

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense, useRef } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Card, CardBody, CardFooter, CardTitle, Row, Col } from 'reactstrap';
-import Plot from '../components/month-chart';
 import '../assets/scss/dashboard.scss';
+import { renderLoader } from '../helpers';
 
 const APIPath = process.env.REACT_APP_APIPATH;
+const Plot = lazy(() => import('../components/month-chart'));
 
 const Dashboard = () => {
   const [countPeople, setCountPeople] = useState(0);
@@ -14,6 +15,7 @@ const Dashboard = () => {
   const [countEvents, setCountEvents] = useState(0);
   const [countSpatial, setCountSpatial] = useState(0);
   const [countTemporal, setCountTemporal] = useState(0);
+  const mounted = useRef(true);
 
   useEffect(() => {
     const load = async () => {
@@ -26,20 +28,25 @@ const Dashboard = () => {
         .catch((error) => {
           console.log(error);
         });
-      setCountPeople(data.people);
-      setCountResources(data.resources);
-      setCountOrganisations(data.organisations);
-      setCountEvents(data.events);
-      setCountSpatial(data.spatial);
-      setCountTemporal(data.temporal);
+      if (mounted.current) {
+        setCountPeople(data.people);
+        setCountResources(data.resources);
+        setCountOrganisations(data.organisations);
+        setCountEvents(data.events);
+        setCountSpatial(data.spatial);
+        setCountTemporal(data.temporal);
+      }
     };
     load();
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   return (
-    <Row>
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+    <Row className="same-height">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
@@ -56,20 +63,19 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/resources" href="/resources">
               View resources
             </Link>
           </CardFooter>
         </Card>
       </Col>
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
                 <div className="icon-big text-center">
-                  <i className="pe-7s-id text-danger" />
+                  <i className="pe-7s-id text-success" />
                 </div>
               </Col>
               <Col xs={7} md={8}>
@@ -81,20 +87,19 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/people" href="/people">
               View people
             </Link>
           </CardFooter>
         </Card>
       </Col>
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
                 <div className="icon-big text-center">
-                  <i className="pe-7s-culture text-danger" />
+                  <i className="pe-7s-culture text-success" />
                 </div>
               </Col>
               <Col xs={7} md={8}>
@@ -106,20 +111,19 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/organisations" href="/organisations">
               View organisations
             </Link>
           </CardFooter>
         </Card>
       </Col>
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
                 <div className="icon-big text-center">
-                  <i className="pe-7s-date text-danger" />
+                  <i className="pe-7s-date text-success" />
                 </div>
               </Col>
               <Col xs={7} md={8}>
@@ -131,7 +135,6 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/events" href="/events">
               View events
             </Link>
@@ -139,13 +142,13 @@ const Dashboard = () => {
         </Card>
       </Col>
 
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
                 <div className="icon-big text-center">
-                  <i className="pe-7s-clock text-danger" />
+                  <i className="pe-7s-clock text-success" />
                 </div>
               </Col>
               <Col xs={7} md={8}>
@@ -157,7 +160,6 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/temporals" href="/temporals">
               View temporal
             </Link>
@@ -165,13 +167,13 @@ const Dashboard = () => {
         </Card>
       </Col>
 
-      <Col xs={12} sm={6} md={4}>
-        <Card className="card-stats">
+      <Col xs={12} sm={6} md={4} className="same-height-col">
+        <Card className="card-stats col-same-height">
           <CardBody>
             <Row>
               <Col xs={5} md={4}>
                 <div className="icon-big text-center">
-                  <i className="pe-7s-map text-danger" />
+                  <i className="pe-7s-map text-success" />
                 </div>
               </Col>
               <Col xs={7} md={8}>
@@ -183,7 +185,6 @@ const Dashboard = () => {
             </Row>
           </CardBody>
           <CardFooter>
-            <hr />
             <Link to="/spatials" href="/spatials">
               View spatial
             </Link>
@@ -194,7 +195,9 @@ const Dashboard = () => {
       <Col xs={12}>
         <Card>
           <CardBody>
-            <Plot />
+            <Suspense fallback={renderLoader()}>
+              <Plot />
+            </Suspense>
           </CardBody>
         </Card>
       </Col>

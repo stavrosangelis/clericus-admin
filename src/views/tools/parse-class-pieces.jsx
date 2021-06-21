@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Label,
   Card,
@@ -10,8 +10,8 @@ import {
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import Breadcrumbs from '../../components/breadcrumbs';
 
+const Breadcrumbs = lazy(() => import('../../components/breadcrumbs'));
 const APIPath = process.env.REACT_APP_APIPATH;
 
 export default class ParseClassPieces extends Component {
@@ -160,7 +160,9 @@ export default class ParseClassPieces extends Component {
     ];
     return (
       <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

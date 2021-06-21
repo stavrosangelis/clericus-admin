@@ -1,28 +1,29 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { Card, CardBody, Spinner, Table } from 'reactstrap';
 import { useSelector, useDispatch } from 'react-redux';
-import BatchActions from '../add-batch-relations';
 import {
   toggleQueryBuilderSubmit,
   setPaginationParams,
   toggleClearQueryBuildResults,
 } from '../../redux/actions';
-import PageActions from './page.actions';
+
+const PageActions = lazy(() => import('./page.actions'));
+const BatchActions = lazy(() => import('../add-batch-relations'));
 
 // table parts
-import EventsColumns from './events/columns';
-import EventsRow from './events/row';
-import OrganisationsColumns from './organisations/columns';
-import OrganisationsRow from './organisations/row';
-import PeopleColumns from './people/columns';
-import PeopleRow from './people/row';
-import ResourcesColumns from './resources/columns';
-import ResourcesRow from './resources/row';
-import SpatialColumns from './spatial/columns';
-import SpatialRow from './spatial/row';
-import TemporalColumns from './temporal/columns';
-import TemporalRow from './temporal/row';
+const EventsColumns = lazy(() => import('./events/columns'));
+const EventsRow = lazy(() => import('./events/row'));
+const OrganisationsColumns = lazy(() => import('./organisations/columns'));
+const OrganisationsRow = lazy(() => import('./organisations/row'));
+const PeopleColumns = lazy(() => import('./people/columns'));
+const PeopleRow = lazy(() => import('./people/row'));
+const ResourcesColumns = lazy(() => import('./resources/columns'));
+const ResourcesRow = lazy(() => import('./resources/row'));
+const SpatialColumns = lazy(() => import('./spatial/columns'));
+const SpatialRow = lazy(() => import('./spatial/row'));
+const TemporalColumns = lazy(() => import('./temporal/columns'));
+const TemporalRow = lazy(() => import('./temporal/row'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -156,18 +157,25 @@ const List = () => {
   const selectedItems = items.filter((item) => item.checked);
 
   const batchActions = (
-    <BatchActions
-      items={selectedItems}
-      removeSelected={removeSelected}
-      type={entityType}
-      relationProperties={[]}
-      deleteSelected={deleteSelected}
-      selectAll={toggleSelectedAll}
-      allChecked={allChecked}
-    />
+    <Suspense fallback={[]}>
+      <BatchActions
+        items={selectedItems}
+        removeSelected={removeSelected}
+        type={entityType}
+        relationProperties={[]}
+        deleteSelected={deleteSelected}
+        selectAll={toggleSelectedAll}
+        allChecked={allChecked}
+        reload={() => {}}
+      />
+    </Suspense>
   );
 
-  const pageActions = <PageActions pageType={entityType} />;
+  const pageActions = (
+    <Suspense fallback={[]}>
+      <PageActions pageType={entityType} />
+    </Suspense>
+  );
 
   const updateOrdering = (value) => {
     const paginationParamsCopy = { ...paginationParams };
@@ -185,134 +193,158 @@ const List = () => {
   let rows = [];
   if (entityType === 'Event') {
     columns = (
-      <EventsColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <EventsColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <EventsRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <EventsRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
   if (entityType === 'Organisation') {
     columns = (
-      <OrganisationsColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <OrganisationsColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <OrganisationsRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <OrganisationsRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
   if (entityType === 'Person') {
     columns = (
-      <PeopleColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <PeopleColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <PeopleRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <PeopleRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
   if (entityType === 'Resource') {
     columns = (
-      <ResourcesColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <ResourcesColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <ResourcesRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <ResourcesRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
   if (entityType === 'Spatial') {
     columns = (
-      <SpatialColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <SpatialColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <SpatialRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <SpatialRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
   if (entityType === 'Temporal') {
     columns = (
-      <TemporalColumns
-        allChecked={allChecked}
-        toggleSelectedAll={toggleSelectedAll}
-        updateOrdering={updateOrdering}
-        orderField={paginationParams.orderField}
-        orderDesc={paginationParams.orderDesc}
-      />
+      <Suspense fallback={[]}>
+        <TemporalColumns
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          updateOrdering={updateOrdering}
+          orderField={paginationParams.orderField}
+          orderDesc={paginationParams.orderDesc}
+        />
+      </Suspense>
     );
     rows =
       items.map((item, i) => (
-        <TemporalRow
-          key={item._id}
-          item={item}
-          page={page}
-          index={i}
-          limit={limit}
-          toggleSelected={toggleSelected}
-        />
+        <Suspense fallback={[]}>
+          <TemporalRow
+            key={item._id}
+            item={item}
+            page={page}
+            index={i}
+            limit={limit}
+            toggleSelected={toggleSelected}
+          />
+        </Suspense>
       )) || [];
   }
 

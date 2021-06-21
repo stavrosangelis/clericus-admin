@@ -160,7 +160,7 @@
 
 .treeview-menu {
   font-size: 14px;
-  width: calc(100% - 2px);
+  width: calc(100% + 1px);
   background-color: #333;
   visibility: hidden;
   padding: 0;
@@ -169,14 +169,33 @@
   transition: visibility 0s, opacity 0.2s linear;
   overflow-y: hidden;
 }
-.treeview-menu .nav-link {
+.treeview-menu > li {
+  padding: 0;
+  margin: 0;
+  width: 100% !important;
+}
+.sidebar .nav .treeview-menu > li > .nav-link {
   padding: 7px 5px 7px 25px;
+  margin: 0;
+  text-transform: none;
 }
 .treeview-menu .nav-link.active {
   opacity: 1;
   background-color: #555;
   border-radius: 0;
   border-left: 4px solid $light-blue;
+}
+.treeview-menu .nav-link.active:before {
+  border-right: 10px solid $beige;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  content: "";
+  display: inline-block;
+  position: absolute;
+  right: 0;
+  opacity: 1;
+  top: 12px;
+  transition: opacity 150ms ease-in;
 }
 .treeview-menu i {
   margin-right: 0 !important;

@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  lazy,
+  Suspense,
+} from 'react';
 import {
   Card,
   CardBody,
@@ -17,11 +24,17 @@ import {
 } from 'reactstrap';
 import axios from 'axios';
 import { Redirect } from 'react-router-dom';
-import { Editor } from '@tinymce/tinymce-react';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
-import Breadcrumbs from '../components/breadcrumbs';
-import ArticleImageBrowser from '../components/article-image-browser';
+// import { Editor } from '@tinymce/tinymce-react';
+import { renderLoader } from '../helpers';
+
+const Editor = lazy(() => import('../components/LazyEditor'));
+
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const ArticleImageBrowser = lazy(() =>
+  import('../components/article-image-browser')
+);
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -647,23 +660,29 @@ const Article = (props) => {
               </div>
               <FormGroup>
                 <Label>Teaser</Label>
-                <Editor
-                  init={teaserEditorSettings}
-                  value={formData.teaser}
-                  onEditorChange={(e) => handleEditorChange(e, 'teaser')}
-                  plugins={teaserEditorPlugins}
-                  toolbar={teaserEditorToolbar}
-                />
+                <Suspense fallback={renderLoader()}>
+                  <Editor
+                    element="teaser"
+                    init={teaserEditorSettings}
+                    value={formData.teaser}
+                    onEditorChange={handleEditorChange}
+                    plugins={teaserEditorPlugins}
+                    toolbar={teaserEditorToolbar}
+                  />
+                </Suspense>
               </FormGroup>
               <FormGroup>
                 <Label>Content</Label>
-                <Editor
-                  init={contentEditorSettings}
-                  value={formData.content}
-                  onEditorChange={(e) => handleEditorChange(e, 'content')}
-                  plugins={contentEditorPlugins}
-                  toolbar={contentEditorToolbar}
-                />
+                <Suspense fallback={renderLoader()}>
+                  <Editor
+                    element="content"
+                    init={contentEditorSettings}
+                    value={formData.content}
+                    onEditorChange={handleEditorChange}
+                    plugins={contentEditorPlugins}
+                    toolbar={contentEditorToolbar}
+                  />
+                </Suspense>
               </FormGroup>
             </Form>
           </CardBody>
@@ -690,12 +709,14 @@ const Article = (props) => {
           </CardFooter>
         </Card>
         {deleteModal}
-        <ArticleImageBrowser
-          modal={featuredModal}
-          toggle={toggleFeatured}
-          featuredImgFn={featuredImageFn}
-          reload={imagesReload}
-        />
+        <Suspense fallback={[]}>
+          <ArticleImageBrowser
+            modal={featuredModal}
+            toggle={toggleFeatured}
+            featuredImgFn={featuredImageFn}
+            reload={imagesReload}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -703,7 +724,9 @@ const Article = (props) => {
   return (
     <div>
       {redirectElem}
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>{heading}</h2>

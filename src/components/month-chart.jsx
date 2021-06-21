@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Spinner } from 'reactstrap';
 import axios from 'axios';
 import {
@@ -14,17 +14,12 @@ import {
 const APIPath = process.env.REACT_APP_APIPATH;
 
 const Plot = () => {
-  const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [ticks, setTicks] = useState(0);
   const [dateValues, setDateValues] = useState({ m: 0, y: 0 });
   const [year, setYear] = useState(null);
   const [month, setMonth] = useState(null);
-
-  const getDaysInMonth = useCallback(
-    (m, y) => new Date(y, m + 1, 0).getDate(),
-    []
-  );
+  const mounted = useRef(true);
 
   const CustomTooltip = useCallback(
     ({ active, payload }) => {
@@ -59,6 +54,7 @@ const Plot = () => {
   );
 
   useEffect(() => {
+    const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
     const loadData = async () => {
       const responseData = await axios({
         method: 'get',
@@ -76,34 +72,36 @@ const Plot = () => {
         .catch((error) => {
           console.log(error);
         });
-      // ticks
-      const monthDays = getDaysInMonth(responseData.month, responseData.year);
-      setDateValues({
-        m: responseData.month,
-        y: responseData.year,
-      });
-      const daysData = [];
-      const days = [];
-      for (let day = 0; day <= monthDays; day += 1) {
-        daysData.push({ x: day, y: 0 });
-        days.push(day);
+      if (mounted.current) {
+        // ticks
+        const monthDays = getDaysInMonth(responseData.month, responseData.year);
+        setDateValues({
+          m: responseData.month,
+          y: responseData.year,
+        });
+        const daysData = [];
+        const days = [];
+        for (let day = 0; day <= monthDays; day += 1) {
+          daysData.push({ x: day, y: 0 });
+          days.push(day);
+        }
+        days.splice(0, 1);
+        setTicks(days);
+        for (let i = 0; i < responseData.items.length; i += 1) {
+          const item = responseData.items[i];
+          daysData[item.day] = { x: item.day, y: item.count };
+        }
+        daysData.splice(0, 1);
+        setData(daysData);
+        setYear(responseData.year);
+        setMonth(responseData.month - 1);
       }
-      days.splice(0, 1);
-      setTicks(days);
-      for (let i = 0; i < responseData.items.length; i += 1) {
-        const item = responseData.items[i];
-        daysData[item.day] = { x: item.day, y: item.count };
-      }
-      daysData.splice(0, 1);
-      setData(daysData);
-      setYear(responseData.year);
-      setMonth(responseData.month - 1);
     };
-    if (loading) {
-      loadData();
-      setLoading(false);
-    }
-  }, [loading, getDaysInMonth]);
+    loadData();
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   let content = (
     <div style={{ padding: '40pt', textAlign: 'center' }}>
@@ -111,7 +109,7 @@ const Plot = () => {
     </div>
   );
 
-  if (!loading && data.length > 0) {
+  if (data.length > 0) {
     content = (
       <ResponsiveContainer height={300}>
         <LineChart

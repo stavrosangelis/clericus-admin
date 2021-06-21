@@ -1,9 +1,13 @@
+import React, { Suspense, lazy } from 'react';
 import { Badge } from 'reactstrap';
-import React, { useDispatch, useSelector } from 'react-redux';
-import Breadcrumbs from '../components/breadcrumbs';
-import QueryBlock from '../components/query-builder/query.block';
-import List from '../components/query-builder/list';
+import { useDispatch, useSelector } from 'react-redux';
 import { toggleQueryBlock } from '../redux/actions';
+
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const QueryBlock = lazy(() =>
+  import('../components/query-builder/query.block')
+);
+const List = lazy(() => import('../components/query-builder/list'));
 
 const QueryBuilder = () => {
   const dispatch = useDispatch();
@@ -16,7 +20,9 @@ const QueryBuilder = () => {
 
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>
@@ -33,8 +39,14 @@ const QueryBuilder = () => {
           </h2>
         </div>
       </div>
-      <QueryBlock />
-      <List />
+
+      <Suspense fallback={[]}>
+        <QueryBlock />
+      </Suspense>
+
+      <Suspense fallback={[]}>
+        <List />
+      </Suspense>
     </div>
   );
 };

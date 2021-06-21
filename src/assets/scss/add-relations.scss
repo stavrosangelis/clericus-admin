@@ -1,0 +1,27 @@
+.add-relations-details {
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  max-height: 0%;
+  background-color: #fff;
+  box-shadow: 0 -4px 8px rgba(0,0,0,0.2);
+  overflow: hidden;
+  transition: max-height 0.4s;
+}
+.add-relations-details.visible {
+  max-height: 75%;
+  border-top: 1px solid #ddd;
+}
+.add-relations-details-inner {
+  padding: 15px;
+  max-height: calc(100% - 62px);
+  overflow-y: auto;
+}
+.add-relations-details-inner .item-details {
+  max-width: 150px;
+  float: right;
+}
+.item-details.img-thumbnail > img {
+  height: 100%;
+}

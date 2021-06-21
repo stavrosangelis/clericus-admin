@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import axios from 'axios';
 import {
   Card,
@@ -20,11 +20,10 @@ import Select from 'react-select';
 import { Link } from 'react-router-dom';
 import { addGenericReference } from '../helpers';
 
-import Breadcrumbs from '../components/breadcrumbs';
-
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 const APIPath = process.env.REACT_APP_APIPATH;
 
-export default class Taxonomies extends React.Component {
+export default class Taxonomies extends Component {
   static termsList(terms, termId = null) {
     const options = [];
     for (let i = 0; i < terms.length; i += 1) {
@@ -1264,7 +1263,9 @@ export default class Taxonomies extends React.Component {
     }
     return (
       <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

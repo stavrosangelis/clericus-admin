@@ -14,7 +14,7 @@ const defaultState = {
   loginRedirect: false,
 
   resourcesPagination: {
-    limit: 25,
+    limit: 24,
     activeType: null,
     page: 1,
     orderField: 'label',
@@ -24,7 +24,7 @@ const defaultState = {
   },
   peoplePagination: {
     limit: 25,
-    peopleType: null,
+    activeType: null,
     page: 1,
     orderField: 'firstName',
     orderDesc: false,
@@ -150,6 +150,26 @@ const defaultState = {
   queryBuildType: 'Event',
   queryBuildResults: [],
   clearQueryBuildResults: false,
+
+  // relations
+  relationsEvents: [],
+  relationsEventsLoading: false,
+  relationsEventsPage: 1,
+  relationsOrganisations: [],
+  relationsOrganisationsLoading: false,
+  relationsOrganisationsPage: 1,
+  relationsPeople: [],
+  relationsPeopleLoading: false,
+  relationsPeoplePage: 1,
+  relationsResources: [],
+  relationsResourcesLoading: false,
+  relationsResourcesPage: 1,
+  relationsSpatial: [],
+  relationsSpatialLoading: false,
+  relationsSpatialPage: 1,
+  relationsTemporal: [],
+  relationsTemporalLoading: false,
+  relationsTemporalPage: 1,
 };
 
 module.exports = {

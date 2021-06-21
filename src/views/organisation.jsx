@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import {
   Spinner,
   Button,
@@ -14,10 +14,14 @@ import { compose } from 'redux';
 import PropTypes from 'prop-types';
 import Breadcrumbs from '../components/breadcrumbs';
 
-import ViewOrganisation from '../components/view-organisation';
-import AddRelation from '../components/add-relations';
+import {
+  parseReferenceLabels,
+  parseReferenceTypes,
+  renderLoader,
+} from '../helpers';
 
-import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
+const ViewOrganisation = lazy(() => import('../components/view-organisation'));
+const AddRelation = lazy(() => import('../components/add-relations'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -390,18 +394,20 @@ class Organisation extends Component {
     if (!loading) {
       content = (
         <div className="items-container">
-          <ViewOrganisation
-            closeUploadModal={closeUploadModal}
-            delete={this.toggleDeleteModal}
-            errorText={errorText}
-            errorVisible={errorVisible}
-            organisation={organisation}
-            organisationTypes={organisationTypes}
-            reload={this.reload}
-            update={this.update}
-            updateBtn={updateBtn}
-            uploadResponse={this.uploadResponse}
-          />
+          <Suspense fallback={renderLoader()}>
+            <ViewOrganisation
+              closeUploadModal={closeUploadModal}
+              delete={this.toggleDeleteModal}
+              errorText={errorText}
+              errorVisible={errorVisible}
+              organisation={organisation}
+              organisationTypes={organisationTypes}
+              reload={this.reload}
+              update={this.update}
+              updateBtn={updateBtn}
+              uploadResponse={this.uploadResponse}
+            />
+          </Suspense>
         </div>
       );
 
@@ -448,14 +454,16 @@ class Organisation extends Component {
     let addRelation = [];
     if (organisation !== null) {
       addRelation = (
-        <AddRelation
-          reload={this.reload}
-          reference={relationReference}
-          item={organisation}
-          referencesLabels={referencesLabels}
-          referencesTypes={referencesTypes}
-          type="organisation"
-        />
+        <Suspense fallback={[]}>
+          <AddRelation
+            reload={this.reload}
+            reference={relationReference}
+            item={organisation}
+            referencesLabels={referencesLabels}
+            referencesTypes={referencesTypes}
+            type="organisation"
+          />
+        </Suspense>
       );
     }
     return (

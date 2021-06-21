@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import {
   Card,
   CardTitle,
@@ -12,9 +12,12 @@ import {
   Collapse,
 } from 'reactstrap';
 import PropTypes from 'prop-types';
-import { getThumbnailURL } from '../helpers';
-import OrganisationAppelations from './organisation-alternate-appelations';
-import RelatedEntitiesBlock from './related-entities-block';
+import { getThumbnailURL, renderLoader } from '../helpers';
+
+const OrganisationAppelations = lazy(() =>
+  import('./organisation-alternate-appelations')
+);
+const RelatedEntitiesBlock = lazy(() => import('./related-entities-block'));
 
 export default class ViewOrganisation extends Component {
   constructor(props) {
@@ -390,11 +393,13 @@ export default class ViewOrganisation extends Component {
                     </FormGroup>
                     <div className="alternate-appelations">
                       <div className="label">Alternate labels</div>
-                      <OrganisationAppelations
-                        data={organisationAppelationsData}
-                        update={this.updateAlternateAppelation}
-                        remove={this.removeAlternateAppelation}
-                      />
+                      <Suspense fallback={[]}>
+                        <OrganisationAppelations
+                          data={organisationAppelationsData}
+                          update={this.updateAlternateAppelation}
+                          remove={this.removeAlternateAppelation}
+                        />
+                      </Suspense>
                     </div>
                     <FormGroup>
                       <Label>Description</Label>
@@ -447,11 +452,13 @@ export default class ViewOrganisation extends Component {
               </CardBody>
             </Card>
 
-            <RelatedEntitiesBlock
-              item={organisation}
-              itemType="Organisation"
-              reload={reload}
-            />
+            <Suspense fallback={renderLoader()}>
+              <RelatedEntitiesBlock
+                item={organisation}
+                itemType="Organisation"
+                reload={reload}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

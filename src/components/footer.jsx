@@ -33,7 +33,7 @@ const Footer = (props) => {
           </nav>
           <div className="credits ml-auto">
             <div className="copyright">
-              &copy; {1900 + new Date().getYear()}
+              &copy; 2020 - {1900 + new Date().getYear()}
             </div>
           </div>
         </Row>

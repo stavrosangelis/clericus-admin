@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Card,
   CardTitle,
@@ -16,9 +16,10 @@ import {
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
-import { getThumbnailURL, getPersonLabel } from '../helpers';
-import PersonAppelations from './person-alternate-appelations';
-import RelatedEntitiesBlock from './related-entities-block';
+import { getThumbnailURL, getPersonLabel, renderLoader } from '../helpers';
+
+const PersonAppelations = lazy(() => import('./person-alternate-appelations'));
+const RelatedEntitiesBlock = lazy(() => import('./related-entities-block'));
 
 const mapStateToProps = (state) => ({
   personTypes: state.personTypes,
@@ -407,11 +408,13 @@ class ViewPerson extends Component {
       alternateAppelationsBlock = (
         <div className="alternate-appelations">
           <div className="label">Alternate appelations</div>
-          <PersonAppelations
-            data={personAppelationsData}
-            update={this.updateAlternateAppelation}
-            remove={this.removeAlternateAppelation}
-          />
+          <Suspense fallback={[]}>
+            <PersonAppelations
+              data={personAppelationsData}
+              update={this.updateAlternateAppelation}
+              remove={this.removeAlternateAppelation}
+            />
+          </Suspense>
         </div>
       );
     }
@@ -565,11 +568,13 @@ class ViewPerson extends Component {
               </CardBody>
             </Card>
 
-            <RelatedEntitiesBlock
-              item={person}
-              itemType="Person"
-              reload={reload}
-            />
+            <Suspense fallback={renderLoader()}>
+              <RelatedEntitiesBlock
+                item={person}
+                itemType="Person"
+                reload={reload}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

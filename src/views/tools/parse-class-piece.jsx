@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useReducer, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+  Suspense,
+  lazy,
+} from 'react';
 import axios from 'axios';
 import {
   Spinner,
@@ -10,8 +17,8 @@ import {
 } from 'reactstrap';
 import { Link, Redirect } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import Breadcrumbs from '../../components/breadcrumbs';
 
+const Breadcrumbs = lazy(() => import('../../components/breadcrumbs'));
 const APIPath = process.env.REACT_APP_APIPATH;
 
 const ParseClassPiece = (props) => {
@@ -56,36 +63,38 @@ const ParseClassPiece = (props) => {
   }, [state.confirmModal]);
 
   const loadFaces = useCallback(async () => {
-    const facesFile = state.file.faces;
-    const responseData = await axios({
-      method: 'get',
-      url: facesFile,
-      crossDomain: true,
-    })
-      .then((response) => response.data)
-      .catch((error) => {
-        console.log(error);
-      });
+    const facesFile = state.file.faces || null;
+    if (facesFile !== null) {
+      const responseData = await axios({
+        method: 'get',
+        url: facesFile,
+        crossDomain: true,
+      })
+        .then((response) => response.data)
+        .catch((error) => {
+          console.log(error);
+        });
 
-    let thumbnailCount = 0;
-    let dataCount = 0;
-    for (let i = 0; i < responseData.length; i += 1) {
-      const face = responseData[i];
-      if (typeof face.thumbnail !== 'undefined') {
-        thumbnailCount += 1;
+      let thumbnailCount = 0;
+      let dataCount = 0;
+      for (let i = 0; i < responseData.length; i += 1) {
+        const face = responseData[i];
+        if (typeof face.thumbnail !== 'undefined') {
+          thumbnailCount += 1;
+        }
+        if (typeof face.firstName !== 'undefined') {
+          dataCount += 1;
+        }
       }
-      if (typeof face.firstName !== 'undefined') {
-        dataCount += 1;
+      if (
+        responseData.length === thumbnailCount &&
+        responseData.length === dataCount
+      ) {
+        setState({
+          createThumbnailsBtnText: <span>Re-identify people</span>,
+          identifyStep: 1,
+        });
       }
-    }
-    if (
-      responseData.length === thumbnailCount &&
-      responseData.length === dataCount
-    ) {
-      setState({
-        createThumbnailsBtnText: <span>Re-identify people</span>,
-        identifyStep: 1,
-      });
     }
   }, [state]);
 
@@ -341,7 +350,9 @@ const ParseClassPiece = (props) => {
   ];
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>{heading}</h2>

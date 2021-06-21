@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Spinner,
   Button,
@@ -25,7 +25,7 @@ import axios from 'axios';
 import { Redirect } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-import Breadcrumbs from '../components/breadcrumbs';
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -798,7 +798,9 @@ export default class User extends Component {
       <div>
         {redirectElem}
         {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

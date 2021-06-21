@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Spinner,
   Button,
@@ -12,12 +12,15 @@ import { Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
+import {
+  parseReferenceLabels,
+  parseReferenceTypes,
+  renderLoader,
+} from '../helpers';
 
-import Breadcrumbs from '../components/breadcrumbs';
-import ViewSpatial from '../components/view-spatial';
-import AddRelation from '../components/add-relations';
-
-import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const ViewSpatial = lazy(() => import('../components/view-spatial'));
+const AddRelation = lazy(() => import('../components/add-relations'));
 
 const mapStateToProps = (state) => ({
   entitiesLoaded: state.entitiesLoaded,
@@ -365,17 +368,19 @@ class Spatial extends Component {
     );
     if (!loading) {
       const viewComponent = (
-        <ViewSpatial
-          item={item}
-          delete={this.toggleDeleteModal}
-          update={this.update}
-          updateBtn={updateBtn}
-          deleteBtn={deleteBtn}
-          errorVisible={errorVisible}
-          errorText={errorText}
-          closeUploadModal={closeUploadModal}
-          reload={this.reload}
-        />
+        <Suspense fallback={renderLoader()}>
+          <ViewSpatial
+            item={item}
+            delete={this.toggleDeleteModal}
+            update={this.update}
+            updateBtn={updateBtn}
+            deleteBtn={deleteBtn}
+            errorVisible={errorVisible}
+            errorText={errorText}
+            closeUploadModal={closeUploadModal}
+            reload={this.reload}
+          />
+        </Suspense>
       );
       content = <div className="items-container">{viewComponent}</div>;
       if (redirect) {
@@ -420,21 +425,25 @@ class Spatial extends Component {
     let addRelation = [];
     if (item !== null) {
       addRelation = (
-        <AddRelation
-          reload={this.reload}
-          reference={relationReference}
-          item={item}
-          referencesLabels={referencesLabels}
-          referencesTypes={referencesTypes}
-          type="spatial"
-        />
+        <Suspense fallback={[]}>
+          <AddRelation
+            reload={this.reload}
+            reference={relationReference}
+            item={item}
+            referencesLabels={referencesLabels}
+            referencesTypes={referencesTypes}
+            type="spatial"
+          />
+        </Suspense>
       );
     }
     return (
       <div>
         {redirectElem}
         {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

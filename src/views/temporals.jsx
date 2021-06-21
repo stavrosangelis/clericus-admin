@@ -1,752 +1,480 @@
-import React, { Component } from 'react';
-import { Table, Card, CardBody, Spinner } from 'reactstrap';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useReducer,
+  useRef,
+  Suspense,
+  lazy,
+} from 'react';
+import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-
-import axios from 'axios';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
-
-import Breadcrumbs from '../components/breadcrumbs';
-import PageActions from '../components/page-actions';
-import BatchActions from '../components/add-batch-relations';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { deleteData, getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const APIPath = process.env.REACT_APP_APIPATH;
-const mapStateToProps = (state) => ({
-  temporalsPagination: state.temporalsPagination,
-});
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const PageActions = lazy(() => import('../components/Page.actions'));
+const BatchActions = lazy(() => import('../components/add-batch-relations'));
+const List = lazy(() => import('../components/List'));
 
-function mapDispatchToProps(dispatch) {
-  return {
-    setPaginationParams: (type, params) =>
-      dispatch(setPaginationParams(type, params)),
+const heading = 'Temporal';
+const breadcrumbsItems = [
+  { label: heading, icon: 'pe-7s-clock', active: true, path: '' },
+];
+const columns = [
+  {
+    props: ['checked'],
+    label: 'checked',
+    link: false,
+    order: false,
+    align: 'center',
+    width: 80,
+  },
+  {
+    props: ['#'],
+    label: '#',
+    link: null,
+    order: false,
+    orderLabel: '',
+    width: 40,
+  },
+  {
+    props: ['label'],
+    label: 'Label',
+    link: { element: 'self', path: 'temporal' },
+    order: true,
+    orderLabel: 'label',
+  },
+  {
+    props: ['createdAt'],
+    label: 'Created',
+    link: null,
+    order: true,
+    orderLabel: 'createdAt',
+  },
+  {
+    props: ['updatedAt'],
+    label: 'Updated',
+    link: null,
+    order: true,
+    orderLabel: 'updatedAt',
+  },
+  {
+    props: ['edit'],
+    label: 'Edit',
+    link: { element: 'self', path: 'temporal' },
+    order: false,
+    align: 'center',
+  },
+];
+
+const Temporal = () => {
+  // redux
+  const dispatch = useDispatch();
+
+  const limit = useSelector((state) => state.temporalsPagination.limit);
+  const page = useSelector((state) => state.temporalsPagination.page);
+  const orderField = useSelector(
+    (state) => state.temporalsPagination.orderField
+  );
+  const orderDesc = useSelector((state) => state.temporalsPagination.orderDesc);
+  const searchInput = useSelector(
+    (state) => state.temporalsPagination.searchInput
+  );
+  const mounted = useRef(true);
+
+  // state
+  const defaultState = {
+    limit,
+    page,
+    gotoPage: page,
+    searchInput,
   };
-}
+  const [state, setState] = useReducer(
+    (curState, newState) => ({ ...curState, ...newState }),
+    defaultState
+  );
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allChecked, setAllChecked] = useState(false);
+  const [prevLimit, setPrevLimit] = useState(25);
+  const [prevPage, setPrevPage] = useState(1);
+  const [prevActiveType, setPrevActiveType] = useState(null);
+  const [prevStatus, setPrevStatus] = useState(null);
+  const [prevOrderField, setPrevOrderField] = useState('label');
+  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
+  const [reLoading, setReLoading] = useState(false);
+  const [prevReLoading, setPrevReLoading] = useState(false);
 
-class Temporals extends Component {
-  constructor(props) {
-    super(props);
-
-    const { temporalsPagination } = this.props;
-    const {
-      orderField,
-      orderDesc,
-      page,
-      limit,
-      status,
-      searchInput,
-    } = temporalsPagination;
-
-    this.state = {
-      loading: true,
-      tableLoading: true,
-      items: [],
-      orderField,
-      orderDesc,
-      page,
-      gotoPage: page,
-      limit,
-      status,
-      totalPages: 0,
-      totalItems: 0,
-      allChecked: false,
-      searchInput,
-    };
-    this.load = this.load.bind(this);
-    this.simpleSearch = this.simpleSearch.bind(this);
-    this.clearSearch = this.clearSearch.bind(this);
-    this.updateOrdering = this.updateOrdering.bind(this);
-    this.updatePage = this.updatePage.bind(this);
-    this.updateLimit = this.updateLimit.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.setStatus = this.setStatus.bind(this);
-    this.itemsTableRows = this.itemsTableRows.bind(this);
-    this.toggleSelected = this.toggleSelected.bind(this);
-    this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
-    this.deleteSelected = this.deleteSelected.bind(this);
-    this.updateStorePagination = this.updateStorePagination.bind(this);
-    this.removeSelected = this.removeSelected.bind(this);
-
-    // hack to kill load promise on unmount
-    this.cancelLoad = false;
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentWillUnmount() {
-    this.cancelLoad = true;
-  }
-
-  handleChange(e) {
+  const handleChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-    this.setState({
+    setState({
       [name]: value,
     });
-  }
+  };
 
-  setStatus(status = null) {
-    this.updateStorePagination({ status });
-    this.setState(
-      {
-        status,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const prepareItems = useCallback((itemsParam) => {
+    const newItems = [];
+    for (let i = 0; i < itemsParam.length; i += 1) {
+      const item = itemsParam[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    return newItems;
+  }, []);
 
-  async load() {
-    const {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    } = this.state;
-    this.setState({
-      tableLoading: true,
-    });
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
     const params = {
-      page,
-      limit,
+      page: state.page,
+      limit: state.limit,
       orderField,
       orderDesc,
-      status,
+      status: state.status,
     };
-    if (searchInput !== '') {
-      params.label = searchInput;
+    if (state.searchInput !== '') {
+      params.label = state.searchInput;
     }
-    const url = `${APIPath}temporals`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (this.cancelLoad) {
-      return false;
+    if (state.activeType !== null) {
+      params.temporalType = state.activeType;
     }
-    const items = responseData.data.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = false;
-      return itemCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
+    const responseData = await getData(`temporals`, params);
+    if (mounted.current) {
+      const { data: newData } = responseData;
+      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      const newItems = await prepareItems(newData.data);
+      setItems(newItems);
+      setTableLoading(false);
+      setState({ page: currentPage });
+      setTotalPages(newData.totalPages);
+      setTotalItems(newData.totalItems);
     }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        items,
-        totalItems: responseData.totalItems,
-      });
-    }
-    return false;
-  }
 
-  async simpleSearch(e) {
-    e.preventDefault();
-    const {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    } = this.state;
-    if (searchInput < 2) {
-      return false;
-    }
-    this.updateStorePagination({ searchInput });
-    this.setState({
-      tableLoading: true,
-    });
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-      label: searchInput,
+    return true;
+  }, [state, prepareItems, orderDesc, orderField, mounted]);
+
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
     };
-    const url = `${APIPath}temporals`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
+  }, []);
+
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      activeTypeParam = null,
+      orderFieldParam = '',
+      orderDescParam = false,
+      statusParam = null,
+      searchInputParam = '',
+    }) => {
+      const limitCopy = limitParam === null ? state.limit : limitParam;
+      const pageCopy = pageParam === null ? state.page : pageParam;
+      const activeTypeCopy =
+        activeTypeParam === null ? state.activeType : activeTypeParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? state.orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? state.orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? state.status : statusParam;
+      const searchInputCopy =
+        searchInputParam === null ? state.searchInput : searchInputParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        activeType: activeTypeCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        status: statusCopy,
+        searchInput: searchInputCopy,
+      };
+      dispatch(setPaginationParams('temporals', payload));
+    },
+    [
+      dispatch,
+      state.activeType,
+      state.limit,
+      state.orderDesc,
+      state.orderField,
+      state.page,
+      state.searchInput,
+      state.status,
+    ]
+  );
+
+  const clearSearch = () => {
+    setState({ searchInput: '' });
+    updateStorePagination({ searchInput: '' });
+    setLoading(true);
+  };
+
+  const updatePage = (value) => {
+    if (value > 0 && value !== state.page) {
+      updateStorePagination({ page: value });
+      setState({
+        page: value,
+        gotoPage: value,
       });
+    }
+  };
 
-    const items = responseData.data.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = false;
-      return itemCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
+  const gotoPage = () => {
+    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
+      updateStorePagination({ page: state.gotoPage });
+      setState({ page: Number(state.gotoPage) });
     }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        items,
-      });
-    }
-    return false;
-  }
+  };
 
-  clearSearch() {
-    return new Promise((resolve) => {
-      this.setState({
-        searchInput: '',
-      });
-      this.updateStorePagination({ searchInput: '' });
-      resolve(true);
-    }).then(() => {
-      this.load();
-    });
-  }
+  const updateLimit = (value) => {
+    updateStorePagination({ limit: value });
+    setState({ limit: value });
+  };
 
-  updateOrdering(orderField = '') {
-    const {
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let orderDesc = false;
-    if (orderField === stateOrderField) {
-      orderDesc = !stateOrderDesc;
-    }
-    this.updateStorePagination({ orderField, orderDesc });
-    this.setState(
-      {
-        orderField,
-        orderDesc,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const toggleSelected = (i) => {
+    const index = i - (Number(state.page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
 
-  updatePage(value) {
-    const { page } = this.state;
-    if (value > 0 && value !== page) {
-      this.updateStorePagination({ page: value });
-      this.setState(
-        {
-          page: value,
-          gotoPage: value,
-        },
-        () => {
-          this.load();
-        }
-      );
+  const toggleSelectedAll = () => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
     }
-  }
+    setAllChecked(newAllChecked);
+  };
 
-  updateStorePagination({
-    limit = null,
-    page = null,
-    orderField = '',
-    orderDesc = false,
-    status = null,
-    searchInput = '',
-  }) {
-    const {
-      limit: stateLimit,
-      page: statePage,
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-      status: stateStatus,
-      searchInput: stateSearchInput,
-    } = this.state;
-    let limitCopy = limit;
-    let pageCopy = page;
-    let orderFieldCopy = orderField;
-    let orderDescCopy = orderDesc;
-    let statusCopy = status;
-    let searchInputCopy = searchInput;
-    if (limit === null) {
-      limitCopy = stateLimit;
+  const clearSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = false;
+      newItems.push(item);
     }
-    if (page === null) {
-      pageCopy = statePage;
-    }
-    if (orderField === '') {
-      orderFieldCopy = stateOrderField;
-    }
-    if (orderDesc === false) {
-      orderDescCopy = stateOrderDesc;
-    }
-    if (status === null) {
-      statusCopy = stateStatus;
-    }
-    if (searchInput === null) {
-      searchInputCopy = stateSearchInput;
-    }
-    const payload = {
-      limit: limitCopy,
-      page: pageCopy,
-      orderField: orderFieldCopy,
-      orderDesc: orderDescCopy,
-      status: statusCopy,
-      searchInput: searchInputCopy,
-    };
-    const { setPaginationParams: setPaginationParamsFn } = this.props;
-    setPaginationParamsFn('temporals', payload);
-  }
+    setAllChecked(false);
+  }, [items]);
 
-  gotoPage(e) {
-    e.preventDefault();
-    const { page } = this.state;
-    let { gotoPage } = this.state;
-    gotoPage = parseInt(gotoPage, 10);
-    if (gotoPage > 0 && gotoPage !== page) {
-      this.updateStorePagination({ page: gotoPage });
-      this.setState(
-        {
-          page: gotoPage,
-        },
-        () => {
-          this.load();
-        }
-      );
+  const reload = () => {
+    setReLoading(true);
+  };
+
+  useEffect(() => {
+    if (prevLimit !== state.limit) {
+      setPrevLimit(state.limit);
+      clearSelectedAll();
+      load();
     }
-  }
-
-  updateLimit(limit) {
-    this.updateStorePagination({ limit });
-    this.setState(
-      {
-        limit,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  itemsTableRows() {
-    const { items, page, limit } = this.state;
-    const rows = [];
-    for (let i = 0; i < items.length; i += 1) {
-      const item = items[i];
-      const countPage = parseInt(page, 10) - 1;
-      const count = i + 1 + countPage * limit;
-      const { label } = item;
-      const createdAt = (
-        <div>
-          <small>{item.createdAt.split('T')[0]}</small>
-          <br />
-          <small>{item.createdAt.split('T')[1]}</small>
-        </div>
-      );
-      const updatedAt = (
-        <div>
-          <small>{item.updatedAt.split('T')[0]}</small>
-          <br />
-          <small>{item.updatedAt.split('T')[1]}</small>
-        </div>
-      );
-      const row = (
-        <tr key={i}>
-          <td>
-            <div className="select-checkbox-container">
-              <input
-                type="checkbox"
-                value={i}
-                checked={items[i].checked}
-                onChange={() => false}
-              />
-              <span
-                className="select-checkbox"
-                onClick={() => this.toggleSelected(i)}
-                onKeyDown={() => false}
-                role="button"
-                tabIndex={0}
-                aria-label="toggle selected"
-              />
-            </div>
-          </td>
-          <td>{count}</td>
-          <td>
-            <Link href={`/temporal/${item._id}`} to={`/temporal/${item._id}`}>
-              {label}
-            </Link>
-          </td>
-          <td>{createdAt}</td>
-          <td>{updatedAt}</td>
-          <td>
-            <Link
-              href={`/temporal/${item._id}`}
-              to={`/temporal/${item._id}`}
-              className="edit-item"
-            >
-              <i className="fa fa-pencil" />
-            </Link>
-          </td>
-        </tr>
-      );
-      rows.push(row);
+    if (prevPage !== state.page) {
+      setPrevPage(state.page);
+      clearSelectedAll();
+      load();
     }
-    return rows;
-  }
+    if (prevActiveType !== state.activeType) {
+      setPrevActiveType(state.activeType);
+      clearSelectedAll();
+      load();
+    }
+    if (prevStatus !== state.status) {
+      setPrevStatus(state.status);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderField !== orderField) {
+      setPrevOrderField(orderField);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderDesc !== orderDesc) {
+      setPrevOrderDesc(orderDesc);
+      clearSelectedAll();
+      load();
+    }
+    if (reLoading && !prevReLoading) {
+      setPrevReLoading(reLoading);
+      clearSelectedAll();
+      load();
+    }
+  }, [
+    clearSelectedAll,
+    load,
+    orderField,
+    orderDesc,
+    prevLimit,
+    prevPage,
+    prevActiveType,
+    prevStatus,
+    prevOrderField,
+    prevOrderDesc,
+    prevReLoading,
+    reLoading,
+    state.limit,
+    state.page,
+    state.activeType,
+    state.status,
+  ]);
 
-  toggleSelected(i) {
-    const { items } = this.state;
-    const newPersonChecked = !items[i].checked;
-    items[i].checked = newPersonChecked;
-    this.setState({
-      items,
-    });
-  }
-
-  toggleSelectedAll() {
-    const { allChecked: stateAllChecked, items } = this.state;
-    const allChecked = !stateAllChecked;
-    const newItems = items.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = allChecked;
-      return itemCopy;
-    });
-    this.setState({
-      items: newItems,
-      allChecked,
-    });
-  }
-
-  async deleteSelected() {
-    const { items } = this.state;
-    const selectedTemporals = items
+  const deleteSelected = async () => {
+    const selectedItems = items
       .filter((item) => item.checked)
       .map((item) => item._id);
     const data = {
-      _ids: selectedTemporals,
+      _ids: selectedItems,
     };
-    const url = `${APIPath}temporals`;
-    const responseData = await axios({
-      method: 'delete',
-      url,
-      crossDomain: true,
-      data,
-    })
-      .then(() => true)
-      .catch((error) => {
-        console.log(error);
-      });
+    const responseData = await deleteData(`temporals`, data);
     if (responseData) {
-      this.setState({
-        allChecked: false,
-      });
-      this.load();
+      setAllChecked(false);
+      setReLoading(true);
     }
-  }
+    return true;
+  };
 
-  removeSelected(_id = null) {
+  const removeSelected = (_id = null) => {
     if (_id == null) {
       return false;
     }
-    const { items } = this.state;
-    const newTemporals = items.map((item) => {
+    const copy = [...items];
+    const newItems = copy.map((item) => {
       const itemCopy = item;
       if (itemCopy._id === _id) {
         itemCopy.checked = false;
       }
       return itemCopy;
     });
-    this.setState({
-      items: newTemporals,
-    });
-    return false;
-  }
-
-  render() {
-    const {
-      page,
-      gotoPage,
-      totalPages,
-      limit,
-      loading,
-      tableLoading,
-      allChecked: stateAllChecked,
-      orderField,
-      orderDesc,
-      searchInput,
-      totalItems,
-      items,
-    } = this.state;
-    const heading = 'Temporal';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-clock', active: true, path: '' },
-    ];
-
-    const pageActions = (
+    setItems(newItems);
+    return true;
+  };
+  const pageActions = (
+    <Suspense fallback={renderLoader()}>
       <PageActions
-        clearSearch={this.clearSearch}
-        current_page={page}
-        gotoPage={this.gotoPage}
-        gotoPageValue={gotoPage}
-        handleChange={this.handleChange}
-        limit={limit}
+        clearSearch={clearSearch}
+        current_page={state.page}
+        defaultLimit={25}
+        gotoPage={gotoPage}
+        gotoPageValue={state.gotoPage}
+        handleChange={handleChange}
+        limit={state.limit}
+        page={state.page}
         pageType="temporals"
-        searchInput={searchInput}
-        setStatus={this.setStatus}
-        simpleSearch={this.simpleSearch}
-        total_pages={totalPages}
+        reload={reload}
+        searchInput={state.searchInput}
+        totalPages={totalPages}
         types={[]}
-        updateLimit={this.updateLimit}
-        updatePage={this.updatePage}
+        updateLimit={updateLimit}
+        updatePage={updatePage}
       />
-    );
-    let content = (
-      <div>
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <div style={{ padding: '40pt', textAlign: 'center' }}>
-              <Spinner type="grow" color="info" /> <i>loading...</i>
-            </div>
-          </div>
-        </div>
-        {pageActions}
-      </div>
-    );
-    if (!loading) {
-      const addNewBtn = (
-        <Link
-          className="btn btn-outline-secondary add-new-item-btn"
-          to="/temporal/new"
-          href="/temporal/new"
-        >
-          <i className="fa fa-plus" />
-        </Link>
-      );
+    </Suspense>
+  );
 
-      const tableLoadingSpinner = (
-        <tr>
-          <td colSpan={5}>
+  let content = (
+    <div>
+      {pageActions}
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
             <Spinner type="grow" color="info" /> <i>loading...</i>
-          </td>
-        </tr>
-      );
-      let itemsRows = [];
-      if (tableLoading) {
-        itemsRows = tableLoadingSpinner;
-      } else {
-        itemsRows = this.itemsTableRows();
-      }
-      const allChecked = stateAllChecked ? 'checked' : '';
-
-      const selectedTemporals = items.filter((item) => item.checked);
-
-      const batchActions = (
-        <BatchActions
-          items={selectedTemporals}
-          removeSelected={this.removeSelected}
-          type="Temporal"
-          relationProperties={[]}
-          deleteSelected={this.deleteSelected}
-          selectAll={this.toggleSelectedAll}
-          allChecked={stateAllChecked}
-        />
-      );
-
-      // ordering
-      let labelOrderIcon = [];
-      let createdOrderIcon = [];
-      let updatedOrderIcon = [];
-      if (orderField === 'label' || orderField === '') {
-        if (orderDesc) {
-          labelOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          labelOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'createdAt') {
-        if (orderDesc) {
-          createdOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          createdOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'updatedAt') {
-        if (orderDesc) {
-          updatedOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          updatedOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      content = (
-        <div className="items-container">
-          {pageActions}
-          <div className="row">
-            <div className="col-12">
-              <Card>
-                <CardBody>
-                  <div className="pull-right">{batchActions}</div>
-                  <Table hover>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '30px' }}>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Label {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th style={{ width: '30px' }} aria-label="edit" />
-                      </tr>
-                    </thead>
-                    <tbody>{itemsRows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Label {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th aria-label="edit" />
-                      </tr>
-                    </tfoot>
-                  </Table>
-                  <div className="pull-right">{batchActions}</div>
-                </CardBody>
-              </Card>
-            </div>
           </div>
-          {pageActions}
-          {addNewBtn}
         </div>
-      );
-    }
+      </div>
+      {pageActions}
+    </div>
+  );
 
-    return (
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+  if (!loading) {
+    const listIndex = (Number(state.page) - 1) * limit;
+    const addNewBtn = (
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+        href="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
+    );
+    const selectedItems = items.filter((item) => item.checked);
+
+    const batchActions = (
+      <Suspense fallback={[]}>
+        <BatchActions
+          items={selectedItems}
+          removeSelected={removeSelected}
+          type="Event"
+          relationProperties={[]}
+          deleteSelected={deleteSelected}
+          selectAll={toggleSelectedAll}
+          allChecked={allChecked}
+          reload={reload}
+        />
+      </Suspense>
+    );
+    const table = tableLoading ? (
+      <div style={{ padding: '40pt', textAlign: 'center' }}>
+        <Spinner type="grow" color="info" /> <i>loading...</i>
+      </div>
+    ) : (
+      <Suspense fallback={renderLoader()}>
+        <List
+          columns={columns}
+          items={items}
+          listIndex={listIndex}
+          type="temporals"
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          toggleSelected={toggleSelected}
+        />
+      </Suspense>
+    );
+
+    content = (
+      <div className="temporals-container">
+        {pageActions}
         <div className="row">
           <div className="col-12">
-            <h2>
-              {heading} <small>({totalItems})</small>
-            </h2>
+            <Card>
+              <CardBody className="temporals-card">
+                <div className="pull-right">{batchActions}</div>
+                {table}
+                <div className="pull-right">{batchActions}</div>
+              </CardBody>
+            </Card>
           </div>
         </div>
-        {content}
+        {pageActions}
+        {addNewBtn}
       </div>
     );
   }
-}
 
-Temporals.defaultProps = {
-  temporalsPagination: null,
-  setPaginationParams: () => {},
+  return (
+    <div>
+      <Suspense fallback={renderLoader()}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>
+            {heading} <small>({totalItems})</small>
+          </h2>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 };
-Temporals.propTypes = {
-  temporalsPagination: PropTypes.object,
-  setPaginationParams: PropTypes.func,
-};
-export default compose(connect(mapStateToProps, mapDispatchToProps))(Temporals);
+export default Temporal;

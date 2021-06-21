@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import {
   Card,
   CardTitle,
@@ -24,12 +24,15 @@ import {
   getResourceThumbnailURL,
   getResourceFullsizeURL,
   jsonStringToObject,
+  renderLoader,
 } from '../helpers';
-import UploadFile from './upload-file';
-import RelatedEntitiesBlock from './related-entities-block';
-import ResourceAlternateLabels from './resource-alternate-labels';
 
-import Viewer from './image-viewer';
+const UploadFile = lazy(() => import('./upload-file'));
+const RelatedEntitiesBlock = lazy(() => import('./related-entities-block'));
+const ResourceAlternateLabels = lazy(() =>
+  import('./resource-alternate-labels')
+);
+const Viewer = lazy(() => import('./image-viewer'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -41,7 +44,7 @@ class ViewResource extends Component {
   constructor(props) {
     super(props);
     const { resource } = this.props;
-    const status = 'private';
+    const status = resource?.status || 'private';
     const newLabel = resource?.label || '';
     const newDescription = resource?.description || '';
     const newOriginalLocation = resource?.originalLocation || '';
@@ -118,7 +121,7 @@ class ViewResource extends Component {
   }
 
   updateResourceDetails(resource) {
-    const status = 'private';
+    const status = resource?.status || 'private';
     const {
       label,
       originalLocation,
@@ -387,6 +390,7 @@ class ViewResource extends Component {
     const {
       imageViewerVisible,
       label,
+      status,
       systemType,
       description,
       updateFileModal: stateUpdateFileModal,
@@ -433,12 +437,14 @@ class ViewResource extends Component {
         </div>,
       ];
       imgViewer = (
-        <Viewer
-          visible={imageViewerVisible}
-          path={fullsizePath}
-          label={label}
-          toggle={this.toggleImageViewer}
-        />
+        <Suspense fallback={renderLoader()}>
+          <Viewer
+            visible={imageViewerVisible}
+            path={fullsizePath}
+            label={label}
+            toggle={this.toggleImageViewer}
+          />
+        </Suspense>
       );
     }
     if (
@@ -491,14 +497,16 @@ class ViewResource extends Component {
     let updateFileModal = [];
     if (resource === null) {
       thumbnailImage = (
-        <UploadFile
-          _id={null}
-          systemType={systemType}
-          uploadResponse={uploadResponse}
-          label={label}
-          description={description}
-          updateSystemType={this.updateSystemType}
-        />
+        <Suspense fallback={renderLoader()}>
+          <UploadFile
+            _id={null}
+            systemType={systemType}
+            uploadResponse={uploadResponse}
+            label={label}
+            description={description}
+            updateSystemType={this.updateSystemType}
+          />
+        </Suspense>
       );
     } else {
       thumbnailImage.push(
@@ -648,7 +656,7 @@ class ViewResource extends Component {
     const statusPrivate = 'secondary';
     let publicOutline = true;
     let privateOutline = false;
-    if (resource !== null && resource.status === 'public') {
+    if (status === 'public') {
       statusPublic = 'success';
       publicOutline = false;
       privateOutline = true;
@@ -670,11 +678,13 @@ class ViewResource extends Component {
       alternateLabelsBlock = (
         <div className="alternate-appelations">
           <div className="label">Alternate labels</div>
-          <ResourceAlternateLabels
-            data={alData}
-            update={this.updateAlternateLabel}
-            remove={this.removeAlternateLabel}
-          />
+          <Suspense fallback={[]}>
+            <ResourceAlternateLabels
+              data={alData}
+              update={this.updateAlternateLabel}
+              remove={this.removeAlternateLabel}
+            />
+          </Suspense>
         </div>
       );
     }
@@ -799,11 +809,13 @@ class ViewResource extends Component {
               </CardBody>
             </Card>
 
-            <RelatedEntitiesBlock
-              item={resource}
-              itemType="Resource"
-              reload={reload}
-            />
+            <Suspense fallback={renderLoader()}>
+              <RelatedEntitiesBlock
+                item={resource}
+                itemType="Resource"
+                reload={reload}
+              />
+            </Suspense>
           </div>
         </div>
         {updateFileModal}

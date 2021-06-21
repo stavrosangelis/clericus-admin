@@ -18,7 +18,7 @@ const AnnotationsLayer = (props) => {
     const html = document.querySelector('html');
     let top = e.clientY;
     let left = e.clientX;
-    if (html.classList.contains('nav-open') && window.innerWidth < 992) {
+    if (html.classList.contains('nav-open')) {
       left -= 260;
       const container = propsContainer.current;
       const rect = container.getBoundingClientRect();

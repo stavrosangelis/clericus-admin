@@ -1,892 +1,543 @@
-import React, { Component } from 'react';
-import { Table, Card, CardBody, Spinner } from 'reactstrap';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useReducer,
+  useRef,
+  Suspense,
+  lazy,
+} from 'react';
+import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
-
-import Breadcrumbs from '../components/breadcrumbs';
-import PageActions from '../components/page-actions';
-import BatchActions from '../components/add-batch-relations';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { deleteData, getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const APIPath = process.env.REACT_APP_APIPATH;
-const mapStateToProps = (state) => ({
-  eventsPagination: state.eventsPagination,
-  eventTypes: state.eventTypes,
-});
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const PageActions = lazy(() => import('../components/Page.actions'));
+const BatchActions = lazy(() => import('../components/add-batch-relations'));
+const List = lazy(() => import('../components/List'));
 
-function mapDispatchToProps(dispatch) {
-  return {
-    setPaginationParams: (type, params) =>
-      dispatch(setPaginationParams(type, params)),
+const heading = 'Events';
+const breadcrumbsItems = [
+  { label: heading, icon: 'pe-7s-date', active: true, path: '' },
+];
+const columns = [
+  {
+    props: ['checked'],
+    label: 'checked',
+    link: false,
+    order: false,
+    align: 'center',
+    width: 80,
+  },
+  {
+    props: ['#'],
+    label: '#',
+    link: null,
+    order: false,
+    orderLabel: '',
+    width: 40,
+  },
+  {
+    props: ['label'],
+    label: 'Label',
+    link: { element: 'self', path: 'event' },
+    order: true,
+    orderLabel: 'label',
+  },
+  {
+    props: ['temporal'],
+    label: 'Temporal',
+    link: {
+      element: 'temporal',
+      key: '_id',
+      path: 'temporal',
+      type: 'array',
+    },
+    order: false,
+  },
+  {
+    props: ['spatial'],
+    label: 'Spatial',
+    link: {
+      element: 'spatial',
+      key: '_id',
+      path: 'spatial',
+      type: 'array',
+    },
+    order: false,
+  },
+  {
+    props: ['status'],
+    label: 'Status',
+    link: null,
+    order: true,
+    orderLabel: 'status',
+    align: 'center',
+  },
+  {
+    props: ['createdAt'],
+    label: 'Created',
+    link: null,
+    order: true,
+    orderLabel: 'createdAt',
+  },
+  {
+    props: ['updatedAt'],
+    label: 'Updated',
+    link: null,
+    order: true,
+    orderLabel: 'updatedAt',
+  },
+  {
+    props: ['edit'],
+    label: 'Edit',
+    link: { element: 'self', path: 'event' },
+    order: false,
+    align: 'center',
+  },
+];
+
+const Events = () => {
+  // redux
+  const dispatch = useDispatch();
+  const eventTypes = useSelector((state) => state.eventTypes);
+
+  const limit = useSelector((state) => state.eventsPagination.limit);
+  const activeType = useSelector((state) => state.eventsPagination.activeType);
+  const page = useSelector((state) => state.eventsPagination.page);
+  const orderField = useSelector((state) => state.eventsPagination.orderField);
+  const orderDesc = useSelector((state) => state.eventsPagination.orderDesc);
+  const status = useSelector((state) => state.eventsPagination.status);
+  const searchInput = useSelector(
+    (state) => state.eventsPagination.searchInput
+  );
+  const mounted = useRef(true);
+
+  // state
+  const defaultState = {
+    limit,
+    activeType,
+    page,
+    gotoPage: page,
+    status,
+    searchInput,
   };
-}
+  const [state, setState] = useReducer(
+    (curState, newState) => ({ ...curState, ...newState }),
+    defaultState
+  );
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allChecked, setAllChecked] = useState(false);
+  const [prevLimit, setPrevLimit] = useState(25);
+  const [prevPage, setPrevPage] = useState(1);
+  const [prevActiveType, setPrevActiveType] = useState(null);
+  const [prevStatus, setPrevStatus] = useState(null);
+  const [prevOrderField, setPrevOrderField] = useState('label');
+  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
+  const [reLoading, setReLoading] = useState(false);
+  const [prevReLoading, setPrevReLoading] = useState(false);
 
-class Events extends Component {
-  constructor(props) {
-    super(props);
-
-    const { eventsPagination } = this.props;
-    const {
-      activeType,
-      orderField,
-      orderDesc,
-      page,
-      limit,
-      status,
-      searchInput,
-    } = eventsPagination;
-
-    this.state = {
-      loading: true,
-      tableLoading: true,
-      items: [],
-      activeType,
-      orderField,
-      orderDesc,
-      page,
-      gotoPage: page,
-      limit,
-      status,
-      totalPages: 0,
-      totalItems: 0,
-      allChecked: false,
-      searchInput,
-    };
-    this.load = this.load.bind(this);
-    this.updateOrdering = this.updateOrdering.bind(this);
-    this.updatePage = this.updatePage.bind(this);
-    this.updateLimit = this.updateLimit.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.setStatus = this.setStatus.bind(this);
-    this.setActiveType = this.setActiveType.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.itemsTableRows = this.itemsTableRows.bind(this);
-    this.toggleSelected = this.toggleSelected.bind(this);
-    this.toggleSelectedAll = this.toggleSelectedAll.bind(this);
-    this.deleteSelected = this.deleteSelected.bind(this);
-    this.updateStorePagination = this.updateStorePagination.bind(this);
-    this.removeSelected = this.removeSelected.bind(this);
-    this.simpleSearch = this.simpleSearch.bind(this);
-    this.clearSearch = this.clearSearch.bind(this);
-    this.findEventType = this.findEventType.bind(this);
-    this.findEventTypeRec = this.findEventTypeRec.bind(this);
-    this.findEventTypeById = this.findEventTypeById.bind(this);
-    this.findEventTypeByIdRec = this.findEventTypeByIdRec.bind(this);
-
-    // hack to kill load promise on unmount
-    this.cancelLoad = false;
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentWillUnmount() {
-    this.cancelLoad = true;
-  }
-
-  handleChange(e) {
+  const handleChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-    this.setState({
+    setState({
       [name]: value,
     });
-  }
+  };
 
-  setActiveType(type) {
-    this.updateStorePagination({ activeType: type });
-    this.setState(
-      {
-        activeType: type,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const prepareItems = useCallback((itemsParam) => {
+    const newItems = [];
+    for (let i = 0; i < itemsParam.length; i += 1) {
+      const item = itemsParam[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    return newItems;
+  }, []);
 
-  setStatus(status = null) {
-    this.updateStorePagination({ status });
-    this.setState(
-      {
-        status,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  async load() {
-    const {
-      page,
-      limit,
-      activeType,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    } = this.state;
-    this.setState({
-      tableLoading: true,
-    });
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
     const params = {
-      page,
-      limit,
+      page: state.page,
+      limit: state.limit,
       orderField,
       orderDesc,
-      status,
+      status: state.status,
     };
-    if (searchInput !== '') {
-      params.label = searchInput;
+    if (state.searchInput !== '') {
+      params.label = state.searchInput;
     }
-    const url = `${APIPath}events`;
-    if (activeType !== null) {
-      const eventType = this.findEventType();
-      if (eventType !== null) {
-        params.eventType = eventType._id;
-      }
+    if (state.activeType !== null) {
+      params.eventType = state.activeType;
     }
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (this.cancelLoad) {
-      return false;
+    const responseData = await getData(`events`, params);
+    if (mounted.current) {
+      const { data: newData } = responseData;
+      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      const newItems = await prepareItems(newData.data);
+      setItems(newItems);
+      setTableLoading(false);
+      setState({ page: currentPage });
+      setTotalPages(newData.totalPages);
+      setTotalItems(newData.totalItems);
     }
-    const items = responseData.data.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = false;
-      return itemCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        items,
-      });
-    }
-    return false;
-  }
 
-  findEventType() {
-    const { activeType: type } = this.state;
-    const { eventTypes } = this.props;
-    const eventType = this.findEventTypeRec(type, eventTypes);
-    return eventType;
-  }
+    return true;
+  }, [state, prepareItems, orderDesc, orderField, mounted]);
 
-  findEventTypeRec(type, types) {
-    let eventType = types.find((t) => t.label === type) || null;
-    if (eventType === null) {
-      for (let c = 0; c < types.length; c += 1) {
-        const { children } = types[c];
-        eventType = this.findEventTypeRec(type, children);
-        if (eventType !== null) {
-          break;
-        }
-      }
-    }
-    return eventType;
-  }
-
-  findEventTypeById(_id = null) {
-    if (_id === null) {
-      return null;
-    }
-    const { eventTypes } = this.props;
-    const eventType = this.findEventTypeByIdRec(_id, eventTypes);
-    return eventType;
-  }
-
-  findEventTypeByIdRec(_id, types) {
-    let eventType = types.find((t) => t._id === _id) || null;
-    if (eventType === null) {
-      for (let c = 0; c < types.length; c += 1) {
-        const { children } = types[c];
-        eventType = this.findEventTypeByIdRec(_id, children);
-        if (eventType !== null) {
-          break;
-        }
-      }
-    }
-    return eventType;
-  }
-
-  async simpleSearch(e) {
-    e.preventDefault();
-    const {
-      page,
-      limit,
-      activeType,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    } = this.state;
-    if (searchInput < 2) {
-      return false;
-    }
-    this.updateStorePagination({ searchInput });
-    this.setState({
-      tableLoading: true,
-    });
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status,
-      label: searchInput,
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
     };
-    const url = `${APIPath}events`;
-    if (activeType !== null) {
-      const eventType = this.findEventType();
-      if (eventType !== null) {
-        params.eventType = eventType._id;
-      }
-    }
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
+  }, []);
+
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      activeTypeParam = null,
+      orderFieldParam = '',
+      orderDescParam = false,
+      statusParam = null,
+      searchInputParam = '',
+    }) => {
+      const limitCopy = limitParam === null ? state.limit : limitParam;
+      const pageCopy = pageParam === null ? state.page : pageParam;
+      const activeTypeCopy =
+        activeTypeParam === null ? state.activeType : activeTypeParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? state.orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? state.orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? state.status : statusParam;
+      const searchInputCopy =
+        searchInputParam === null ? state.searchInput : searchInputParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        activeType: activeTypeCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        status: statusCopy,
+        searchInput: searchInputCopy,
+      };
+      dispatch(setPaginationParams('events', payload));
+    },
+    [
+      dispatch,
+      state.activeType,
+      state.limit,
+      state.orderDesc,
+      state.orderField,
+      state.page,
+      state.searchInput,
+      state.status,
+    ]
+  );
+
+  const setActiveType = (type) => {
+    updateStorePagination({ activeType: type });
+    setState({
+      activeType: type,
+    });
+  };
+
+  const setStatus = (statusParam = null) => {
+    updateStorePagination({ status: statusParam });
+    setState({
+      status: statusParam,
+    });
+  };
+
+  const clearSearch = () => {
+    setState({ searchInput: '' });
+    updateStorePagination({ searchInput: '' });
+    setLoading(true);
+  };
+
+  /* const updateOrdering = (orderFieldParam = '') => {
+    if (orderFieldParam !== '') {
+      const orderDescending =
+        orderFieldParam === state.orderField ? !state.orderDesc : false;
+      updateStorePagination({
+        orderField: orderFieldParam,
+        orderDesc: orderDescending,
       });
-    if (this.cancelLoad) {
-      return false;
     }
-    const items = responseData.data.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = false;
-      return itemCopy;
-    });
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
-    }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        totalItems: responseData.totalItems,
-        items,
+  }; */
+
+  const updatePage = (value) => {
+    if (value > 0 && value !== state.page) {
+      updateStorePagination({ page: value });
+      setState({
+        page: value,
+        gotoPage: value,
       });
     }
-    return false;
-  }
+  };
 
-  clearSearch() {
-    return new Promise((resolve) => {
-      this.setState({
-        searchInput: '',
-      });
-      this.updateStorePagination({ searchInput: '' });
-      resolve(true);
-    }).then(() => {
-      this.load();
-    });
-  }
+  const gotoPage = () => {
+    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
+      updateStorePagination({ page: state.gotoPage });
+      setState({ page: Number(state.gotoPage) });
+    }
+  };
 
-  updateOrdering(orderField = '') {
-    const {
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let orderDesc = false;
-    if (orderField === stateOrderField) {
-      orderDesc = !stateOrderDesc;
-    }
-    this.updateStorePagination({ orderField, orderDesc });
-    this.setState(
-      {
-        orderField,
-        orderDesc,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const updateLimit = (value) => {
+    updateStorePagination({ limit: value });
+    setState({ limit: value });
+  };
 
-  updatePage(value) {
-    const { page } = this.state;
-    if (value > 0 && value !== page) {
-      this.updateStorePagination({ page: value });
-      this.setState(
-        {
-          page: value,
-          gotoPage: value,
-        },
-        () => {
-          this.load();
-        }
-      );
-    }
-  }
+  const toggleSelected = (i) => {
+    const index = i - (Number(state.page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
 
-  updateStorePagination({
-    limit = null,
-    page = null,
-    activeType = null,
-    orderField = '',
-    orderDesc = false,
-    status = null,
-    searchInput = '',
-  }) {
-    const {
-      limit: stateLimit,
-      page: statePage,
-      activeType: stateActiveType,
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-      status: stateStatus,
-      searchInput: stateSearchInput,
-    } = this.state;
-    let limitCopy = limit;
-    let pageCopy = page;
-    let activeTypeCopy = activeType;
-    let orderFieldCopy = orderField;
-    let orderDescCopy = orderDesc;
-    let statusCopy = status;
-    let searchInputCopy = searchInput;
-    if (limit === null) {
-      limitCopy = stateLimit;
+  const toggleSelectedAll = () => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
     }
-    if (page === null) {
-      pageCopy = statePage;
-    }
-    if (activeType === null) {
-      activeTypeCopy = stateActiveType;
-    }
-    if (orderField === '') {
-      orderFieldCopy = stateOrderField;
-    }
-    if (orderDesc === false) {
-      orderDescCopy = stateOrderDesc;
-    }
-    if (status === null) {
-      statusCopy = stateStatus;
-    }
-    if (searchInput === null) {
-      searchInputCopy = stateSearchInput;
-    }
-    const payload = {
-      limit: limitCopy,
-      page: pageCopy,
-      activeType: activeTypeCopy,
-      orderField: orderFieldCopy,
-      orderDesc: orderDescCopy,
-      status: statusCopy,
-      searchInput: searchInputCopy,
-    };
-    const { setPaginationParams: setPaginationParamsFn } = this.props;
-    setPaginationParamsFn('events', payload);
-  }
+    setAllChecked(newAllChecked);
+  };
 
-  gotoPage(e) {
-    e.preventDefault();
-    const { page } = this.state;
-    let { gotoPage } = this.state;
-    gotoPage = parseInt(gotoPage, 10);
-    if (gotoPage > 0 && gotoPage !== page) {
-      this.updateStorePagination({ page: gotoPage });
-      this.setState(
-        {
-          page: gotoPage,
-        },
-        () => {
-          this.load();
-        }
-      );
+  const clearSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = false;
+      newItems.push(item);
     }
-  }
+    setAllChecked(false);
+  }, [items]);
 
-  updateLimit(limit) {
-    this.updateStorePagination({ limit });
-    this.setState(
-      {
-        limit,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+  const reload = () => {
+    setReLoading(true);
+  };
 
-  itemsTableRows() {
-    const { items, page, limit } = this.state;
-    const rows = [];
-    for (let i = 0; i < items.length; i += 1) {
-      const item = items[i];
-      const countPage = parseInt(page, 10) - 1;
-      const count = i + 1 + countPage * limit;
-      const { label } = item;
-      const findEventType = this.findEventTypeById(item.eventType);
-      let eventType = '';
-      if (findEventType !== null) {
-        eventType = findEventType.label;
-      }
-      let temporal = [];
-      if (item.temporal.length > 0) {
-        const temporalData = item.temporal[0].ref;
-        temporal = temporalData.label;
-      }
-      let spatial = [];
-      if (item.spatial.length > 0) {
-        const spatialData = item.spatial[0].ref;
-        spatial = spatialData.label;
-      }
-      const createdAt = (
-        <div>
-          <small>{item.createdAt.split('T')[0]}</small>
-          <br />
-          <small>{item.createdAt.split('T')[1]}</small>
-        </div>
-      );
-      const updatedAt = (
-        <div>
-          <small>{item.updatedAt.split('T')[0]}</small>
-          <br />
-          <small>{item.updatedAt.split('T')[1]}</small>
-        </div>
-      );
-      const row = (
-        <tr key={i}>
-          <td>
-            <div className="select-checkbox-container">
-              <input
-                type="checkbox"
-                value={i}
-                checked={items[i].checked}
-                onChange={() => false}
-              />
-              <span
-                className="select-checkbox"
-                onClick={() => this.toggleSelected(i)}
-                onKeyDown={() => false}
-                role="button"
-                tabIndex={0}
-                aria-label="toggle selected"
-              />
-            </div>
-          </td>
-          <td>{count}</td>
-          <td>
-            <Link href={`/event/${item._id}`} to={`/event/${item._id}`}>
-              {label}
-            </Link>
-          </td>
-          <td>
-            <Link href={`/event/${item._id}`} to={`/event/${item._id}`}>
-              {eventType}
-            </Link>
-          </td>
-          <td>{temporal}</td>
-          <td>{spatial}</td>
-          <td>{createdAt}</td>
-          <td>{updatedAt}</td>
-          <td>
-            <Link
-              href={`/event/${item._id}`}
-              to={`/event/${item._id}`}
-              className="edit-item"
-            >
-              <i className="fa fa-pencil" />
-            </Link>
-          </td>
-        </tr>
-      );
-      rows.push(row);
+  useEffect(() => {
+    if (prevLimit !== state.limit) {
+      setPrevLimit(state.limit);
+      clearSelectedAll();
+      load();
     }
-    return rows;
-  }
+    if (prevPage !== state.page) {
+      setPrevPage(state.page);
+      clearSelectedAll();
+      load();
+    }
+    if (prevActiveType !== state.activeType) {
+      setPrevActiveType(state.activeType);
+      clearSelectedAll();
+      load();
+    }
+    if (prevStatus !== state.status) {
+      setPrevStatus(state.status);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderField !== orderField) {
+      setPrevOrderField(orderField);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderDesc !== orderDesc) {
+      setPrevOrderDesc(orderDesc);
+      clearSelectedAll();
+      load();
+    }
+    if (reLoading && !prevReLoading) {
+      setPrevReLoading(reLoading);
+      clearSelectedAll();
+      load();
+    }
+  }, [
+    clearSelectedAll,
+    load,
+    orderField,
+    orderDesc,
+    prevLimit,
+    prevPage,
+    prevActiveType,
+    prevStatus,
+    prevOrderField,
+    prevOrderDesc,
+    prevReLoading,
+    reLoading,
+    state.limit,
+    state.page,
+    state.activeType,
+    state.status,
+  ]);
 
-  toggleSelected(i) {
-    const { items } = this.state;
-    const newPersonChecked = !items[i].checked;
-    items[i].checked = newPersonChecked;
-    this.setState({
-      items,
-    });
-  }
-
-  toggleSelectedAll() {
-    const { allChecked: stateAllChecked, items } = this.state;
-    const allChecked = !stateAllChecked;
-    const newItems = items.map((item) => {
-      const itemCopy = item;
-      itemCopy.checked = allChecked;
-      return itemCopy;
-    });
-    this.setState({
-      items: newItems,
-      allChecked,
-    });
-  }
-
-  async deleteSelected() {
-    const { items } = this.state;
-    const selectedEvents = items
+  const deleteSelected = async () => {
+    const selectedItems = items
       .filter((item) => item.checked)
       .map((item) => item._id);
     const data = {
-      _ids: selectedEvents,
+      _ids: selectedItems,
     };
-    const url = `${APIPath}events`;
-    const responseData = await axios({
-      method: 'delete',
-      url,
-      crossDomain: true,
-      data,
-    })
-      .then(() => true)
-      .catch((error) => {
-        console.log(error);
-      });
+    const responseData = await deleteData(`events`, data);
     if (responseData) {
-      this.setState({
-        allChecked: false,
-      });
-      this.load();
+      setAllChecked(false);
+      setReLoading(true);
     }
-  }
+    return true;
+  };
 
-  removeSelected(_id = null) {
+  const removeSelected = (_id = null) => {
     if (_id == null) {
       return false;
     }
-    const { items } = this.state;
-    const newEvents = items.map((item) => {
+    const copy = [...items];
+    const newItems = copy.map((item) => {
       const itemCopy = item;
       if (itemCopy._id === _id) {
         itemCopy.checked = false;
       }
       return itemCopy;
     });
-    this.setState({
-      items: newEvents,
-    });
-    return false;
-  }
+    setItems(newItems);
+    return true;
+  };
 
-  render() {
-    const {
-      page,
-      gotoPage,
-      totalPages,
-      limit,
-      loading,
-      tableLoading,
-      allChecked: stateAllChecked,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-      totalItems,
-      items,
-    } = this.state;
-    const { eventTypes } = this.props;
-    const heading = 'Events';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-date', active: true, path: '' },
-    ];
-    const pageActions = (
+  const pageActions = (
+    <Suspense fallback={renderLoader()}>
       <PageActions
-        clearSearch={this.clearSearch}
-        current_page={page}
-        gotoPage={this.gotoPage}
-        gotoPageValue={gotoPage}
-        handleChange={this.handleChange}
-        limit={limit}
+        activeType={state.activeType}
+        clearSearch={clearSearch}
+        current_page={state.page}
+        defaultLimit={25}
+        gotoPage={gotoPage}
+        gotoPageValue={state.gotoPage}
+        handleChange={handleChange}
+        limit={state.limit}
+        page={state.page}
         pageType="events"
-        searchInput={searchInput}
-        setActiveType={this.setActiveType}
-        setStatus={this.setStatus}
-        status={status}
-        simpleSearch={this.simpleSearch}
-        total_pages={totalPages}
+        reload={reload}
+        searchInput={state.searchInput}
+        setActiveType={setActiveType}
+        setStatus={setStatus}
+        status={state.status}
+        totalPages={totalPages}
         types={eventTypes}
-        updateLimit={this.updateLimit}
-        updatePage={this.updatePage}
+        updateLimit={updateLimit}
+        updatePage={updatePage}
       />
-    );
-    let content = (
-      <div>
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <div style={{ padding: '40pt', textAlign: 'center' }}>
-              <Spinner type="grow" color="info" /> <i>loading...</i>
-            </div>
+    </Suspense>
+  );
+
+  let content = (
+    <div>
+      {pageActions}
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
+            <Spinner type="grow" color="info" /> <i>loading...</i>
           </div>
         </div>
-        {pageActions}
       </div>
+      {pageActions}
+    </div>
+  );
+
+  if (!loading) {
+    const listIndex = (Number(state.page) - 1) * limit;
+    const addNewBtn = (
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+        href="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
     );
-    if (!loading) {
-      const addNewBtn = (
-        <Link
-          className="btn btn-outline-secondary add-new-item-btn"
-          to="/event/new"
-          href="/event/new"
-        >
-          <i className="fa fa-plus" />
-        </Link>
-      );
+    const selectedItems = items.filter((item) => item.checked);
 
-      const tableLoadingSpinner = (
-        <tr>
-          <td colSpan={8}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </td>
-        </tr>
-      );
-      let itemsRows = [];
-      if (tableLoading) {
-        itemsRows = tableLoadingSpinner;
-      } else {
-        itemsRows = this.itemsTableRows();
-      }
-      let allChecked = '';
-      if (stateAllChecked) {
-        allChecked = 'checked';
-      }
-
-      const selectedEvents = items.filter((item) => item.checked);
-
-      const batchActions = (
+    const batchActions = (
+      <Suspense fallback={[]}>
         <BatchActions
-          items={selectedEvents}
-          removeSelected={this.removeSelected}
+          items={selectedItems}
+          removeSelected={removeSelected}
           type="Event"
           relationProperties={[]}
-          deleteSelected={this.deleteSelected}
-          selectAll={this.toggleSelectedAll}
-          allChecked={stateAllChecked}
+          deleteSelected={deleteSelected}
+          selectAll={toggleSelectedAll}
+          allChecked={allChecked}
+          reload={reload}
         />
-      );
-      // ordering
-      let labelOrderIcon = [];
-      let typeOrderIcon = [];
-      let createdOrderIcon = [];
-      let updatedOrderIcon = [];
-      if (orderField === 'label' || orderField === '') {
-        if (orderDesc) {
-          labelOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          labelOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'eventType') {
-        if (orderDesc) {
-          typeOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          typeOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'createdAt') {
-        if (orderDesc) {
-          createdOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          createdOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'updatedAt') {
-        if (orderDesc) {
-          updatedOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          updatedOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
+      </Suspense>
+    );
+    const table = tableLoading ? (
+      <div style={{ padding: '40pt', textAlign: 'center' }}>
+        <Spinner type="grow" color="info" /> <i>loading...</i>
+      </div>
+    ) : (
+      <Suspense fallback={renderLoader()}>
+        <List
+          columns={columns}
+          items={items}
+          listIndex={listIndex}
+          type="events"
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          toggleSelected={toggleSelected}
+        />
+      </Suspense>
+    );
 
-      content = (
-        <div className="items-container">
-          {pageActions}
-          <div className="row">
-            <div className="col-12">
-              <Card>
-                <CardBody className="table-container">
-                  <div className="pull-right">{batchActions}</div>
-                  <Table hover>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '30px' }}>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Label {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('eventType')}
-                        >
-                          Type {typeOrderIcon}
-                        </th>
-                        <th>Temporal</th>
-                        <th>Spatial</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th style={{ width: '30px' }} aria-label="edit" />
-                      </tr>
-                    </thead>
-                    <tbody>{itemsRows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th>
-                          <div className="select-checkbox-container default">
-                            <input
-                              type="checkbox"
-                              checked={allChecked}
-                              onChange={() => false}
-                            />
-                            <span
-                              className="select-checkbox"
-                              onClick={this.toggleSelectedAll}
-                              onKeyDown={() => false}
-                              role="button"
-                              tabIndex={0}
-                              aria-label="toggle select all"
-                            />
-                          </div>
-                        </th>
-                        <th>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Label {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('eventType')}
-                        >
-                          Type {typeOrderIcon}
-                        </th>
-                        <th>Temporal</th>
-                        <th>Spatial</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('createdAt')}
-                        >
-                          Created {createdOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('updatedAt')}
-                        >
-                          Updated {updatedOrderIcon}
-                        </th>
-                        <th aria-label="edit" />
-                      </tr>
-                    </tfoot>
-                  </Table>
-                  <div className="pull-right">{batchActions}</div>
-                </CardBody>
-              </Card>
-            </div>
-          </div>
-          {pageActions}
-          {addNewBtn}
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+    content = (
+      <div className="events-container">
+        {pageActions}
         <div className="row">
           <div className="col-12">
-            <h2>
-              {heading} <small>({totalItems})</small>
-            </h2>
+            <Card>
+              <CardBody className="events-card">
+                <div className="pull-right">{batchActions}</div>
+                {table}
+                <div className="pull-right">{batchActions}</div>
+              </CardBody>
+            </Card>
           </div>
         </div>
-        {content}
+        {pageActions}
+        {addNewBtn}
       </div>
     );
   }
-}
 
-Events.defaultProps = {
-  eventsPagination: null,
-  eventTypes: [],
-  setPaginationParams: () => {},
+  return (
+    <div>
+      <Suspense fallback={renderLoader()}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>
+            {heading} <small>({totalItems})</small>
+          </h2>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 };
-Events.propTypes = {
-  eventsPagination: PropTypes.object,
-  eventTypes: PropTypes.array,
-  setPaginationParams: PropTypes.func,
-};
-export default compose(connect(mapStateToProps, mapDispatchToProps))(Events);
+export default Events;

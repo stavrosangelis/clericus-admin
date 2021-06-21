@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getData } from '../helpers';
 
 const GENERIC_UPDATE = 'GENERIC_UPDATE';
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -64,7 +65,7 @@ export function checkSession() {
       };
       if (responseData.error !== '') {
         payload.loginError = true;
-        payload.loginErrorText = responseData.error;
+        payload.loginErrorText = responseData.msg;
       }
     } else {
       payload = {
@@ -190,6 +191,211 @@ export function getLanguageCodes() {
   };
 }
 
+export const loadRelationsEventsValues = (
+  searchId,
+  searchTemporal,
+  searchItem,
+  searchSpatial,
+  searchEventType
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsEventsLoading: true,
+    },
+  });
+  const temporal = searchTemporal.replace(/_/g, '.');
+  const params = {
+    _id: searchId,
+    label: searchItem,
+    temporal,
+    spatial: searchSpatial,
+  };
+  if (
+    typeof searchEventType.value !== 'undefined' &&
+    searchEventType.value !== ''
+  ) {
+    params.eventType = searchEventType.value;
+  }
+  const responseData = await getData(`events`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsEvents: responseData.data.data,
+      relationsEventsLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
+export const loadRelationsOrganisationsValues = (
+  searchId = '',
+  searchLabel = '',
+  searchType = ''
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsOrganisationsLoading: true,
+    },
+  });
+  const params = {
+    _id: searchId,
+    label: searchLabel,
+  };
+  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+    params.organisationType = searchType.label;
+  }
+  const responseData = await getData(`organisations`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsOrganisations: responseData.data.data,
+      relationsOrganisationsLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
+export const loadRelationsPeopleValues = (
+  searchId = '',
+  searchLabel = '',
+  searchFirstName = '',
+  searchLastName = '',
+  searchType = ''
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsPeopleLoading: true,
+    },
+  });
+  const params = {
+    _id: searchId,
+    label: searchLabel,
+    firstName: searchFirstName,
+    lastName: searchLastName,
+  };
+  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+    params.personType = searchType.label;
+  }
+  const responseData = await getData(`people`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsPeople: responseData.data.data,
+      relationsPeopleLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
+export const loadRelationsResourcesValues = (
+  searchId = '',
+  searchLabel = '',
+  searchType = ''
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsResourcesLoading: true,
+    },
+  });
+  const params = {
+    _id: searchId,
+    label: searchLabel,
+    limit: 24,
+  };
+  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+    params.systemType = searchType.value;
+  }
+  const responseData = await getData(`resources`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsResources: responseData.data.data,
+      relationsResourcesLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
+export const loadRelationsSpatialValues = (
+  searchId = '',
+  searchLabel = '',
+  searchCountry = '',
+  searchType = ''
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsSpatialLoading: true,
+    },
+  });
+  const params = {
+    _id: searchId,
+    label: searchLabel,
+    country: searchCountry,
+    locationType: searchType,
+  };
+  const responseData = await getData(`spatials`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsSpatial: responseData.data.data,
+      relationsSpatialLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
+export const loadRelationsTemporalValues = (
+  searchId = '',
+  searchLabel = '',
+  searchStartDate = '',
+  searchEndDate = ''
+) => async (dispatch) => {
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload: {
+      relationsTemporalLoading: true,
+    },
+  });
+  const params = {
+    _id: searchId,
+    label: searchLabel,
+    startDate: searchStartDate,
+    endDate: searchEndDate,
+  };
+  const responseData = await getData(`temporals`, params);
+  let payload = {};
+  if (responseData.status) {
+    payload = {
+      relationsTemporal: responseData.data.data,
+      relationsTemporalLoading: false,
+    };
+  }
+  dispatch({
+    type: GENERIC_UPDATE,
+    payload,
+  });
+};
+
 export function setPaginationParams(type, params) {
   return (dispatch) => {
     let payload = null;
@@ -254,6 +460,36 @@ export function setPaginationParams(type, params) {
     return false;
   };
 }
+
+export const setPaginationOrder = (type, orderField = '') => (
+  dispatch,
+  getState
+) => {
+  if (orderField === '') {
+    console.log('No order field');
+    return false;
+  }
+  const state = getState();
+  const stateKey = `${type}Pagination`;
+  const copyKey = state[stateKey];
+  let orderDir = 'asc';
+  if (copyKey.orderDir === orderDir && copyKey.orderDir === 'asc') {
+    orderDir = 'desc';
+  }
+  const orderDesc = orderDir !== 'asc';
+  copyKey.orderField = orderField;
+  copyKey.orderDir = orderDir;
+  copyKey.orderDesc = orderDesc;
+  const payload = {
+    [stateKey]: copyKey,
+  };
+  dispatch({
+    type: 'GENERIC_UPDATE',
+    payload,
+  });
+
+  return false;
+};
 
 export function getSystemTypes() {
   return async (dispatch) => {

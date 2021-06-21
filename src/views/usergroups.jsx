@@ -1,469 +1,429 @@
-import React, { Component } from 'react';
-import { Table, Card, CardBody, Spinner } from 'reactstrap';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useReducer,
+  useRef,
+  Suspense,
+  lazy,
+} from 'react';
+import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
-
-import axios from 'axios';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
-
-import Breadcrumbs from '../components/breadcrumbs';
-import PageActions from '../components/page-actions';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const APIPath = process.env.REACT_APP_APIPATH;
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const PageActions = lazy(() => import('../components/Page.actions'));
+const List = lazy(() => import('../components/List'));
 
-const mapStateToProps = (state) => ({
-  usergroupsPagination: state.usergroupsPagination,
-});
+const heading = 'Usergroups';
+const breadcrumbsItems = [
+  { label: heading, icon: 'fa fa-user', active: true, path: '' },
+];
+const columns = [
+  {
+    props: ['#'],
+    label: '#',
+    link: null,
+    order: false,
+    orderLabel: '',
+    width: 40,
+  },
+  {
+    props: ['label'],
+    label: 'Usergroup',
+    link: { element: 'self', path: 'usergroup' },
+    order: true,
+    orderLabel: 'label',
+  },
+  {
+    props: ['isDefault'],
+    label: 'Default',
+    link: { element: 'self', path: 'usergroup' },
+    order: true,
+    orderLabel: 'isDefault',
+    align: 'center',
+    width: 80,
+  },
+  {
+    props: ['edit'],
+    label: 'Edit',
+    link: { element: 'self', path: 'user' },
+    order: false,
+    align: 'center',
+    width: 80,
+  },
+];
 
-function mapDispatchToProps(dispatch) {
-  return {
-    setPaginationParams: (type, params) =>
-      dispatch(setPaginationParams(type, params)),
+const Usergroups = () => {
+  // redux
+  const dispatch = useDispatch();
+
+  const limit = useSelector((state) => state.usergroupsPagination.limit);
+  const page = useSelector((state) => state.usergroupsPagination.page);
+  const orderField = useSelector(
+    (state) => state.usergroupsPagination.orderField
+  );
+  const orderDesc = useSelector(
+    (state) => state.usergroupsPagination.orderDesc
+  );
+  const searchInput = useSelector(
+    (state) => state.usergroupsPagination.searchInput
+  );
+  const mounted = useRef(true);
+
+  // state
+  const defaultState = {
+    limit,
+    page,
+    gotoPage: page,
+    searchInput,
   };
-}
+  const [state, setState] = useReducer(
+    (curState, newState) => ({ ...curState, ...newState }),
+    defaultState
+  );
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allChecked, setAllChecked] = useState(false);
+  const [prevLimit, setPrevLimit] = useState(25);
+  const [prevPage, setPrevPage] = useState(1);
+  const [prevActiveType, setPrevActiveType] = useState(null);
+  const [prevStatus, setPrevStatus] = useState(null);
+  const [prevOrderField, setPrevOrderField] = useState('label');
+  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
+  const [reLoading, setReLoading] = useState(false);
+  const [prevReLoading, setPrevReLoading] = useState(false);
 
-class Usergroups extends Component {
-  constructor(props) {
-    super(props);
-
-    const { usergroupsPagination } = this.props;
-    const { orderField, orderDesc, page, limit } = usergroupsPagination;
-
-    this.state = {
-      loading: true,
-      tableLoading: true,
-      usergroups: [],
-      orderField,
-      orderDesc,
-      page,
-      gotoPage: page,
-      limit,
-      totalPages: 0,
-    };
-    this.load = this.load.bind(this);
-    this.updateOrdering = this.updateOrdering.bind(this);
-    this.updatePage = this.updatePage.bind(this);
-    this.updateLimit = this.updateLimit.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.usergroupsTableRows = this.usergroupsTableRows.bind(this);
-    this.updateStorePagination = this.updateStorePagination.bind(this);
-
-    // hack to kill load promise on unmount
-    this.cancelLoad = false;
-  }
-
-  componentDidMount() {
-    this.load();
-  }
-
-  componentWillUnmount() {
-    this.cancelLoad = true;
-  }
-
-  handleChange(e) {
+  const handleChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-    this.setState({
+    setState({
       [name]: value,
     });
-  }
+  };
 
-  async load() {
-    const { page, limit, orderField, orderDesc } = this.state;
-    this.setState({
-      tableLoading: true,
-    });
+  const prepareItems = useCallback((itemsParam) => {
+    const newItems = [];
+    for (let i = 0; i < itemsParam.length; i += 1) {
+      const item = itemsParam[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    return newItems;
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
     const params = {
-      page,
-      limit,
+      page: state.page,
+      limit: state.limit,
       orderField,
       orderDesc,
+      status: state.status,
     };
-    const url = `${APIPath}user-groups`;
-    const responseData = await axios({
-      method: 'get',
-      url,
-      crossDomain: true,
-      params,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (this.cancelLoad) {
-      return false;
+    if (state.searchInput !== '') {
+      params.label = state.searchInput;
     }
-    const usergroups = responseData.data;
-    let currentPage = 1;
-    if (responseData.currentPage > 0) {
-      currentPage = responseData.currentPage;
+    const responseData = await getData(`user-groups`, params);
+    if (mounted.current) {
+      const { data: newData } = responseData;
+      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      const newItems = await prepareItems(newData.data);
+      setItems(newItems);
+      setTableLoading(false);
+      setState({ page: currentPage });
+      setTotalPages(newData.totalPages);
+      setTotalItems(newData.totalItems);
     }
-    // normalize the page number when the selected page is empty for the selected number of items per page
-    if (currentPage > 1 && currentPage > responseData.totalPages) {
-      this.setState(
-        {
-          page: responseData.totalPages,
-        },
-        () => {
-          this.load();
-        }
-      );
-    } else {
-      this.setState({
-        loading: false,
-        tableLoading: false,
-        page: responseData.currentPage,
-        totalPages: responseData.totalPages,
-        usergroups,
-      });
-    }
-    return false;
-  }
 
-  updateOrdering(orderField = '') {
-    const {
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let orderDesc = false;
-    if (orderField === stateOrderField) {
-      orderDesc = !stateOrderDesc;
-    }
-    this.updateStorePagination({ orderField, orderDesc });
-    this.setState(
-      {
-        orderField,
-        orderDesc,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
+    return true;
+  }, [state, prepareItems, orderDesc, orderField, mounted]);
 
-  updatePage(value) {
-    const { page } = this.state;
-    if (value > 0 && value !== page) {
-      this.updateStorePagination({ page: value });
-      this.setState(
-        {
-          page: value,
-          gotoPage: value,
-        },
-        () => {
-          this.load();
-        }
-      );
-    }
-  }
-
-  updateStorePagination(
-    limit = null,
-    page = null,
-    orderField = '',
-    orderDesc = false
-  ) {
-    const {
-      limit: stateLimit,
-      page: statePage,
-      orderField: stateOrderField,
-      orderDesc: stateOrderDesc,
-    } = this.state;
-    let limitCopy = limit;
-    let pageCopy = page;
-    let orderFieldCopy = orderField;
-    let orderDescCopy = orderDesc;
-    if (limit === null) {
-      limitCopy = stateLimit;
-    }
-    if (page === null) {
-      pageCopy = statePage;
-    }
-    if (orderField === '') {
-      orderFieldCopy = stateOrderField;
-    }
-    if (orderDesc === false) {
-      orderDescCopy = stateOrderDesc;
-    }
-    const payload = {
-      limit: limitCopy,
-      page: pageCopy,
-      orderField: orderFieldCopy,
-      orderDesc: orderDescCopy,
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
     };
-    const { setPaginationParams: setPaginationParamsFn } = this.props;
-    setPaginationParamsFn('usergroups', payload);
-  }
+  }, []);
 
-  gotoPage(e) {
-    e.preventDefault();
-    const { page } = this.state;
-    let { gotoPage } = this.state;
-    gotoPage = parseInt(gotoPage, 10);
-    if (gotoPage > 0 && gotoPage !== page) {
-      this.updateStorePagination({ page: gotoPage });
-      this.setState(
-        {
-          page: gotoPage,
-        },
-        () => {
-          this.load();
-        }
-      );
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      activeTypeParam = null,
+      orderFieldParam = '',
+      orderDescParam = false,
+      statusParam = null,
+      searchInputParam = '',
+    }) => {
+      const limitCopy = limitParam === null ? state.limit : limitParam;
+      const pageCopy = pageParam === null ? state.page : pageParam;
+      const activeTypeCopy =
+        activeTypeParam === null ? state.activeType : activeTypeParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? state.orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? state.orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? state.status : statusParam;
+      const searchInputCopy =
+        searchInputParam === null ? state.searchInput : searchInputParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        activeType: activeTypeCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        status: statusCopy,
+        searchInput: searchInputCopy,
+      };
+      dispatch(setPaginationParams('usergroups', payload));
+    },
+    [
+      dispatch,
+      state.activeType,
+      state.limit,
+      state.orderDesc,
+      state.orderField,
+      state.page,
+      state.searchInput,
+      state.status,
+    ]
+  );
+
+  const clearSearch = () => {
+    setState({ searchInput: '' });
+    updateStorePagination({ searchInput: '' });
+    setLoading(true);
+  };
+
+  /* const updateOrdering = (orderFieldParam = '') => {
+    if (orderFieldParam !== '') {
+      const orderDescending =
+        orderFieldParam === state.orderField ? !state.orderDesc : false;
+      updateStorePagination({
+        orderField: orderFieldParam,
+        orderDesc: orderDescending,
+      });
     }
-  }
+  }; */
 
-  updateLimit(limit) {
-    this.updateStorePagination({ limit });
-    this.setState(
-      {
-        limit,
-      },
-      () => {
-        this.load();
-      }
-    );
-  }
-
-  usergroupsTableRows() {
-    const { usergroups, page, limit } = this.state;
-    const rows = [];
-    for (let i = 0; i < usergroups.length; i += 1) {
-      const usergroup = usergroups[i];
-      const countPage = parseInt(page, 10) - 1;
-      const count = i + 1 + countPage * limit;
-      const { label } = usergroup;
-
-      let isAdminIcon = [];
-      let isDefaultIcon = [];
-      if (usergroup.isAdmin) {
-        isAdminIcon = <i className="fa fa-check-circle" />;
-      }
-      if (usergroup.isDefault) {
-        isDefaultIcon = <i className="fa fa-check-circle" />;
-      }
-
-      const row = (
-        <tr key={i}>
-          <td>{count}</td>
-          <td>
-            <Link
-              href={`/user-group/${usergroup._id}`}
-              to={`/user-group/${usergroup._id}`}
-            >
-              {label}
-            </Link>
-          </td>
-          <td className="text-center">{isDefaultIcon}</td>
-          <td className="text-center">{isAdminIcon}</td>
-          <td>
-            <Link
-              href={`/user-group/${usergroup._id}`}
-              to={`/user-group/${usergroup._id}`}
-              className="edit-item"
-            >
-              <i className="fa fa-pencil" />
-            </Link>
-          </td>
-        </tr>
-      );
-      rows.push(row);
+  const updatePage = (value) => {
+    if (value > 0 && value !== state.page) {
+      updateStorePagination({ page: value });
+      setState({
+        page: value,
+        gotoPage: value,
+      });
     }
-    return rows;
-  }
+  };
 
-  render() {
-    const {
-      page,
-      gotoPage,
-      limit,
-      totalPages,
-      loading,
-      tableLoading,
-      orderField,
-      orderDesc,
-    } = this.state;
-    const heading = 'Usergroups';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-user', active: true, path: '' },
-    ];
+  const gotoPage = () => {
+    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
+      updateStorePagination({ page: state.gotoPage });
+      setState({ page: Number(state.gotoPage) });
+    }
+  };
 
-    const pageActions = (
+  const updateLimit = (value) => {
+    updateStorePagination({ limit: value });
+    setState({ limit: value });
+  };
+
+  const toggleSelected = (i) => {
+    const index = i - (Number(state.page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
+
+  const toggleSelectedAll = () => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
+    }
+    setAllChecked(newAllChecked);
+  };
+
+  const clearSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = false;
+      newItems.push(item);
+    }
+    setAllChecked(false);
+  }, [items]);
+
+  const reload = () => {
+    setReLoading(true);
+  };
+
+  useEffect(() => {
+    if (prevLimit !== state.limit) {
+      setPrevLimit(state.limit);
+      clearSelectedAll();
+      load();
+    }
+    if (prevPage !== state.page) {
+      setPrevPage(state.page);
+      clearSelectedAll();
+      load();
+    }
+    if (prevActiveType !== state.activeType) {
+      setPrevActiveType(state.activeType);
+      clearSelectedAll();
+      load();
+    }
+    if (prevStatus !== state.status) {
+      setPrevStatus(state.status);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderField !== orderField) {
+      setPrevOrderField(orderField);
+      clearSelectedAll();
+      load();
+    }
+    if (prevOrderDesc !== orderDesc) {
+      setPrevOrderDesc(orderDesc);
+      clearSelectedAll();
+      load();
+    }
+    if (reLoading && !prevReLoading) {
+      setPrevReLoading(reLoading);
+      clearSelectedAll();
+      load();
+    }
+  }, [
+    clearSelectedAll,
+    load,
+    orderField,
+    orderDesc,
+    prevLimit,
+    prevPage,
+    prevActiveType,
+    prevStatus,
+    prevOrderField,
+    prevOrderDesc,
+    prevReLoading,
+    reLoading,
+    state.limit,
+    state.page,
+    state.activeType,
+    state.status,
+  ]);
+
+  const pageActions = (
+    <Suspense fallback={renderLoader()}>
       <PageActions
-        current_page={page}
-        gotoPage={this.gotoPage}
-        gotoPageValue={gotoPage}
-        handleChange={this.handleChange}
-        limit={limit}
+        clearSearch={clearSearch}
+        current_page={state.page}
+        defaultLimit={25}
+        gotoPage={gotoPage}
+        gotoPageValue={state.gotoPage}
+        handleChange={handleChange}
+        limit={state.limit}
+        page={state.page}
         pageType="usergroups"
-        total_pages={totalPages}
-        updateLimit={this.updateLimit}
-        updatePage={this.updatePage}
+        reload={reload}
+        searchInput={state.searchInput}
+        status={state.status}
+        totalPages={totalPages}
+        types={[]}
+        updateLimit={updateLimit}
+        updatePage={updatePage}
       />
-    );
-    let content = (
-      <div>
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <div style={{ padding: '40pt', textAlign: 'center' }}>
-              <Spinner type="grow" color="info" /> <i>loading...</i>
-            </div>
-          </div>
-        </div>
-        {pageActions}
-      </div>
-    );
-    if (!loading) {
-      const addNewBtn = (
-        <Link
-          className="btn btn-outline-secondary add-new-item-btn"
-          to="/user-group/new"
-          href="/user-group/new"
-        >
-          <i className="fa fa-plus" />
-        </Link>
-      );
+    </Suspense>
+  );
 
-      const tableLoadingSpinner = (
-        <tr>
-          <td colSpan={6}>
+  let content = (
+    <div>
+      {pageActions}
+      <div className="row">
+        <div className="col-12">
+          <div style={{ padding: '40pt', textAlign: 'center' }}>
             <Spinner type="grow" color="info" /> <i>loading...</i>
-          </td>
-        </tr>
-      );
-      let usergroupsRows = [];
-      if (tableLoading) {
-        usergroupsRows = tableLoadingSpinner;
-      } else {
-        usergroupsRows = this.usergroupsTableRows();
-      }
-
-      // ordering
-      let labelOrderIcon = [];
-      let isDefaultOrderIcon = [];
-      let isAdminOrderIcon = [];
-      if (orderField === 'label' || orderField === '') {
-        if (orderDesc) {
-          labelOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          labelOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'isDefault') {
-        if (orderDesc) {
-          isDefaultOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          isDefaultOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-      if (orderField === 'isAdmin') {
-        if (orderDesc) {
-          isAdminOrderIcon = <i className="fa fa-caret-down" />;
-        } else {
-          isAdminOrderIcon = <i className="fa fa-caret-up" />;
-        }
-      }
-
-      content = (
-        <div className="people-container">
-          {pageActions}
-          <div className="row">
-            <div className="col-12">
-              <Card>
-                <CardBody>
-                  <Table hover>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Usergroup {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('isDefault')}
-                          style={{ width: '80px' }}
-                        >
-                          Default {isDefaultOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('isAdmin')}
-                          style={{ width: '80px' }}
-                        >
-                          Admin {isAdminOrderIcon}
-                        </th>
-                        <th style={{ width: '40px' }} aria-label="edit" />
-                      </tr>
-                    </thead>
-                    <tbody>{usergroupsRows}</tbody>
-                    <tfoot>
-                      <tr>
-                        <th>#</th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('label')}
-                        >
-                          Usergroup {labelOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('isDefault')}
-                          style={{ width: '80px' }}
-                        >
-                          Default {isDefaultOrderIcon}
-                        </th>
-                        <th
-                          className="ordering-label"
-                          onClick={() => this.updateOrdering('isAdmin')}
-                          style={{ width: '80px' }}
-                        >
-                          Admin {isAdminOrderIcon}
-                        </th>
-                        <th aria-label="edit" />
-                      </tr>
-                    </tfoot>
-                  </Table>
-                </CardBody>
-              </Card>
-            </div>
           </div>
-          {pageActions}
-          {addNewBtn}
         </div>
-      );
-    }
+      </div>
+      {pageActions}
+    </div>
+  );
 
-    return (
-      <div>
-        <Breadcrumbs items={breadcrumbsItems} />
+  if (!loading) {
+    const listIndex = (Number(state.page) - 1) * limit;
+    const addNewBtn = (
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+        href="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
+    );
+
+    const table = tableLoading ? (
+      <div style={{ padding: '40pt', textAlign: 'center' }}>
+        <Spinner type="grow" color="info" /> <i>loading...</i>
+      </div>
+    ) : (
+      <Suspense fallback={renderLoader()}>
+        <List
+          columns={columns}
+          items={items}
+          listIndex={listIndex}
+          type="usergroups"
+          allChecked={allChecked}
+          toggleSelectedAll={toggleSelectedAll}
+          toggleSelected={toggleSelected}
+        />
+      </Suspense>
+    );
+
+    content = (
+      <div className="usergroups-container">
+        {pageActions}
         <div className="row">
           <div className="col-12">
-            <h2>{heading}</h2>
+            <Card>
+              <CardBody className="usergroups-card">{table}</CardBody>
+            </Card>
           </div>
         </div>
-        {content}
+        {pageActions}
+        {addNewBtn}
       </div>
     );
   }
-}
 
-Usergroups.defaultProps = {
-  usergroupsPagination: null,
-  setPaginationParams: () => {},
+  return (
+    <div>
+      <Suspense fallback={renderLoader()}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>
+            {heading} <small>({totalItems})</small>
+          </h2>
+        </div>
+      </div>
+      {content}
+    </div>
+  );
 };
-Usergroups.propTypes = {
-  usergroupsPagination: PropTypes.object,
-  setPaginationParams: PropTypes.func,
-};
-export default compose(connect(mapStateToProps, mapDispatchToProps))(
-  Usergroups
-);
+export default Usergroups;

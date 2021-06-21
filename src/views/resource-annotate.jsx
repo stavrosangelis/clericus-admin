@@ -4,19 +4,32 @@ import React, {
   useRef,
   useReducer,
   useCallback,
+  lazy,
+  Suspense,
 } from 'react';
 import { Spinner } from 'reactstrap';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
-import Breadcrumbs from '../components/breadcrumbs';
-import { getResourceFullsizeURL } from '../helpers';
-import AnnotationsLayer from '../components/annotation-tool/annotations-layer';
-import ContextMenu from '../components/annotation-tool/context-menu';
-import ItemContextMenu from '../components/annotation-tool/item-context-menu';
-import EditModal from '../components/annotation-tool/edit-modal';
-import DeleteModal from '../components/annotation-tool/delete-modal';
-import Notification from '../components/notification';
+import { getResourceFullsizeURL, renderLoader } from '../helpers';
+
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const AnnotationsLayer = lazy(() =>
+  import('../components/annotation-tool/annotations-layer')
+);
+const ContextMenu = lazy(() =>
+  import('../components/annotation-tool/context-menu')
+);
+const ItemContextMenu = lazy(() =>
+  import('../components/annotation-tool/item-context-menu')
+);
+const EditModal = lazy(() =>
+  import('../components/annotation-tool/edit-modal')
+);
+const DeleteModal = lazy(() =>
+  import('../components/annotation-tool/delete-modal')
+);
+const Notification = lazy(() => import('../components/notification'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -293,8 +306,7 @@ const AnnotateTool = (props) => {
           index: itemContextMenuState.index,
         });
       }
-      const { x } = state;
-      const { y } = state;
+      const { x, y } = state;
       const container = containerRef.current;
       const containerRect = container.getBoundingClientRect();
       const leftX = containerRect.x;
@@ -365,7 +377,7 @@ const AnnotateTool = (props) => {
     const html = document.querySelector('html');
     let top = e.clientY;
     let left = e.clientX;
-    if (html.classList.contains('nav-open') && window.innerWidth < 992) {
+    if (html.classList.contains('nav-open')) {
       left -= 260;
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
@@ -853,14 +865,16 @@ const AnnotateTool = (props) => {
     let annotationsLayer = [];
     if (resources.length > 0 && state.width > 0 && state.height > 0) {
       annotationsLayer = (
-        <AnnotationsLayer
-          items={resources}
-          container={containerRef}
-          width={state.width}
-          height={state.height}
-          itemContextMenuShow={itemContextMenuShow}
-          returnValues={returnValues}
-        />
+        <Suspense fallback={[]}>
+          <AnnotationsLayer
+            items={resources}
+            container={containerRef}
+            width={state.width}
+            height={state.height}
+            itemContextMenuShow={itemContextMenuShow}
+            returnValues={returnValues}
+          />
+        </Suspense>
       );
     }
 
@@ -944,54 +958,64 @@ const AnnotateTool = (props) => {
     };
 
     const contextMenu = (
-      <ContextMenu
-        top={contextMenuState.top}
-        left={contextMenuState.left}
-        visible={contextMenuState.visible}
-        onClickFn={addAnnotation}
-      />
+      <Suspense fallback={[]}>
+        <ContextMenu
+          top={contextMenuState.top}
+          left={contextMenuState.left}
+          visible={contextMenuState.visible}
+          onClickFn={addAnnotation}
+        />
+      </Suspense>
     );
     const itemContextMenu = (
-      <ItemContextMenu
-        top={itemContextMenuState.top}
-        left={itemContextMenuState.left}
-        visible={itemContextMenuState.visible}
-        itemId={itemContextMenuState.itemId}
-        toggleDeleteModalFn={toggleDeleteModal}
-        onClickFn={editItem}
-      />
+      <Suspense fallback={[]}>
+        <ItemContextMenu
+          top={itemContextMenuState.top}
+          left={itemContextMenuState.left}
+          visible={itemContextMenuState.visible}
+          itemId={itemContextMenuState.itemId}
+          toggleDeleteModalFn={toggleDeleteModal}
+          onClickFn={editItem}
+        />
+      </Suspense>
     );
 
     // edit/delete item
     const editModal = (
-      <EditModal
-        visible={editModalVisible}
-        toggleFn={toggleEditModal}
-        submitFn={updateEditItem}
-        itemState={editItemState}
-        handleChangeFn={handleChange}
-        resourcesTypes={resourcesTypes}
-        toggleDeleteModalFn={toggleDeleteModal}
-        editItemUpdateBtn={editItemUpdateBtn}
-      />
+      <Suspense fallback={[]}>
+        <EditModal
+          visible={editModalVisible}
+          toggleFn={toggleEditModal}
+          submitFn={updateEditItem}
+          itemState={editItemState}
+          handleChangeFn={handleChange}
+          resourcesTypes={resourcesTypes}
+          toggleDeleteModalFn={toggleDeleteModal}
+          editItemUpdateBtn={editItemUpdateBtn}
+        />
+      </Suspense>
     );
 
     const deleteModal = (
-      <DeleteModal
-        visible={deleteModalVisible}
-        toggleFn={toggleDeleteModal}
-        itemState={editItemState}
-        deleteFn={deleteItem}
-      />
+      <Suspense fallback={[]}>
+        <DeleteModal
+          visible={deleteModalVisible}
+          toggleFn={toggleDeleteModal}
+          itemState={editItemState}
+          deleteFn={deleteItem}
+        />
+      </Suspense>
     );
 
     content = (
       <div>
-        <Notification
-          visible={notificationState.visible}
-          content={notificationState.content}
-          color={notificationState.color}
-        />
+        <Suspense fallback={[]}>
+          <Notification
+            visible={notificationState.visible}
+            content={notificationState.content}
+            color={notificationState.color}
+          />
+        </Suspense>
         {editModal}
         {deleteModal}
         {zoomPanel}
@@ -1035,7 +1059,9 @@ const AnnotateTool = (props) => {
   }
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={renderLoader()}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>{heading}</h2>

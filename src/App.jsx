@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, Suspense, lazy } from 'react';
 import {
   BrowserRouter as Router,
   Route,
@@ -20,8 +20,6 @@ import './assets/scss/App.scss';
 
 // routes
 import indexRoutes from './routes/index';
-import Login from './views/login';
-import Seed from './views/seed';
 
 // layout components
 import Header from './components/header';
@@ -41,6 +39,9 @@ import {
   resetSeedRedirect,
   getLanguageCodes,
 } from './redux/actions';
+
+const Login = lazy(() => import('./views/login'));
+const Seed = lazy(() => import('./views/seed'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 const basename = process.env.REACT_APP_BASENAME;
@@ -199,11 +200,17 @@ function App() {
     appHTML = (
       <Router basename={basename}>
         {seedRedirectElem}
-        <Seed />
+        <Suspense fallback={[]}>
+          <Seed />
+        </Suspense>
       </Router>
     );
   } else if (!sessionActive) {
-    appHTML = <Login />;
+    appHTML = (
+      <Suspense fallback={[]}>
+        <Login />
+      </Suspense>
+    );
   } else if (sessionActive) {
     appHTML = (
       <Router basename={basename}>

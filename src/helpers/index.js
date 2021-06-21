@@ -1,4 +1,7 @@
+import React from 'react';
+import { Spinner } from 'reactstrap';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const domain = process.env.REACT_APP_DOMAIN;
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -307,15 +310,21 @@ export const capitalizeOnlyFirst = (str) => {
   return firstLetter + restOfString;
 };
 
-export const outputDate = (dateParam) => {
+export const outputDate = (dateParam, sep = '/') => {
   let date = dateParam;
   if (date instanceof Date === false) {
     date = new Date(date);
   }
-  const d = date.getDate();
-  const m = date.getMonth() + 1;
+  let d = date.getDate();
+  if (d < 10) {
+    d = `0${d}`;
+  }
+  let m = date.getMonth() + 1;
+  if (m < 10) {
+    m = `0${m}`;
+  }
   const y = date.getFullYear();
-  return `${d}/${m}/${y}`;
+  return `${d}${sep}${m}${sep}${y}`;
 };
 
 export const queryDate = (dateParam) => {
@@ -327,4 +336,226 @@ export const queryDate = (dateParam) => {
   const m = date.getMonth() + 1;
   const y = date.getFullYear();
   return `${y}-${m}-${d}`;
+};
+
+export const renderLoader = () => (
+  <div style={{ padding: '40pt', textAlign: 'center' }}>
+    <Spinner type="grow" color="info" />
+  </div>
+);
+
+export const getData = async (urlParam = '', params = null) => {
+  if (urlParam === '') {
+    return [];
+  }
+  const url = `${APIPath}${urlParam}`;
+  const parameters = {
+    method: 'get',
+    url,
+    crossDomain: true,
+  };
+  if (params !== null) {
+    parameters.params = params;
+  }
+  const responseData = await axios(parameters)
+    .then((response) => response.data)
+    .catch((error) => {
+      console.log(error);
+    });
+  return responseData;
+};
+
+export const putData = async (urlParam = '', params = null) => {
+  if (urlParam === '') {
+    return [];
+  }
+  const url = `${APIPath}${urlParam}`;
+  const parameters = {
+    method: 'put',
+    url,
+    crossDomain: true,
+  };
+  if (params !== null) {
+    parameters.data = params;
+  }
+  const responseData = await axios(parameters)
+    .then((response) => response.data)
+    .catch((error) => {
+      console.log(error);
+    });
+  return responseData;
+};
+
+export const deleteData = async (urlParam = '', params = null) => {
+  if (urlParam === '') {
+    return [];
+  }
+  const url = `${APIPath}${urlParam}`;
+  const parameters = {
+    method: 'delete',
+    url,
+    crossDomain: true,
+  };
+  if (params !== null) {
+    parameters.data = params;
+  }
+  const responseData = await axios(parameters)
+    .then((response) => response.data)
+    .catch((error) => {
+      console.log(error);
+    });
+  return responseData;
+};
+
+const isUpperCase = (c) => {
+  const result = c === c.toUpperCase();
+  return result;
+};
+
+export const outputRelationTypes = (str) => {
+  let newString = '';
+  for (let i = 0; i < str.length; i += 1) {
+    const c = str[i];
+    const upperCase = isUpperCase(c);
+    if (upperCase) {
+      newString += ` ${c.toLowerCase()}`;
+    } else {
+      newString += c;
+    }
+  }
+  return newString;
+};
+
+export const personLabel = (item) => {
+  let label = '';
+  if (
+    typeof item.honorificPrefix !== 'undefined' &&
+    item.honorificPrefix !== ''
+  ) {
+    label += `${item.honorificPrefix} `;
+  }
+  if (typeof item.firstName !== 'undefined' && item.firstName !== '') {
+    label += `${item.firstName} `;
+  }
+  if (typeof item.middleName !== 'undefined' && item.middleName !== '') {
+    label += `${item.middleName} `;
+  }
+  if (typeof item.lastName !== 'undefined' && item.lastName !== '') {
+    label += `${item.lastName} `;
+  }
+  return label;
+};
+
+export const eventLabelDetails = (item) => {
+  const temporal =
+    typeof item.temporal !== 'undefined'
+      ? item.temporal.map((t) => t.ref.label).join(', ')
+      : '';
+  const spatial =
+    typeof item.spatial !== 'undefined'
+      ? item.spatial.map((s) => s.ref.label).join(', ')
+      : '';
+  let label = '';
+  if (temporal !== '') {
+    label += temporal;
+    if (spatial !== '') {
+      label += ' | ';
+    }
+  }
+  if (spatial !== '') {
+    label += spatial;
+  }
+  return label;
+};
+
+export const eventBlock = (item) => {
+  const { _id, label } = item.ref;
+  const labelDetails = eventLabelDetails(item);
+  const url = `event/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          {label}
+          {labelDetails}
+        </span>
+      </Link>
+    </li>
+  );
+};
+
+export const organisationBlock = (item) => {
+  const { _id, label } = item.ref;
+  const termLabel = outputRelationTypes(item.term.label);
+  const url = `organisation/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          <i>{termLabel}</i> {label}
+        </span>
+      </Link>
+    </li>
+  );
+};
+
+export const peopleBlock = (item) => {
+  const { _id } = item.ref;
+  const label = personLabel(item.ref);
+  const termLabel = outputRelationTypes(item.term.label);
+  const url = `person/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          <i>{termLabel}</i> {label}
+        </span>
+      </Link>
+    </li>
+  );
+};
+
+export const resourcesBlock = (item) => {
+  const { _id, label } = item.ref;
+  const termLabel = outputRelationTypes(item.term.label);
+  const url = `resource/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          <i>{termLabel}</i> {label}
+        </span>
+      </Link>
+    </li>
+  );
+};
+
+export const spatialBlock = (item) => {
+  const { _id, label } = item.ref;
+  const termLabel = outputRelationTypes(item.term.label);
+  const url = `spatial/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          <i>{termLabel}</i> {label}
+        </span>
+      </Link>
+    </li>
+  );
+};
+
+export const temporalBlock = (item) => {
+  const { _id, label } = item.ref;
+  const termLabel = outputRelationTypes(item.term.label);
+  const url = `temporal/${_id}`;
+  return (
+    <li key={_id}>
+      <Link href={url} to={url} target="_blank">
+        <span className="tag-bg tag-item">
+          <i>{termLabel}</i> {label}
+        </span>
+      </Link>
+    </li>
+  );
 };

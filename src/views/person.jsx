@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import {
   Spinner,
   Button,
@@ -12,12 +12,15 @@ import { Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import PropTypes from 'prop-types';
+import {
+  parseReferenceLabels,
+  parseReferenceTypes,
+  renderLoader,
+} from '../helpers';
 
-import Breadcrumbs from '../components/breadcrumbs';
-import ViewPerson from '../components/view-person';
-import AddRelation from '../components/add-relations';
-
-import { parseReferenceLabels, parseReferenceTypes } from '../helpers';
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const ViewPerson = lazy(() => import('../components/view-person'));
+const AddRelation = lazy(() => import('../components/add-relations'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -270,6 +273,8 @@ class Person extends Component {
     postData.alternateAppelations = newData.alternateAppelations;
     postData.description = newData.description;
     postData.status = newData.status;
+    postData.personType = newData.personType;
+    console.log(postData.personType);
     const { match } = this.props;
     const { _id } = match.params;
     if (_id !== 'new') {
@@ -277,7 +282,7 @@ class Person extends Component {
     } else {
       delete postData._id;
     }
-    const isValid = this.validatePerson(postData);
+    const isValid = true; // this.validatePerson(postData);
     if (isValid) {
       const context = this;
       const responseData = await axios({
@@ -428,18 +433,20 @@ class Person extends Component {
     if (!loading) {
       content = (
         <div className="items-container">
-          <ViewPerson
-            person={person}
-            label={label}
-            delete={this.toggleDeleteModal}
-            uploadResponse={this.uploadResponse}
-            update={this.update}
-            updateBtn={updateBtn}
-            errorVisible={errorVisible}
-            errorText={errorText}
-            closeUploadModal={closeUploadModal}
-            reload={this.reload}
-          />
+          <Suspense fallback={renderLoader()}>
+            <ViewPerson
+              person={person}
+              label={label}
+              delete={this.toggleDeleteModal}
+              uploadResponse={this.uploadResponse}
+              update={this.update}
+              updateBtn={updateBtn}
+              errorVisible={errorVisible}
+              errorText={errorText}
+              closeUploadModal={closeUploadModal}
+              reload={this.reload}
+            />
+          </Suspense>
         </div>
       );
 
@@ -492,21 +499,25 @@ class Person extends Component {
     let addRelation = [];
     if (person !== null) {
       addRelation = (
-        <AddRelation
-          reload={this.reload}
-          reference={relationReference}
-          item={person}
-          referencesLabels={referencesLabels}
-          referencesTypes={referencesTypes}
-          type="person"
-        />
+        <Suspense fallback={[]}>
+          <AddRelation
+            reload={this.reload}
+            reference={relationReference}
+            item={person}
+            referencesLabels={referencesLabels}
+            referencesTypes={referencesTypes}
+            type="person"
+          />
+        </Suspense>
       );
     }
     return (
       <div>
         {redirectElem}
         {redirectReload}
-        <Breadcrumbs items={breadcrumbsItems} />
+        <Suspense fallback={[]}>
+          <Breadcrumbs items={breadcrumbsItems} />
+        </Suspense>
         <div className="row">
           <div className="col-12">
             <h2>{heading}</h2>

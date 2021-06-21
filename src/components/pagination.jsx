@@ -12,7 +12,6 @@ const MainPagination = (props) => {
 
   // state
   const [paginationItems, setPaginationItems] = useState([]);
-
   useEffect(() => {
     const createPagination = () => {
       let prevPage = 0;
@@ -51,7 +50,6 @@ const MainPagination = (props) => {
       for (let j = 0; j < Number(totalPages); j += 1) {
         const pageNum = j + 1;
         const pageActive = currentPage === pageNum ? 'active' : '';
-
         let paginationItem = (
           <PaginationItem key={pageNum} className={pageActive}>
             <PaginationLink

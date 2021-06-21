@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useReducer } from 'react';
+import React, { useEffect, useState, useReducer, Suspense, lazy } from 'react';
 import { Card, CardBody, Input, Button, Spinner } from 'reactstrap';
 
 import Select from 'react-select';
 import { Link } from 'react-router-dom';
-
 import axios from 'axios';
-import Breadcrumbs from '../components/breadcrumbs';
 
+const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 const APIPath = process.env.REACT_APP_APIPATH;
 
 const Highlights = () => {
@@ -263,7 +262,7 @@ const Highlights = () => {
               color="danger"
               outline
               size="sm"
-              className="edit-item"
+              className="delete-item"
               onClick={() => removeHighlight(item._id)}
             >
               <i className="fa fa-trash" />
@@ -350,7 +349,9 @@ const Highlights = () => {
   }
   return (
     <div>
-      <Breadcrumbs items={breadcrumbsItems} />
+      <Suspense fallback={[]}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
       <div className="row">
         <div className="col-12">
           <h2>
