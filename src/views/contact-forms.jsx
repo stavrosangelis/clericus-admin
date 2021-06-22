@@ -8,7 +8,6 @@ import React, {
   lazy,
 } from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
-import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
@@ -376,15 +375,7 @@ const ContactForms = () => {
 
   if (!loading) {
     const listIndex = (Number(state.page) - 1) * limit;
-    const addNewBtn = (
-      <Link
-        className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
-      >
-        <i className="fa fa-plus" />
-      </Link>
-    );
+    const addNewBtn = [];
 
     const table = tableLoading ? (
       <div style={{ padding: '40pt', textAlign: 'center' }}>

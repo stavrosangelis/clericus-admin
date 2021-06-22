@@ -462,8 +462,8 @@ const Organisations = () => {
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        to="/organisation/new"
+        href="/organisation/new"
       >
         <i className="fa fa-plus" />
       </Link>

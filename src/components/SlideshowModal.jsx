@@ -15,20 +15,21 @@ import PropTypes from 'prop-types';
 import { getData, putData, deleteData } from '../helpers';
 import ArticleImageBrowser from './article-image-browser';
 
+const defaultState = {
+  _id: null,
+  label: '',
+  caption: '',
+  order: '',
+  url: '',
+  status: '',
+  image: '',
+};
+
 const SlideshowModal = (props) => {
   // props
   const { _id, visible, toggle, reload } = props;
 
   // state
-  const defaultState = {
-    _id: null,
-    label: '',
-    caption: '',
-    order: '',
-    url: '',
-    status: '',
-    image: '',
-  };
   const [state, setState] = useReducer(
     (curState, newState) => ({ ...curState, ...newState }),
     defaultState
@@ -46,20 +47,25 @@ const SlideshowModal = (props) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const loadItem = useCallback(async () => {
-    const responseData = await getData(`slideshow-item`, { _id });
-    if (responseData.status) {
-      const { data } = responseData;
-      const form = {
-        _id: data._id,
-        label: data.label,
-        caption: data.caption,
-        order: data.order,
-        url: data.url,
-        status: data.status,
-        image: data.image,
-      };
-      setState(form);
-      setImageDetails(data.imageDetails);
+    if (_id === 'new') {
+      setState(defaultState);
+      setImageDetails(null);
+    } else if (_id !== null) {
+      const responseData = await getData(`slideshow-item`, { _id });
+      if (responseData.status) {
+        const { data } = responseData;
+        const form = {
+          _id: data._id,
+          label: data.label,
+          caption: data.caption,
+          order: data.order,
+          url: data.url,
+          status: data.status,
+          image: data.image,
+        };
+        setState(form);
+        setImageDetails(data.imageDetails);
+      }
     }
   }, [_id]);
 
@@ -195,6 +201,21 @@ const SlideshowModal = (props) => {
     </Modal>
   );
 
+  const deleteBtn =
+    _id !== null && _id !== 'new' ? (
+      <Button
+        color="danger"
+        outline
+        size="sm"
+        onClick={() => toggleDeleteModal()}
+        className="pull-left"
+      >
+        <i className="fa fa-trash" /> Delete
+      </Button>
+    ) : (
+      []
+    );
+
   return (
     <div>
       <Modal isOpen={visible} toggle={() => toggle(null)} size="lg">
@@ -286,15 +307,7 @@ const SlideshowModal = (props) => {
           />
         </ModalBody>
         <ModalFooter>
-          <Button
-            color="danger"
-            outline
-            size="sm"
-            onClick={() => toggleDeleteModal()}
-            className="pull-left"
-          >
-            <i className="fa fa-trash" /> Delete
-          </Button>
+          {deleteBtn}
           <Button
             color="primary"
             outline

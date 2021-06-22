@@ -438,8 +438,8 @@ const Resources = () => {
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        to="/resource/new"
+        href="/resource/new"
       >
         <i className="fa fa-plus" />
       </Link>

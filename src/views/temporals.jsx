@@ -401,8 +401,8 @@ const Temporal = () => {
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        to="/temporal/new"
+        href="/temporal/new"
       >
         <i className="fa fa-plus" />
       </Link>

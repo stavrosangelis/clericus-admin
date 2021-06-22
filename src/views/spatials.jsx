@@ -401,8 +401,8 @@ const Spatial = () => {
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        to="/spatial/new"
+        href="/spatial/new"
       >
         <i className="fa fa-plus" />
       </Link>

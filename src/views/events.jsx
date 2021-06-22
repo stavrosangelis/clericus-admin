@@ -464,8 +464,8 @@ const Events = () => {
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        to="/event/new"
+        href="/event/new"
       >
         <i className="fa fa-plus" />
       </Link>

@@ -8,16 +8,15 @@ import React, {
   lazy,
 } from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
-import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
-import EditModal from '../components/SlideshowModal';
+// import EditModal from '../components/SlideshowModal';
 
 const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
 const List = lazy(() => import('../components/List'));
-// const EditModal = lazy(() => import('../components/SlideshowModal'));
+const EditModal = lazy(() => import('../components/SlideshowModal'));
 
 const heading = 'Slideshow';
 const breadcrumbsItems = [
@@ -124,7 +123,7 @@ const Slideshow = () => {
     {
       props: ['edit'],
       label: 'Edit',
-      modal: Slideshow.toggleModal,
+      modal: toggleModal,
       order: false,
       align: 'center',
     },
@@ -414,13 +413,16 @@ const Slideshow = () => {
   if (!loading) {
     const listIndex = (Number(state.page) - 1) * limit;
     const addNewBtn = (
-      <Link
+      <div
         className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
+        onClick={() => toggleModal('new')}
+        role="button"
+        tabIndex="0"
+        aria-label="toggle modal"
+        onKeyDown={() => toggleModal('new')}
       >
         <i className="fa fa-plus" />
-      </Link>
+      </div>
     );
 
     const table = tableLoading ? (
@@ -453,12 +455,14 @@ const Slideshow = () => {
         </div>
         {pageActions}
         {addNewBtn}
-        <EditModal
-          visible={editModalVisible}
-          _id={itemId}
-          toggle={toggleModal}
-          reload={reload}
-        />
+        <Suspense fallback={[]}>
+          <EditModal
+            visible={editModalVisible}
+            _id={itemId}
+            toggle={toggleModal}
+            reload={reload}
+          />
+        </Suspense>
       </div>
     );
   }
