@@ -645,6 +645,33 @@ export function getEventTypes() {
   };
 }
 
+export function getArticlesCategories() {
+  return async (dispatch) => {
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}article-categories`,
+      crossDomain: true,
+    })
+      .then((response) => response.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    if (responseData.status) {
+      const articleCategories = responseData.data;
+      const payload = {
+        articleCategories,
+      };
+      dispatch({
+        type: GENERIC_UPDATE,
+        payload,
+      });
+    } else {
+      return false;
+    }
+    return false;
+  };
+}
+
 const loadEntityProperties = async (label) => {
   const params = { labelId: label };
   const entity = await axios({

@@ -11,7 +11,7 @@ import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getData, renderLoader } from '../helpers';
-import { setPaginationParams } from '../redux/actions';
+import { setPaginationParams, getArticlesCategories } from '../redux/actions';
 
 const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
@@ -77,6 +77,7 @@ const columns = [
 const Articles = () => {
   // redux
   const dispatch = useDispatch();
+  const articleCategories = useSelector((state) => state.articleCategories);
 
   const limit = useSelector((state) => state.articlesPagination.limit);
   const activeType = useSelector(
@@ -156,7 +157,7 @@ const Articles = () => {
       params.label = state.searchInput;
     }
     if (state.activeType !== null) {
-      params.articleType = state.activeType;
+      params.categoryId = state.activeType;
     }
     const responseData = await getData(`articles`, params);
     if (mounted.current) {
@@ -179,6 +180,12 @@ const Articles = () => {
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (articleCategories.length === 0) {
+      dispatch(getArticlesCategories());
+    }
+  }, [dispatch, articleCategories]);
 
   const updateStorePagination = useCallback(
     ({
@@ -385,7 +392,7 @@ const Articles = () => {
         setStatus={setStatus}
         status={state.status}
         totalPages={totalPages}
-        types={[]}
+        types={articleCategories}
         updateLimit={updateLimit}
         updatePage={updatePage}
       />

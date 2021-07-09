@@ -5,7 +5,6 @@ import {
   DropdownItem,
   DropdownToggle,
 } from 'reactstrap';
-
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import PropTypes from 'prop-types';

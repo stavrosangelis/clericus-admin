@@ -136,7 +136,13 @@ const PageActions = (props) => {
 
   const parsePropTypes = (typesParam, sep = '', parentI = null) => {
     const typesDropdownItems = typesParam.map((item, i) => {
-      const active = activeType === item.label;
+      let active = activeType === item.label;
+      if (pageType === 'organisations') {
+        active = activeType === item.labelId;
+      }
+      if (['resources', 'articles'].indexOf(pageType) > -1) {
+        active = activeType === item._id;
+      }
       const key = parentI !== null ? `${parentI}-${i}` : i;
       const sepOut =
         sep !== '' ? <span style={{ padding: '0 5px' }}>{sep}</span> : '';
@@ -147,6 +153,9 @@ const PageActions = (props) => {
           activeTypeValue = item.labelId;
           break;
         case 'resources':
+          activeTypeValue = item._id;
+          break;
+        case 'articles':
           activeTypeValue = item._id;
           break;
         default:

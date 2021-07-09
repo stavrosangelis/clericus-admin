@@ -121,6 +121,7 @@ const defaultState = {
   personTypes: [],
   organisationTypes: [],
   eventTypes: [],
+  articleCategories: [],
 
   lightBoxOpen: false,
   lightBoxSrc: null,

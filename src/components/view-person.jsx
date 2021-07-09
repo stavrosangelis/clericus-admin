@@ -37,7 +37,7 @@ class ViewPerson extends Component {
     const lastName = person?.lastName || '';
     const alternateAppelations = person?.alternateAppelations || [];
     const description = person?.description || '';
-    const personType = person?.personType || '';
+    const personType = person?.personType || 'Clergy';
 
     this.state = {
       detailsOpen: true,
@@ -68,7 +68,6 @@ class ViewPerson extends Component {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const { name } = target;
-
     this.setState({
       [name]: value,
     });
