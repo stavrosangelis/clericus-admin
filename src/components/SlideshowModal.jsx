@@ -79,9 +79,9 @@ const SlideshowModal = (props) => {
     setImageModal(!imageModal);
   };
 
-  const imageFn = () => {
+  const imageFn = (imageId) => {
     const stateCopy = { ...state };
-    stateCopy.image = _id;
+    stateCopy.image = imageId;
     setState(stateCopy);
   };
 

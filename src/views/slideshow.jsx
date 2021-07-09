@@ -11,7 +11,6 @@ import { Card, CardBody, Spinner } from 'reactstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { getData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
-// import EditModal from '../components/SlideshowModal';
 
 const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
