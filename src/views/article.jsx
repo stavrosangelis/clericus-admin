@@ -26,7 +26,6 @@ import axios from 'axios';
 import { Redirect } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
-// import { Editor } from '@tinymce/tinymce-react';
 import { renderLoader } from '../helpers';
 
 const Editor = lazy(() => import('../components/LazyEditor'));

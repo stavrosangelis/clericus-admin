@@ -14,6 +14,7 @@ import {
   ModalFooter,
   Spinner,
 } from 'reactstrap';
+import Select from 'react-select';
 import axios from 'axios';
 
 const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
@@ -440,6 +441,24 @@ const Menu = () => {
     setMenuItemForm(form);
   };
 
+  const select2Change = (selectedOption, element = null) => {
+    if (element === null) {
+      return false;
+    }
+    let link = '';
+    if (element === 'article') {
+      const article = articles.find((a) => a._id === selectedOption.value);
+      if (typeof article !== 'undefined') {
+        link = article.permalink;
+      }
+    }
+    const form = { ...menuItemForm };
+    form.objectId = selectedOption.value;
+    form.link = link;
+    setMenuItemForm(form);
+    return true;
+  };
+
   const handleMenuItemChange = (e) => {
     const { target } = e;
     const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -481,8 +500,16 @@ const Menu = () => {
       target: newData.target,
       status: newData.status,
     };
+    if (newData.type === 'article') {
+      const article = articles.find((a) => a._id === newData.objectId);
+      menuItemFormParams.articleId = {
+        label: article.label,
+        link: article.permalink,
+        value: article._id,
+      };
+    }
     setMenuItemForm(menuItemFormParams);
-  }, [menuItemId]);
+  }, [menuItemId, articles]);
 
   useEffect(() => {
     if (menuItemId !== null) {
@@ -637,16 +664,18 @@ const Menu = () => {
   }
 
   // articles options list
-  let articlesOptionsHTML = articles.map((article) => (
-    <option value={article._id} link={article.permalink} key={article._id}>
-      {article.label}
-    </option>
-  ));
+  let articlesOptionsHTML = articles.map((article) => ({
+    label: article.label,
+    link: article.permalink,
+    value: article._id,
+  }));
   articlesOptionsHTML = [
     ...[
-      <option value="" key="0a">
-        -- Select article --
-      </option>,
+      {
+        label: '-- Select article --',
+        link: '',
+        value: '',
+      },
     ],
     ...articlesOptionsHTML,
   ];
@@ -824,14 +853,13 @@ const Menu = () => {
           </FormGroup>
           <FormGroup className={articleVisible}>
             <Label>Article</Label>
-            <Input
+            <Select
               type="select"
               name="articleId"
               value={menuItemForm.articleId}
-              onChange={(e) => handleMenuItemTypeChange(e, 'article')}
-            >
-              {articlesOptionsHTML}
-            </Input>
+              onChange={(e) => select2Change(e, 'article')}
+              options={articlesOptionsHTML}
+            />
           </FormGroup>
           <FormGroup className={categoryVisible}>
             <Label>Article Category</Label>
