@@ -1,12 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useReducer,
-  useRef,
-  Suspense,
-  lazy,
-} from 'react';
+import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { getData, renderLoader } from '../helpers';
@@ -81,42 +73,22 @@ const ContactForms = () => {
   const searchInput = useSelector(
     (state) => state.contactFormsPagination.searchInput
   );
-  const mounted = useRef(true);
 
   // state
-  const defaultState = {
-    limit,
-    page,
-    gotoPage: page,
-    searchInput,
-  };
-  const [state, setState] = useReducer(
-    (curState, newState) => ({ ...curState, ...newState }),
-    defaultState
-  );
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [allChecked, setAllChecked] = useState(false);
+  const [gotoPageVal, setGotoPage] = useState(page);
+
   const [prevLimit, setPrevLimit] = useState(25);
   const [prevPage, setPrevPage] = useState(1);
-  const [prevActiveType, setPrevActiveType] = useState(null);
-  const [prevStatus, setPrevStatus] = useState(null);
   const [prevOrderField, setPrevOrderField] = useState('label');
   const [prevOrderDesc, setPrevOrderDesc] = useState(false);
   const [reLoading, setReLoading] = useState(false);
   const [prevReLoading, setPrevReLoading] = useState(false);
-
-  const handleChange = (e) => {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    setState({
-      [name]: value,
-    });
-  };
 
   const prepareItems = useCallback((itemsParam) => {
     const newItems = [];
@@ -128,128 +100,103 @@ const ContactForms = () => {
     return newItems;
   }, []);
 
+  const updateStorePagination = useCallback(
+    ({
+      limitParam = null,
+      pageParam = null,
+      orderFieldParam = null,
+      orderDescParam = null,
+      searchInputParam = null,
+    }) => {
+      const limitCopy = limitParam === null ? limit : limitParam;
+      const pageCopy = pageParam === null ? page : pageParam;
+      const orderFieldCopy =
+        orderFieldParam === null ? orderField : orderFieldParam;
+      const orderDescCopy =
+        orderDescParam === null ? orderDesc : orderDescParam;
+      const searchInputCopy =
+        searchInputParam === null ? searchInput : searchInputParam;
+      const payload = {
+        limit: limitCopy,
+        page: pageCopy,
+        orderField: orderFieldCopy,
+        orderDesc: orderDescCopy,
+        searchInput: searchInputCopy,
+      };
+      dispatch(setPaginationParams('users', payload));
+    },
+    [dispatch, limit, orderDesc, orderField, page, searchInput]
+  );
+
   const load = useCallback(async () => {
     setLoading(false);
     setReLoading(false);
     setPrevReLoading(false);
     setTableLoading(true);
     const params = {
-      page: state.page,
-      limit: state.limit,
+      page,
+      limit,
       orderField,
       orderDesc,
-      status: state.status,
     };
-    if (state.searchInput !== '') {
-      params.label = state.searchInput;
+    if (searchInput !== '') {
+      params.label = searchInput;
     }
     const responseData = await getData(`contact-forms`, params);
-    if (mounted.current) {
-      const { data: newData } = responseData;
-      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-      const newItems = await prepareItems(newData.data);
-      setItems(newItems);
-      setTableLoading(false);
-      setState({ page: currentPage });
-      setTotalPages(newData.totalPages);
-      setTotalItems(newData.totalItems);
+    const { data: newData } = responseData;
+    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+    if (currentPage > newData.totalPages && newData.totalPages > 0) {
+      currentPage = newData.totalPages;
     }
+    const newItems = await prepareItems(newData.data);
+    setItems(newItems);
+    setTableLoading(false);
+    updateStorePagination({ pageParam: currentPage });
+    setTotalPages(newData.totalPages);
+    setTotalItems(newData.totalItems);
+  }, [
+    limit,
+    page,
+    searchInput,
+    prepareItems,
+    orderDesc,
+    orderField,
+    updateStorePagination,
+  ]);
 
-    return true;
-  }, [state, prepareItems, orderDesc, orderField, mounted]);
-
-  useEffect(() => {
-    load();
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  const updateStorePagination = useCallback(
-    ({
-      limitParam = null,
-      pageParam = null,
-      activeTypeParam = null,
-      orderFieldParam = '',
-      orderDescParam = false,
-      statusParam = null,
-      searchInputParam = '',
-    }) => {
-      const limitCopy = limitParam === null ? state.limit : limitParam;
-      const pageCopy = pageParam === null ? state.page : pageParam;
-      const activeTypeCopy =
-        activeTypeParam === null ? state.activeType : activeTypeParam;
-      const orderFieldCopy =
-        orderFieldParam === null ? state.orderField : orderFieldParam;
-      const orderDescCopy =
-        orderDescParam === null ? state.orderDesc : orderDescParam;
-      const statusCopy = statusParam === null ? state.status : statusParam;
-      const searchInputCopy =
-        searchInputParam === null ? state.searchInput : searchInputParam;
-      const payload = {
-        limit: limitCopy,
-        page: pageCopy,
-        activeType: activeTypeCopy,
-        orderField: orderFieldCopy,
-        orderDesc: orderDescCopy,
-        status: statusCopy,
-        searchInput: searchInputCopy,
-      };
-      dispatch(setPaginationParams('users', payload));
-    },
-    [
-      dispatch,
-      state.activeType,
-      state.limit,
-      state.orderDesc,
-      state.orderField,
-      state.page,
-      state.searchInput,
-      state.status,
-    ]
-  );
-
-  const clearSearch = () => {
-    setState({ searchInput: '' });
-    updateStorePagination({ searchInput: '' });
-    setLoading(true);
+  const handleChange = (e) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    updateStorePagination({
+      [`${name}Param`]: value,
+    });
   };
 
-  /* const updateOrdering = (orderFieldParam = '') => {
-    if (orderFieldParam !== '') {
-      const orderDescending =
-        orderFieldParam === state.orderField ? !state.orderDesc : false;
-      updateStorePagination({
-        orderField: orderFieldParam,
-        orderDesc: orderDescending,
-      });
-    }
-  }; */
+  const updateLimit = (value) => {
+    updateStorePagination({ limitParam: value });
+  };
 
   const updatePage = (value) => {
-    if (value > 0 && value !== state.page) {
-      updateStorePagination({ page: value });
-      setState({
-        page: value,
-        gotoPage: value,
-      });
+    if (value > 0 && value !== page) {
+      updateStorePagination({ pageParam: value });
+      setGotoPage(value);
     }
   };
 
   const gotoPage = () => {
-    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
-      updateStorePagination({ page: state.gotoPage });
-      setState({ page: Number(state.gotoPage) });
+    if (Number(gotoPageVal) > 0 && gotoPageVal !== page) {
+      updateStorePagination({ pageParam: gotoPageVal });
     }
   };
 
-  const updateLimit = (value) => {
-    updateStorePagination({ limit: value });
-    setState({ limit: value });
+  const clearSearch = () => {
+    updateStorePagination({ searchInputParam: '' });
+    setLoading(true);
   };
 
   const toggleSelected = (i) => {
-    const index = i - (Number(state.page) - 1) * limit;
+    const index = i - (Number(page) - 1) * limit;
     const copy = [...items];
     copy[index].checked = !copy[index].checked;
     setItems(copy);
@@ -283,74 +230,62 @@ const ContactForms = () => {
   };
 
   useEffect(() => {
-    if (prevLimit !== state.limit) {
-      setPrevLimit(state.limit);
-      clearSelectedAll();
-      load();
+    if (prevLimit !== limit) {
+      setPrevLimit(limit);
     }
-    if (prevPage !== state.page) {
-      setPrevPage(state.page);
-      clearSelectedAll();
-      load();
-    }
-    if (prevActiveType !== state.activeType) {
-      setPrevActiveType(state.activeType);
-      clearSelectedAll();
-      load();
-    }
-    if (prevStatus !== state.status) {
-      setPrevStatus(state.status);
-      clearSelectedAll();
-      load();
+    if (prevPage !== page) {
+      setPrevPage(page);
     }
     if (prevOrderField !== orderField) {
       setPrevOrderField(orderField);
-      clearSelectedAll();
-      load();
     }
     if (prevOrderDesc !== orderDesc) {
       setPrevOrderDesc(orderDesc);
-      clearSelectedAll();
-      load();
     }
     if (reLoading && !prevReLoading) {
       setPrevReLoading(reLoading);
+    }
+    if (
+      loading ||
+      prevLimit !== limit ||
+      prevPage !== page ||
+      prevOrderField !== orderField ||
+      prevOrderDesc !== orderDesc ||
+      (reLoading && !prevReLoading)
+    ) {
       clearSelectedAll();
       load();
     }
   }, [
+    loading,
     clearSelectedAll,
     load,
     orderField,
     orderDesc,
     prevLimit,
     prevPage,
-    prevActiveType,
-    prevStatus,
     prevOrderField,
     prevOrderDesc,
     prevReLoading,
     reLoading,
-    state.limit,
-    state.page,
-    state.activeType,
-    state.status,
+    limit,
+    page,
   ]);
 
   const pageActions = (
     <Suspense fallback={renderLoader()}>
       <PageActions
         clearSearch={clearSearch}
-        current_page={state.page}
+        current_page={page}
         defaultLimit={25}
         gotoPage={gotoPage}
-        gotoPageValue={state.gotoPage}
+        gotoPageValue={gotoPageVal}
         handleChange={handleChange}
-        limit={state.limit}
-        page={state.page}
+        limit={limit}
+        page={page}
         pageType="contact-forms"
         reload={reload}
-        searchInput={state.searchInput}
+        searchInput={searchInput}
         totalPages={totalPages}
         types={[]}
         updateLimit={updateLimit}
@@ -374,7 +309,7 @@ const ContactForms = () => {
   );
 
   if (!loading) {
-    const listIndex = (Number(state.page) - 1) * limit;
+    const listIndex = (Number(page) - 1) * limit;
     const addNewBtn = [];
 
     const table = tableLoading ? (

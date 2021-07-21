@@ -3,11 +3,13 @@ import {
   Collapse,
   Navbar,
   Nav,
+  NavItem,
   Dropdown,
   DropdownToggle,
   DropdownMenu,
   DropdownItem,
   Container,
+  Button,
 } from 'reactstrap';
 
 import { connect } from 'react-redux';
@@ -17,6 +19,8 @@ import PropTypes from 'prop-types';
 import dashboardRoutes from '../routes/index';
 import { logout } from '../redux/actions';
 import '../assets/scss/header.scss';
+
+import AboutModal from './About.modal';
 
 function mapDispatchToProps(dispatch) {
   return {
@@ -34,8 +38,10 @@ class Header extends Component {
     this.state = {
       isOpen: false,
       dropdownOpen: false,
+      aboutOpen: false,
     };
     this.toggle = this.toggle.bind(this);
+    this.toggleAbout = this.toggleAbout.bind(this);
     this.dropdownToggle = this.dropdownToggle.bind(this);
   }
 
@@ -69,6 +75,13 @@ class Header extends Component {
     });
   }
 
+  toggleAbout() {
+    const { aboutOpen } = this.state;
+    this.setState({
+      aboutOpen: !aboutOpen,
+    });
+  }
+
   dropdownToggle() {
     const { dropdownOpen } = this.state;
     this.setState({
@@ -77,7 +90,7 @@ class Header extends Component {
   }
 
   render() {
-    const { isOpen, dropdownOpen } = this.state;
+    const { isOpen, dropdownOpen, aboutOpen } = this.state;
     let userName = '';
     const user = JSON.parse(localStorage.getItem('user'));
     if (user !== null) {
@@ -93,46 +106,58 @@ class Header extends Component {
     }
     const { logout: logoutFn } = this.props;
     return (
-      <Navbar expand="md" className="main-navbar">
-        <Container fluid>
-          <div className="navbar-wrapper">
-            <div className="navbar-toggle">
-              <button
-                type="button"
-                className="navbar-toggler left"
-                onClick={() => this.constructor.openSidebar()}
-              >
-                <span className="navbar-toggler-bar bar1" />
-                <span className="navbar-toggler-bar bar2" />
-                <span className="navbar-toggler-bar bar3" />
-              </button>
+      <div>
+        <Navbar expand="md" className="main-navbar">
+          <Container fluid>
+            <div className="navbar-wrapper">
+              <div className="navbar-toggle">
+                <button
+                  type="button"
+                  className="navbar-toggler left"
+                  onClick={() => this.constructor.openSidebar()}
+                >
+                  <span className="navbar-toggler-bar bar1" />
+                  <span className="navbar-toggler-bar bar2" />
+                  <span className="navbar-toggler-bar bar3" />
+                </button>
+              </div>
             </div>
-          </div>
-          <Collapse
-            isOpen={isOpen}
-            navbar
-            className="justify-content-end user-menu"
-          >
-            <Nav navbar>
-              <Dropdown
-                nav
-                isOpen={dropdownOpen}
-                toggle={(e) => this.dropdownToggle(e)}
-              >
-                <DropdownToggle caret nav>
-                  <i className="pe-header-bar-icon pe-7s-user" />
-                </DropdownToggle>
-                <DropdownMenu right>
-                  <DropdownItem header>Welcome {userName}</DropdownItem>
-                  <DropdownItem tag="a" onClick={() => logoutFn()}>
-                    Logout
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-            </Nav>
-          </Collapse>
-        </Container>
-      </Navbar>
+            <Collapse
+              isOpen={isOpen}
+              navbar
+              className="justify-content-end user-menu"
+            >
+              <Nav navbar>
+                <Dropdown
+                  nav
+                  isOpen={dropdownOpen}
+                  toggle={(e) => this.dropdownToggle(e)}
+                >
+                  <DropdownToggle caret nav>
+                    <i className="pe-header-bar-icon pe-7s-user" />
+                  </DropdownToggle>
+                  <DropdownMenu right>
+                    <DropdownItem header>Welcome {userName}</DropdownItem>
+                    <DropdownItem tag="a" onClick={() => logoutFn()}>
+                      Logout
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+                <NavItem>
+                  <Button
+                    color="link"
+                    className="top-nav-link-btn"
+                    onClick={() => this.toggleAbout()}
+                  >
+                    <i className="pe-header-bar-icon pe-7s-info" />
+                  </Button>
+                </NavItem>
+              </Nav>
+            </Collapse>
+          </Container>
+        </Navbar>
+        <AboutModal visible={aboutOpen} toggle={this.toggleAbout} />
+      </div>
     );
   }
 }

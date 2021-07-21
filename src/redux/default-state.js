@@ -31,6 +31,8 @@ const defaultState = {
     status: null,
     searchInput: '',
     advancedSearchInputs: [],
+    classpieceSearchInput: '',
+    classpieceId: null,
   },
   organisationsPagination: {
     limit: 25,

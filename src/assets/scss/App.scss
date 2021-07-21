@@ -975,6 +975,9 @@ header {
 .go-to-page-btn {
   width: 30px;
 }
+.filter-item.search.active > .dropdown > button {
+  background-color: #f9d58b;
+}
 .filter-item {
   padding: 0 5px 5px 5px;
   float: left;

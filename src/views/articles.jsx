@@ -1,12 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useReducer,
-  useRef,
-  Suspense,
-  lazy,
-} from 'react';
+import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -92,27 +84,16 @@ const Articles = () => {
   const searchInput = useSelector(
     (state) => state.articlesPagination.searchInput
   );
-  const mounted = useRef(true);
 
   // state
-  const defaultState = {
-    limit,
-    activeType,
-    page,
-    gotoPage: page,
-    status,
-    searchInput,
-  };
-  const [state, setState] = useReducer(
-    (curState, newState) => ({ ...curState, ...newState }),
-    defaultState
-  );
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [allChecked, setAllChecked] = useState(false);
+  const [gotoPageVal, setGotoPage] = useState(page);
+
   const [prevLimit, setPrevLimit] = useState(25);
   const [prevPage, setPrevPage] = useState(1);
   const [prevActiveType, setPrevActiveType] = useState(null);
@@ -121,15 +102,6 @@ const Articles = () => {
   const [prevOrderDesc, setPrevOrderDesc] = useState(false);
   const [reLoading, setReLoading] = useState(false);
   const [prevReLoading, setPrevReLoading] = useState(false);
-
-  const handleChange = (e) => {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    setState({
-      [name]: value,
-    });
-  };
 
   const prepareItems = useCallback((itemsParam) => {
     const newItems = [];
@@ -141,73 +113,27 @@ const Articles = () => {
     return newItems;
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
-    const params = {
-      page: state.page,
-      limit: state.limit,
-      orderField,
-      orderDesc,
-      status: state.status,
-    };
-    if (state.searchInput !== '') {
-      params.label = state.searchInput;
-    }
-    if (state.activeType !== null) {
-      params.categoryId = state.activeType;
-    }
-    const responseData = await getData(`articles`, params);
-    if (mounted.current) {
-      const { data: newData } = responseData;
-      const currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-      const newItems = await prepareItems(newData.data);
-      setItems(newItems);
-      setTableLoading(false);
-      setState({ page: currentPage });
-      setTotalPages(newData.totalPages);
-      setTotalItems(newData.totalItems);
-    }
-
-    return true;
-  }, [state, prepareItems, orderDesc, orderField, mounted]);
-
-  useEffect(() => {
-    load();
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (articleCategories.length === 0) {
-      dispatch(getArticlesCategories());
-    }
-  }, [dispatch, articleCategories]);
-
   const updateStorePagination = useCallback(
     ({
       limitParam = null,
       pageParam = null,
       activeTypeParam = null,
-      orderFieldParam = '',
-      orderDescParam = false,
+      orderFieldParam = null,
+      orderDescParam = null,
       statusParam = null,
-      searchInputParam = '',
+      searchInputParam = null,
     }) => {
-      const limitCopy = limitParam === null ? state.limit : limitParam;
-      const pageCopy = pageParam === null ? state.page : pageParam;
+      const limitCopy = limitParam === null ? limit : limitParam;
+      const pageCopy = pageParam === null ? page : pageParam;
       const activeTypeCopy =
-        activeTypeParam === null ? state.activeType : activeTypeParam;
+        activeTypeParam === null ? activeType : activeTypeParam;
       const orderFieldCopy =
-        orderFieldParam === null ? state.orderField : orderFieldParam;
+        orderFieldParam === null ? orderField : orderFieldParam;
       const orderDescCopy =
-        orderDescParam === null ? state.orderDesc : orderDescParam;
-      const statusCopy = statusParam === null ? state.status : statusParam;
+        orderDescParam === null ? orderDesc : orderDescParam;
+      const statusCopy = statusParam === null ? status : statusParam;
       const searchInputCopy =
-        searchInputParam === null ? state.searchInput : searchInputParam;
+        searchInputParam === null ? searchInput : searchInputParam;
       const payload = {
         limit: limitCopy,
         page: pageCopy,
@@ -221,71 +147,106 @@ const Articles = () => {
     },
     [
       dispatch,
-      state.activeType,
-      state.limit,
-      state.orderDesc,
-      state.orderField,
-      state.page,
-      state.searchInput,
-      state.status,
+      activeType,
+      limit,
+      orderDesc,
+      orderField,
+      page,
+      searchInput,
+      status,
     ]
   );
 
-  const setActiveType = (type) => {
-    updateStorePagination({ activeType: type });
-    setState({
-      activeType: type,
-    });
-  };
-
-  const setStatus = (statusParam = null) => {
-    updateStorePagination({ status: statusParam });
-    setState({
+  const load = useCallback(async () => {
+    setLoading(false);
+    setReLoading(false);
+    setPrevReLoading(false);
+    setTableLoading(true);
+    const statusParam = status !== '' ? status : null;
+    const params = {
+      page,
+      limit,
+      orderField,
+      orderDesc,
       status: statusParam,
+    };
+    if (searchInput !== '') {
+      params.label = searchInput;
+    }
+    if (activeType !== null && activeType !== '') {
+      params.categoryId = activeType;
+    }
+    const responseData = await getData(`articles`, params);
+    const { data: newData } = responseData;
+    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+    if (currentPage > newData.totalPages && newData.totalPages > 0) {
+      currentPage = newData.totalPages;
+    }
+    const newItems = await prepareItems(newData.data);
+    setItems(newItems);
+    setTableLoading(false);
+    updateStorePagination({ pageParam: currentPage });
+    setTotalPages(newData.totalPages);
+    setTotalItems(newData.totalItems);
+  }, [
+    activeType,
+    limit,
+    page,
+    searchInput,
+    status,
+    prepareItems,
+    orderDesc,
+    orderField,
+    updateStorePagination,
+  ]);
+
+  const handleChange = (e) => {
+    const { target } = e;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const { name } = target;
+    updateStorePagination({
+      [`${name}Param`]: value,
     });
   };
 
-  const clearSearch = () => {
-    setState({ searchInput: '' });
-    updateStorePagination({ searchInput: '' });
-    setLoading(true);
+  useEffect(() => {
+    if (articleCategories.length === 0) {
+      dispatch(getArticlesCategories());
+    }
+  }, [dispatch, articleCategories]);
+
+  const updateLimit = (value) => {
+    updateStorePagination({ limitParam: value });
   };
 
-  /* const updateOrdering = (orderFieldParam = '') => {
-    if (orderFieldParam !== '') {
-      const orderDescending =
-        orderFieldParam === state.orderField ? !state.orderDesc : false;
-      updateStorePagination({
-        orderField: orderFieldParam,
-        orderDesc: orderDescending,
-      });
-    }
-  }; */
+  const setActiveType = (type) => {
+    updateStorePagination({ activeTypeParam: type });
+  };
 
   const updatePage = (value) => {
-    if (value > 0 && value !== state.page) {
-      updateStorePagination({ page: value });
-      setState({
-        page: value,
-        gotoPage: value,
-      });
+    if (value > 0 && value !== page) {
+      updateStorePagination({ pageParam: value });
+      setGotoPage(value);
     }
   };
 
   const gotoPage = () => {
-    if (Number(state.gotoPage) > 0 && state.gotoPage !== state.page) {
-      updateStorePagination({ page: state.gotoPage });
-      setState({ page: Number(state.gotoPage) });
+    if (Number(gotoPageVal) > 0 && gotoPageVal !== page) {
+      updateStorePagination({ pageParam: gotoPageVal });
     }
   };
 
-  const updateLimit = (value) => {
-    updateStorePagination({ limit: value });
-    setState({ limit: value });
+  const setStatus = (statusParam = null) => {
+    updateStorePagination({ statusParam });
+  };
+
+  const clearSearch = () => {
+    updateStorePagination({ searchInputParam: '' });
+    setLoading(true);
   };
 
   const toggleSelected = (i) => {
-    const index = i - (Number(state.page) - 1) * limit;
+    const index = i - (Number(page) - 1) * limit;
     const copy = [...items];
     copy[index].checked = !copy[index].checked;
     setItems(copy);
@@ -319,42 +280,44 @@ const Articles = () => {
   };
 
   useEffect(() => {
-    if (prevLimit !== state.limit) {
-      setPrevLimit(state.limit);
-      clearSelectedAll();
-      load();
+    if (prevLimit !== limit) {
+      setPrevLimit(limit);
     }
-    if (prevPage !== state.page) {
-      setPrevPage(state.page);
-      clearSelectedAll();
-      load();
+    if (prevPage !== page) {
+      setPrevPage(page);
     }
-    if (prevActiveType !== state.activeType) {
-      setPrevActiveType(state.activeType);
-      clearSelectedAll();
-      load();
+    if (prevActiveType !== activeType) {
+      setPrevActiveType(activeType);
     }
-    if (prevStatus !== state.status) {
-      setPrevStatus(state.status);
-      clearSelectedAll();
-      load();
+    if (prevStatus !== status) {
+      setPrevStatus(status);
     }
     if (prevOrderField !== orderField) {
       setPrevOrderField(orderField);
-      clearSelectedAll();
-      load();
     }
     if (prevOrderDesc !== orderDesc) {
       setPrevOrderDesc(orderDesc);
-      clearSelectedAll();
-      load();
     }
     if (reLoading && !prevReLoading) {
       setPrevReLoading(reLoading);
       clearSelectedAll();
       load();
     }
+    if (
+      loading ||
+      prevLimit !== limit ||
+      prevPage !== page ||
+      prevActiveType !== activeType ||
+      prevStatus !== status ||
+      prevOrderField !== orderField ||
+      prevOrderDesc !== orderDesc ||
+      (reLoading && !prevReLoading)
+    ) {
+      clearSelectedAll();
+      load();
+    }
   }, [
+    loading,
     clearSelectedAll,
     load,
     orderField,
@@ -367,30 +330,30 @@ const Articles = () => {
     prevOrderDesc,
     prevReLoading,
     reLoading,
-    state.limit,
-    state.page,
-    state.activeType,
-    state.status,
+    limit,
+    page,
+    activeType,
+    status,
   ]);
 
   const pageActions = (
     <Suspense fallback={renderLoader()}>
       <PageActions
-        activeType={state.activeType}
+        activeType={activeType}
         clearSearch={clearSearch}
-        current_page={state.page}
+        current_page={page}
         defaultLimit={25}
         gotoPage={gotoPage}
-        gotoPageValue={state.gotoPage}
+        gotoPageValue={gotoPageVal}
         handleChange={handleChange}
-        limit={state.limit}
-        page={state.page}
+        limit={limit}
+        page={page}
         pageType="articles"
         reload={reload}
-        searchInput={state.searchInput}
+        searchInput={searchInput}
         setActiveType={setActiveType}
         setStatus={setStatus}
-        status={state.status}
+        status={status}
         totalPages={totalPages}
         types={articleCategories}
         updateLimit={updateLimit}
@@ -414,7 +377,7 @@ const Articles = () => {
   );
 
   if (!loading) {
-    const listIndex = (Number(state.page) - 1) * limit;
+    const listIndex = (Number(page) - 1) * limit;
     const addNewBtn = (
       <Link
         className="btn btn-outline-secondary add-new-item-btn"

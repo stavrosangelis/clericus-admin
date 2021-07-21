@@ -30,6 +30,8 @@ const PageActions = (props) => {
     gotoPageValue,
     handleChange,
     limit,
+    orderField,
+    orderDesc,
     page,
     pageType,
     reload,
@@ -42,6 +44,7 @@ const PageActions = (props) => {
     types,
     updateAdvancedSearchInputs,
     updateLimit,
+    updateOrdering,
     updatePage,
     totalPages,
   } = props;
@@ -158,6 +161,9 @@ const PageActions = (props) => {
         case 'articles':
           activeTypeValue = item._id;
           break;
+        case 'events':
+          activeTypeValue = item._id;
+          break;
         default:
           activeTypeValue = item.label;
           break;
@@ -240,7 +246,7 @@ const PageActions = (props) => {
   );
   let searchDropdown = [];
   let classpieces = [];
-  const sortDropdown = [];
+  let sortDropdown = [];
   let typesDropdownFilter = [];
   let statusDropdown = [];
 
@@ -275,8 +281,10 @@ const PageActions = (props) => {
       );
     });
 
+    const searchDropdownActive = searchInput !== '' ? ' active' : '';
+
     searchDropdown = (
-      <div className="filter-item search">
+      <div className={`filter-item search${searchDropdownActive}`}>
         <UncontrolledDropdown direction="down">
           <DropdownToggle caret size="sm" outline>
             Search
@@ -403,8 +411,10 @@ const PageActions = (props) => {
       </div>
     );
   } else {
+    const searchDropdownActive = searchInput !== '' ? ' active' : '';
+
     searchDropdown = (
-      <div className="filter-item search">
+      <div className={`filter-item search${searchDropdownActive}`}>
         <UncontrolledDropdown direction="down">
           <DropdownToggle caret size="sm" outline>
             Search
@@ -442,6 +452,78 @@ const PageActions = (props) => {
     );
   }
 
+  if (pageType === 'resources') {
+    const labelActive = orderField === 'label';
+    const statusActive = orderField === 'status';
+    const createdAtActive = orderField === 'createdAt';
+    const updatedAtActive = orderField === 'updatedAt';
+
+    let labelIcon = [];
+    if (orderField === 'label' && orderDesc) {
+      labelIcon = <i className="fa fa-caret-up pull-right" />;
+    } else if (orderField === 'label' && !orderDesc) {
+      labelIcon = <i className="fa fa-caret-down pull-right" />;
+    }
+    let statusIcon = [];
+    if (orderField === 'status' && orderDesc) {
+      statusIcon = <i className="fa fa-caret-up pull-right" />;
+    } else if (orderField === 'status' && !orderDesc) {
+      statusIcon = <i className="fa fa-caret-down pull-right" />;
+    }
+    let createdAtIcon = [];
+    if (orderField === 'createdAt' && orderDesc) {
+      createdAtIcon = <i className="fa fa-caret-up pull-right" />;
+    } else if (orderField === 'createdAt' && !orderDesc) {
+      createdAtIcon = <i className="fa fa-caret-down pull-right" />;
+    }
+    let updatedAtIcon = [];
+    if (orderField === 'updatedAt' && orderDesc) {
+      updatedAtIcon = <i className="fa fa-caret-up pull-right" />;
+    } else if (orderField === 'updatedAt' && !orderDesc) {
+      updatedAtIcon = <i className="fa fa-caret-down pull-right" />;
+    }
+    sortDropdown = (
+      <div className="filter-item">
+        <UncontrolledDropdown direction="down">
+          <DropdownToggle outline caret size="sm">
+            Sort
+          </DropdownToggle>
+          <DropdownMenu right>
+            <DropdownItem
+              active={labelActive}
+              onClick={() => updateOrdering('label')}
+              key="default"
+            >
+              <span className="first-cap">label</span>
+              {labelIcon}
+            </DropdownItem>
+            <DropdownItem
+              active={statusActive}
+              onClick={() => updateOrdering('status')}
+            >
+              <span className="first-cap">status</span>
+              {statusIcon}
+            </DropdownItem>
+            <DropdownItem
+              active={createdAtActive}
+              onClick={() => updateOrdering('createdAt')}
+            >
+              <span className="first-cap">createdAt</span>
+              {createdAtIcon}
+            </DropdownItem>
+            <DropdownItem
+              active={updatedAtActive}
+              onClick={() => updateOrdering('updatedAt')}
+            >
+              <span className="first-cap">updatedAt</span>
+              {updatedAtIcon}
+            </DropdownItem>
+          </DropdownMenu>
+        </UncontrolledDropdown>
+      </div>
+    );
+  }
+
   if (typeof types !== 'undefined' && types.length > 0) {
     const typesDropdownItems = parsePropTypes(types);
     const allActive = activeType === null;
@@ -453,7 +535,7 @@ const PageActions = (props) => {
         <DropdownMenu right>
           <DropdownItem
             active={allActive}
-            onClick={() => setActiveType(null)}
+            onClick={() => setActiveType('')}
             key="default"
           >
             <span className="first-cap">All</span>
@@ -465,7 +547,16 @@ const PageActions = (props) => {
 
     typesDropdownFilter = <div className="filter-item">{typesDropdown}</div>;
   }
-  if (typeof status !== 'undefined' && status !== '') {
+
+  const noStatus = [
+    'temporals',
+    'spatials',
+    'contact-forms',
+    'users',
+    'usergroups',
+  ];
+
+  if (noStatus.indexOf(pageType) === -1 && typeof status !== 'undefined') {
     let statusDropdownActive0 = true;
     let statusDropdownActive1 = false;
     let statusDropdownActive2 = false;
@@ -480,7 +571,7 @@ const PageActions = (props) => {
     const statusDropdownFilter = [
       <DropdownItem
         active={statusDropdownActive0}
-        onClick={() => setStatus(null)}
+        onClick={() => setStatus('')}
         key={0}
       >
         All
@@ -572,6 +663,8 @@ PageActions.defaultProps = {
   clearSearch: () => {},
   gotoPage: () => {},
   limit: 25,
+  orderDesc: false,
+  orderField: '',
   page: 1,
   reload: () => {},
   searchElements: [],
@@ -583,9 +676,7 @@ PageActions.defaultProps = {
   totalPages: 0,
   types: [],
   updateAdvancedSearchInputs: () => {},
-  // updateOrdering: () => {},
-  // orderField: '',
-  // orderDesc: false,
+  updateOrdering: () => {},
 };
 
 PageActions.propTypes = {
@@ -603,6 +694,8 @@ PageActions.propTypes = {
     .isRequired,
   handleChange: PropTypes.func.isRequired,
   limit: PropTypes.number,
+  orderDesc: PropTypes.bool,
+  orderField: PropTypes.string,
   page: PropTypes.number,
   pageType: PropTypes.string.isRequired,
   reload: PropTypes.func,
@@ -616,10 +709,8 @@ PageActions.propTypes = {
   types: PropTypes.array,
   updateAdvancedSearchInputs: PropTypes.func,
   updateLimit: PropTypes.func.isRequired,
+  updateOrdering: PropTypes.func,
   updatePage: PropTypes.func.isRequired,
-  // updateOrdering: PropTypes.func,
-  // orderField: PropTypes.string,
-  // orderDesc: PropTypes.bool,
 };
 
 export default PageActions;

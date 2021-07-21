@@ -395,7 +395,7 @@ export const loadRelationsTemporalValues = (
     payload,
   });
 };
-
+/*
 export function setPaginationParams(type, params) {
   return (dispatch) => {
     let payload = null;
@@ -422,6 +422,7 @@ export function setPaginationParams(type, params) {
           status: params.status,
           searchInput: params.searchInput,
           advancedSearchInputs: params.advancedSearchInputs,
+          classpieceSearchInput: params.classpieceSearchInput,
         },
       };
     } else if (type === 'queryBuilder') {
@@ -457,6 +458,28 @@ export function setPaginationParams(type, params) {
       payload,
     });
 
+    return false;
+  };
+}
+*/
+export function setPaginationParams(type, params) {
+  return (dispatch, getState) => {
+    let payload = null;
+    const pagination = `${type}Pagination`;
+    const newValues = { ...getState()[pagination] };
+    Object.keys(params).forEach((key) => {
+      newValues[key] = params[key];
+    });
+    payload = {
+      [pagination]: newValues,
+    };
+    if (payload === null) {
+      return false;
+    }
+    dispatch({
+      type: 'GENERIC_UPDATE',
+      payload,
+    });
     return false;
   };
 }
