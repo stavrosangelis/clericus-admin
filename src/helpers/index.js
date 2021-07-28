@@ -430,17 +430,30 @@ export const personLabel = (item) => {
   let label = '';
   if (
     typeof item.honorificPrefix !== 'undefined' &&
-    item.honorificPrefix !== ''
+    item.honorificPrefix !== '' &&
+    item.honorificPrefix !== 'undefined'
   ) {
     label += `${item.honorificPrefix} `;
   }
-  if (typeof item.firstName !== 'undefined' && item.firstName !== '') {
+  if (
+    typeof item.firstName !== 'undefined' &&
+    item.firstName !== '' &&
+    item.firstName !== 'undefined'
+  ) {
     label += `${item.firstName} `;
   }
-  if (typeof item.middleName !== 'undefined' && item.middleName !== '') {
+  if (
+    typeof item.middleName !== 'undefined' &&
+    item.middleName !== '' &&
+    item.middleName !== 'undefined'
+  ) {
     label += `${item.middleName} `;
   }
-  if (typeof item.lastName !== 'undefined' && item.lastName !== '') {
+  if (
+    typeof item.lastName !== 'undefined' &&
+    item.lastName !== '' &&
+    item.lastName !== 'undefined'
+  ) {
     label += `${item.lastName} `;
   }
   return label;
