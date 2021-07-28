@@ -197,7 +197,6 @@ class Resource extends Component {
   }
 
   uploadResponse(data) {
-    console.log(data);
     if (data.status) {
       const { newId, resource } = this.state;
       if (newId === null) {

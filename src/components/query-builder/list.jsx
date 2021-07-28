@@ -205,7 +205,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <EventsRow
             key={item._id}
             item={item}
@@ -231,7 +231,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <OrganisationsRow
             key={item._id}
             item={item}
@@ -257,7 +257,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <PeopleRow
             key={item._id}
             item={item}
@@ -283,7 +283,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <ResourcesRow
             key={item._id}
             item={item}
@@ -309,7 +309,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <SpatialRow
             key={item._id}
             item={item}
@@ -335,7 +335,7 @@ const List = () => {
     );
     rows =
       items.map((item, i) => (
-        <Suspense fallback={[]}>
+        <Suspense fallback={[]} key={item._id}>
           <TemporalRow
             key={item._id}
             item={item}

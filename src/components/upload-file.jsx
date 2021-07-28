@@ -198,7 +198,6 @@ export default class UploadFile extends Component {
       .catch((response) => {
         console.log(response);
       });
-    console.log(responseData);
     if (responseData.status) {
       this.setState({
         uploading: false,
