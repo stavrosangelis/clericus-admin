@@ -55,7 +55,6 @@ const ParseClassPiece = (props) => {
     (exState, newState) => ({ ...exState, ...newState }),
     defaultState
   );
-
   const confirmModalToggle = useCallback(() => {
     setState({
       confirmModal: !state.confirmModal,
@@ -162,25 +161,8 @@ const ParseClassPiece = (props) => {
     }
   }, [state.redirect]);
 
-  const analyzeFile = async () => {
+  const reAnalyzeFile = useCallback(async () => {
     if (state.analyzeStatus) {
-      return false;
-    }
-    // confirm re-analysis
-    if (state.analyzeStep === 1 && !state.confirmModal) {
-      setState({
-        confirmModal: true,
-        confirmModalTitle: 'Confirm image re-analysis',
-        confirmModalContent: (
-          <p>
-            This classpiece will be submitted to microsoft&apos;s computer
-            vision api to be analyzed again.
-            <br /> Continue?
-          </p>
-        ),
-        confirmModalAction: analyzeFile,
-        confirmModalBtn: <span>Re-analyze image</span>,
-      });
       return false;
     }
     setState({
@@ -190,6 +172,7 @@ const ParseClassPiece = (props) => {
         </span>
       ),
       analyzeStatus: true,
+      confirmModal: false,
     });
     const responseData = await axios({
       method: 'get',
@@ -213,7 +196,62 @@ const ParseClassPiece = (props) => {
       });
     }, 2000);
     return false;
-  };
+  }, [state, fileName, loadFile]);
+
+  const analyzeFile = useCallback(async () => {
+    if (state.analyzeStatus) {
+      return false;
+    }
+    // confirm re-analysis
+    if (state.analyzeStep === 1 && !state.confirmModal) {
+      setState({
+        analyzeStep: 0,
+        confirmModal: true,
+        confirmModalTitle: 'Confirm image re-analysis',
+        confirmModalContent: (
+          <p>
+            This classpiece will be submitted to microsoft&apos;s computer
+            vision api to be analyzed again.
+            <br /> Continue?
+          </p>
+        ),
+        confirmModalAction: reAnalyzeFile,
+        confirmModalBtn: <span>Re-analyze image</span>,
+      });
+    } else {
+      setState({
+        analyzeBtnText: (
+          <span>
+            Analyzing image... <Spinner size="sm" color="secondary" />
+          </span>
+        ),
+        analyzeStatus: true,
+      });
+      const responseData = await axios({
+        method: 'get',
+        url: `${APIPath}parse-class-piece?file=${fileName}`,
+        crossDomain: true,
+      })
+        .then((response) => response.data.data)
+        .catch((error) => {
+          console.log(error);
+        });
+      const file = responseData[0];
+      setState({
+        analyzeBtnText: <span>Analysis complete</span>,
+        file,
+        loading: false,
+      });
+      loadFile();
+      setTimeout(() => {
+        setState({
+          analyzeBtnText: <span>Analyze image</span>,
+        });
+      }, 2000);
+    }
+
+    return false;
+  }, [state, fileName, loadFile, reAnalyzeFile]);
 
   const redirectToIdentify = () => {
     setState({
@@ -273,7 +311,7 @@ const ParseClassPiece = (props) => {
     );
     const analyzeBtn = state.analyzeBtnStatus ? (
       <div>
-        <Button outline color="secondary" onClick={analyzeFile}>
+        <Button outline color="secondary" onClick={() => analyzeFile()}>
           {state.analyzeBtnText}
         </Button>
       </div>
@@ -366,7 +404,7 @@ const ParseClassPiece = (props) => {
         </ModalHeader>
         <ModalBody>{state.confirmModalContent}</ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={state.confirmModalAction}>
+          <Button color="primary" onClick={() => state.confirmModalAction()}>
             {state.confirmModalBtn}
           </Button>{' '}
           <Button color="secondary" onClick={confirmModalToggle}>
