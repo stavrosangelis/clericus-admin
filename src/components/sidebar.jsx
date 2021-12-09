@@ -166,12 +166,6 @@ class Sidebar extends React.Component {
         <div className="logo">
           <Link href="/" to="/" className="simple-text logo-mini">
             <img src={logosrc} className="img-logo" alt="Clericus logo" />
-            {/* <div className="logo-container">
-              <div className="triangle-left"></div>
-              <div className="triangle-left-inner"></div>
-              <div className="triangle-right"></div>
-              <div className="triangle-right-inner"></div>
-            </div> */}
           </Link>
           <Link href="/" to="/" className="simple-text logo-normal">
             Clericus

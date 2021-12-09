@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useReducer, useRef } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useReducer,
+  useRef,
+} from 'react';
 import axios from 'axios';
 import {
   Spinner,
@@ -28,12 +34,14 @@ const ParseClassPieceThumbnails = (props) => {
   const fileName = match.params?.fileName || '';
 
   // state
+  const [loadingTaxonomies, setLoadingTaxonomies] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingFaces, setLoadingFaces] = useState(true);
   const defaultState = {
     initialLoad: true,
-    loading: true,
     organisationTypes: [],
     peopleRoles: [],
-    fileInfo: [],
+    fileInfo: null,
     file: [],
     faces: [],
     texts: [],
@@ -98,7 +106,10 @@ const ParseClassPieceThumbnails = (props) => {
 
     // contextual menu
     contextualMenuVisible: false,
-    contextualMenuPosition: [],
+    contextualMenuPosition: {
+      top: 0,
+      left: 0,
+    },
     contextualMenuTargetFace: false,
     selectedNode: [],
     selectedNodeKey: [],
@@ -210,12 +221,10 @@ const ParseClassPieceThumbnails = (props) => {
       fileInfo: file,
       file: fileOutput,
     });
-    loadFaces();
-    loadText();
-    loadSettings();
-  }, [fileName, loadFaces, loadText, loadSettings]);
+    setLoading(false);
+  }, [fileName]);
 
-  const loadTaxonomyTypes = async () => {
+  const loadTaxonomyTypes = useCallback(async () => {
     const organisationTypes = await axios({
       method: 'get',
       url: `${APIPath}taxonomy`,
@@ -240,7 +249,8 @@ const ParseClassPieceThumbnails = (props) => {
       organisationTypes: organisationTypes.taxonomyterms,
       peopleRoles: peopleRoles.taxonomyterms,
     });
-  };
+    setLoadingTaxonomies(false);
+  }, []);
 
   const updateFaces = async () => {
     if (state.storeSelectionsStatus) {
@@ -354,14 +364,14 @@ const ParseClassPieceThumbnails = (props) => {
     if (sessionStorage.getItem('settings') !== null) {
       settings = JSON.parse(sessionStorage.getItem('settings'));
     }
-    settings = { zoom: newZoom };
+    settings = { zoom: Number(newZoom) };
     const storedSettings = JSON.stringify(settings);
     sessionStorage.setItem('settings', storedSettings);
   };
 
   const updateZoom = (value) => {
     setState({
-      zoom: value,
+      zoom: Number(value),
       settingsUpdate: true,
     });
   };
@@ -1032,7 +1042,8 @@ const ParseClassPieceThumbnails = (props) => {
         </span>
       ),
     });
-    const faces = { ...state.faces };
+
+    const faces = [...state.faces];
     const selectedFaceIndex = state.selectionFaces;
 
     const selectedPerson = faces[selectedFaceIndex];
@@ -1131,7 +1142,7 @@ const ParseClassPieceThumbnails = (props) => {
     const containerPosition = state.selectedNode.getBoundingClientRect();
     const faces = { ...state.faces };
     const mousePosition = state.contextualMenuPosition;
-    const zoom = parseInt(state.zoom, 10);
+    const zoom = Number(state.zoom);
     const mouseLeft =
       ((parseInt(mousePosition.left, 10) - containerPosition.left) * 100) /
       zoom;
@@ -1173,6 +1184,9 @@ const ParseClassPieceThumbnails = (props) => {
   const handleContextMenu = (e) => {
     e.preventDefault();
 
+    const sideBarOpen = document.documentElement.classList.contains('nav-open');
+
+    const leftMargin = sideBarOpen ? 260 : 0;
     let contextualMenuTargetFace = false;
     if (typeof e.target.classes !== 'undefined') {
       const nodeClasses = e.target.attributes.class.nodeValue;
@@ -1198,7 +1212,7 @@ const ParseClassPieceThumbnails = (props) => {
       clickX = parseFloat(clickX, 10) - contextMenuWidth;
     }
     const newPosition = {
-      left: clickX,
+      left: clickX - leftMargin,
       top: clickY,
     };
     setState({
@@ -1242,13 +1256,25 @@ const ParseClassPieceThumbnails = (props) => {
   };
 
   useEffect(() => {
-    loadTaxonomyTypes();
-    loadFile();
-  }, [loadFile]);
+    if (loadingTaxonomies) {
+      loadTaxonomyTypes();
+    }
+  }, [loadingTaxonomies, loadTaxonomyTypes]);
 
   useEffect(() => {
-    loadFile();
-  }, [loadFile, fileName]);
+    if (loading && !loadingTaxonomies) {
+      loadFile();
+    }
+  }, [loading, loadingTaxonomies, loadFile]);
+
+  useEffect(() => {
+    if (state.fileInfo !== null && loadingFaces) {
+      setLoadingFaces(false);
+      loadFaces();
+      loadText();
+      loadSettings();
+    }
+  }, [state.fileInfo, loadingFaces, loadFaces, loadText, loadSettings]);
 
   useEffect(() => {
     window.addEventListener('keydown', startSelection);
@@ -1294,7 +1320,7 @@ const ParseClassPieceThumbnails = (props) => {
       </div>
     </div>
   );
-  if (!state.loading) {
+  if (!loading) {
     const scaleNum = parseInt(state.zoom, 10) / 100;
     const transform = { transform: `scale(${scaleNum},${scaleNum})` };
 
@@ -1504,7 +1530,7 @@ const ParseClassPieceThumbnails = (props) => {
     const textBox = (
       <div
         draggable="true"
-        onDragStart={() => startDragText()}
+        onDragStart={(e) => startDragText(e)}
         key={key}
         className="thumbnail-textbox"
       >
@@ -1657,7 +1683,7 @@ const ParseClassPieceThumbnails = (props) => {
       <div className="sidebar-toolbox">
         <ParseClassPieceToolbox
           updateFaces={updateFaces}
-          zoom={state.zoom}
+          zoom={Number(state.zoom)}
           updateZoom={updateZoom}
           updateSettings={updateSettings}
           toggleSelections={toggleSelections}

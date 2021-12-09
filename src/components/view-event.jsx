@@ -26,7 +26,6 @@ export default class ViewEvent extends Component {
     const label = item?.label || '';
     const description = item?.description || '';
     const eventType = item?.eventType || '';
-
     this.state = {
       detailsOpen: true,
       label,

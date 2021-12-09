@@ -263,7 +263,10 @@ export default class ImportClassPieceToDB extends Component {
   };
 
   selectAll = () => {
-    const { selectAllStatus: stateSelectAllStatus, stateData } = this.state;
+    const {
+      selectAllStatus: stateSelectAllStatus,
+      data: stateData,
+    } = this.state;
     let selectAllBtn = <span>Select All</span>;
     const selectAllStatus = !stateSelectAllStatus;
     if (selectAllStatus) {
@@ -1082,7 +1085,7 @@ export default class ImportClassPieceToDB extends Component {
               <div>
                 <div
                   className="collapse-trigger"
-                  onClick={() => this.toggleRelations(i)}
+                  onClick={() => this.toggleRelations(i + 1)}
                   size="sm"
                   onKeyDown={() => false}
                   role="button"
@@ -1568,9 +1571,11 @@ export default class ImportClassPieceToDB extends Component {
         duplicateFace.resources.find((r) => r.term.label === 'isDepictedOn') !==
           'undefined'
       ) {
-        const dbtype = duplicateFace.resources.find(
-          (r) => r.term.label === 'isDepictedOn'
-        ).term.role;
+        const dbtypeFind =
+          duplicateFace.resources.find(
+            (r) => r.term.label === 'isDepictedOn'
+          ) || null;
+        const dbtype = dbtypeFind !== null ? dbtypeFind.term.role : '';
         dbty = (
           <div className="form-group">
             <Label>Type</Label>

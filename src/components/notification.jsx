@@ -5,9 +5,11 @@ import PropTypes from 'prop-types';
 const Notification = (props) => {
   const { color, visible, content } = props;
   return (
-    <Alert color={color} isOpen={visible} className="notification">
-      {content}
-    </Alert>
+    <div style={{ position: 'relative', display: 'block' }}>
+      <Alert color={color} isOpen={visible} className="notification">
+        {content}
+      </Alert>
+    </div>
   );
 };
 Notification.defaultProps = {

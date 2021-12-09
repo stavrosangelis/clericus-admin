@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   Button,
   Label,
@@ -16,6 +16,8 @@ import {
 import axios from 'axios';
 // import { useDropzone } from 'react-dropzone';
 import PropTypes from 'prop-types';
+import MainPagination from './pagination';
+import Dropfile from './Dropfile';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
@@ -31,6 +33,15 @@ const ArticleImageBrowser = (props) => {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const prevPage = useRef(null);
+
+  const updatePage = (value) => {
+    if (value > 0 && value !== page) {
+      setPage(value);
+    }
+  };
 
   const toggleTab = (tab) => {
     if (activeTab !== tab) setActiveTab(tab);
@@ -59,15 +70,6 @@ const ArticleImageBrowser = (props) => {
     featuredImgFn(copyId);
     toggle();
   };
-
-  /* const moveUp = () => {
-    let dirs = dir.split("/");
-    dirs.pop();
-    dirs.pop();
-    let newDir = dirs.join("/");
-    setDir(`${newDir}/`);
-    setLoading(true);
-  } */
 
   const blob = (file) => {
     const reader = new FileReader();
@@ -129,39 +131,57 @@ const ArticleImageBrowser = (props) => {
     }
   };
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(false);
-      const params = {};
-      const responseData = await axios({
-        method: 'get',
-        url: `${APIPath}uploaded-files`,
-        crossDomain: true,
-        params,
-      })
-        .then((response) => response.data.data)
-        .catch((error) => {
-          console.log(error);
-        });
-      setItems(responseData.data);
+  const returnValues = (file) => {
+    uploadFile(file);
+  };
+
+  const load = useCallback(async () => {
+    setLoading(false);
+    const params = {
+      page,
+      limit: 25,
+      type: 'image',
     };
+    const responseData = await axios({
+      method: 'get',
+      url: `${APIPath}uploaded-files`,
+      crossDomain: true,
+      params,
+    })
+      .then((response) => response.data.data)
+      .catch((error) => {
+        console.log(error);
+      });
+    setItems(responseData.data);
+    setPage(responseData.currentPage);
+    setTotalPages(responseData.totalPages);
+  }, [page]);
+
+  useEffect(() => {
     if (loading) {
       load();
     }
+  }, [loading, load]);
+
+  useEffect(() => {
     if (uploaded) {
       load();
       setUploaded(false);
     }
+  }, [uploaded, load]);
+
+  useEffect(() => {
     if (reload) {
       load();
     }
-  }, [loading, dir, uploaded, reload]);
+  }, [reload, load]);
 
-  /* const onDrop = (acceptedFiles) => {
-    uploadFile(acceptedFiles[0]);
-  }; */
-
-  // const { getRootProps } = useDropzone({ onDrop });
+  useEffect(() => {
+    if (prevPage.current !== page) {
+      prevPage.current = page;
+      load();
+    }
+  }, [prevPage, page, load]);
 
   const openFileDialog = useCallback(() => {
     if (inputRef.current) {
@@ -193,38 +213,40 @@ const ArticleImageBrowser = (props) => {
       const fullPath = item.paths.find((p) => p.pathType === 'source').path;
       const itemHTML = (
         <div
-          className={`col-xs-12 col-sm-3 col-lg-2 image-file ${active}`}
+          className={`col-xs-12 col-sm-4 col-lg-3 ${active}`}
           key={item._id}
           onDoubleClick={() => returnFile(item._id)}
         >
-          <a
-            href={fullPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="show-featured-image btn btn-outline-primary"
-          >
-            <i className="fa fa-external-link-square" />
-          </a>
-          <div
-            style={{ display: 'inline-block' }}
-            onClick={() => selectFile(item._id)}
-            onKeyDown={() => false}
-            role="button"
-            tabIndex={0}
-            aria-label="select file"
-          >
-            <img src={thumbPath} alt="" className="img-fluid" />
+          <div className="image-file">
+            <a
+              href={fullPath}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="show-featured-image btn btn-outline-primary"
+            >
+              <i className="fa fa-external-link-square" />
+            </a>
+            <div
+              style={{ display: 'inline-block' }}
+              onClick={() => selectFile(item._id)}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="select file"
+            >
+              <img src={thumbPath} alt="" className="img-fluid" />
+            </div>
+            <Button
+              outline
+              color="danger"
+              size="sm"
+              onClick={() => deleteFile(item._id)}
+              className="remove-featured-image"
+            >
+              <i className="fa fa-trash-o" />
+            </Button>
+            <Label onClick={() => selectFile(item._id)}>{item.filename}</Label>
           </div>
-          <Button
-            outline
-            color="danger"
-            size="sm"
-            onClick={() => deleteFile(item._id)}
-            className="remove-featured-image"
-          >
-            <i className="fa fa-trash-o" />
-          </Button>
-          <Label onClick={() => selectFile(item._id)}>{item.filename}</Label>
         </div>
       );
       return itemHTML;
@@ -260,8 +282,26 @@ const ArticleImageBrowser = (props) => {
         <TabContent activeTab={activeTab}>
           <TabPane tabId="1">
             <div className="row">
+              <div className="col">
+                <div className="images-browser-pagination">
+                  <MainPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    pagination_function={updatePage}
+                  />
+                </div>
+              </div>
               <div className="col-12">
                 <div className="images-browser row">{itemsHTML}</div>
+              </div>
+              <div className="col">
+                <div className="images-browser-pagination">
+                  <MainPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    pagination_function={updatePage}
+                  />
+                </div>
               </div>
             </div>
           </TabPane>
@@ -284,9 +324,13 @@ const ArticleImageBrowser = (props) => {
                 onChange={(e) => handleFileChange(e)}
               />
               <div className="browse-img-or">OR</div>
-              {/* <div {...getRootProps()} className="dropzone-box">
-                <p>DROP AN IMAGE HERE</p>
-              </div> */}
+              <div className="text-center">
+                <Dropfile
+                  text={<p>DROP AN IMAGE HERE</p>}
+                  returnValues={returnValues}
+                  fileTypes={['image/jpeg', 'image/png']}
+                />
+              </div>
             </div>
           </TabPane>
         </TabContent>

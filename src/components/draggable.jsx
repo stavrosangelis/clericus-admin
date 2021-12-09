@@ -588,7 +588,7 @@ Wrapper.propTypes = {
   index: PropTypes.number,
   parentConstrain: PropTypes.bool,
   parentId: PropTypes.string,
-  children: PropTypes.object,
+  children: PropTypes.array,
   className: PropTypes.string,
   left: PropTypes.string,
   top: PropTypes.string,

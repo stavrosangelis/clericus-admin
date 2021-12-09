@@ -470,7 +470,19 @@ header {
   font-weight: 600;
   display: block;
 }
-
+.import-file-link {
+  border: 2px solid #40ccce;
+  border-radius: 4px;
+  padding: 5px;
+  display: block;
+  text-align: center;
+}
+.import-file-link > i {
+  display: block;
+  margin: 5px auto;
+  font-size: 32px;
+  width: 32px;
+}
 
 .select-checkbox-container {
   display: block;
@@ -1078,6 +1090,10 @@ header {
 .dropzone-progress {
   max-width: 200px;
   min-width: 100px;
+}
+.dropzone-text {
+  padding: 15px;
+  display: block;
 }
 .file-preview {
   position: absolute;
@@ -2506,8 +2522,11 @@ textarea.form-control {
   flex-direction: row;
   padding: 15px;
 }
+.images-browser-pagination {
+  padding: 5px 15px;
+}
 .images-browser > div {
-  margin: 5px;
+  text-align: center;
 }
 .images-browser label {
   display: block;
@@ -2649,6 +2668,17 @@ textarea.form-control {
 }
 .uploaded-files-modal-body .tab-content {
   min-height: 100px;
+}
+.dropzone-component > .dropzone-target {
+  margin: 15px auto;
+}
+.dropzone-component > .upload-file-details {
+  margin: 0 auto 15px auto;
+}
+.dropzone-component > .error-container {
+  min-width: 100px;
+  max-width: 200px;
+  margin: 0 auto;
 }
 .dropzone-container {
   text-align: center;
@@ -3045,4 +3075,18 @@ textarea.form-control {
 }
 .grid-container {
   display: block;
+}
+.col-block {
+  padding: 4px;
+}
+.col-block:nth-child(odd) {
+  background-color: #f0f0f0;
+}
+.links-list {
+  margin: 0;
+  padding: 0 0 0 15px;
+}
+.responsive-tbody {
+  max-height: 500px;
+  overflow-y: auto;
 }

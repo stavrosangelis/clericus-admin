@@ -572,3 +572,19 @@ export const temporalBlock = (item) => {
     </li>
   );
 };
+
+const alphabet = String.fromCharCode(...Array(123).keys()).slice(97);
+const aLength = alphabet.length;
+
+export const returnLetter = (idx) => {
+  let output = '';
+  if (idx > aLength - 1) {
+    const firstIdx = Math.floor(idx / aLength);
+    const stack = aLength * firstIdx;
+    const secondIdx = idx - stack;
+    output = `${alphabet[firstIdx - 1]}${alphabet[secondIdx]}`;
+  } else {
+    output = alphabet[idx];
+  }
+  return output;
+};

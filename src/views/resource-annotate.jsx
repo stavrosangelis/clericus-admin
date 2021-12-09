@@ -84,6 +84,7 @@ const AnnotateTool = (props) => {
   );
   const imgRef = useRef(null);
   const containerRef = useRef(null);
+  const headingRef = useRef(null);
   const [notificationState, setNotificationState] = useState({
     visible: false,
     content: null,
@@ -563,7 +564,7 @@ const AnnotateTool = (props) => {
       visible: true,
       content: (
         <div>
-          <span style={{ fontStyle: 'italic' }}>Adding resource...</span>{' '}
+          <span style={{ fontStyle: 'italic' }}>Saving resource...</span>{' '}
           <Spinner color="info" style={{ width: '16px', height: '16px' }} />
         </div>
       ),
@@ -648,19 +649,14 @@ const AnnotateTool = (props) => {
     return false;
   };
 
-  // when item interaction completes return updated values
-  const returnValues = async (values) => {
-    const { height, rotate, width, x, y, _id: itemId } = values;
-    // calculate coordinates
-    let top = y;
-    let left = x;
+  const calculateCoordinates = (topParam, leftParam) => {
+    let top = topParam;
+    let left = leftParam;
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
-    const rectTop = rect.top;
-    const rectLeft = rect.left;
+    const { top: rectTop, left: rectLeft } = rect;
     const { offsetTop, scrollLeft } = container;
-    const dragTop = state.top;
-    const dragLeft = state.left;
+    const { top: dragTop, left: dragLeft } = state;
     const windowOffsetTop = window.pageYOffset;
     left -= Math.abs(rectLeft);
     if (rectTop > 0) {
@@ -690,6 +686,17 @@ const AnnotateTool = (props) => {
     const { scale } = state;
     top /= scale;
     left /= scale;
+    const sideBarOpen = document.documentElement.classList.contains('nav-open');
+    if (sideBarOpen) {
+      left += 260;
+    }
+    return { top, left };
+  };
+
+  // when item interaction completes return updated values
+  const returnValues = async (values) => {
+    const { height, rotate, width, top, left, _id: itemId } = values;
+
     let resource = null;
     const itemData = await loadEditItem(itemId);
     resource = { ...itemData.data };
@@ -721,44 +728,10 @@ const AnnotateTool = (props) => {
       }, 5000);
       return false;
     }
-    let { top } = contextMenuState;
-    let { left } = contextMenuState;
-    const container = containerRef.current;
-    const rect = container.getBoundingClientRect();
-    const rectTop = rect.top;
-    const rectLeft = rect.left;
-    const { offsetTop, scrollLeft } = container;
-    const dragTop = state.top;
-    const dragLeft = state.left;
-    const windowOffsetTop = window.pageYOffset;
-    left -= Math.abs(rectLeft);
-    if (rectTop > 0) {
-      top -= Math.abs(offsetTop) - Math.abs(windowOffsetTop);
-    } else if (rectTop < 0) {
-      if (Math.abs(windowOffsetTop) > Math.abs(offsetTop)) {
-        top += Math.abs(windowOffsetTop) - Math.abs(offsetTop);
-      } else {
-        top += Math.abs(windowOffsetTop);
-      }
-    }
-    if (dragTop < 0) {
-      top += Math.abs(dragTop);
-    } else if (dragTop > 0) {
-      top -= Math.abs(dragTop);
-    }
-    if (scrollLeft > 0) {
-      left += Math.abs(scrollLeft);
-    } else if (scrollLeft < 0) {
-      left -= Math.abs(scrollLeft);
-    }
-    if (dragLeft < 0) {
-      left += Math.abs(dragLeft);
-    } else if (dragLeft > 0) {
-      left -= Math.abs(dragLeft);
-    }
-    const { scale } = state;
-    top /= scale;
-    left /= scale;
+    const { top, left } = calculateCoordinates(
+      contextMenuState.top,
+      contextMenuState.left
+    );
     const newResource = {
       ref: {
         _id: null,
@@ -979,7 +952,6 @@ const AnnotateTool = (props) => {
         />
       </Suspense>
     );
-
     // edit/delete item
     const editModal = (
       <Suspense fallback={[]}>
@@ -1062,7 +1034,7 @@ const AnnotateTool = (props) => {
       <Suspense fallback={renderLoader()}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
-      <div className="row">
+      <div className="row" ref={headingRef}>
         <div className="col-12">
           <h2>{heading}</h2>
         </div>

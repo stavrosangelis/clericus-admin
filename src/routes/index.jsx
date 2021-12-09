@@ -3,10 +3,14 @@ import Article from '../views/article';
 import ArticleCategories from '../views/article-categories';
 import ContactForms from '../views/contact-forms';
 import Dashboard from '../views/dashboard';
+import Datacleaning from '../views/tools/Data.cleaning';
 import Entities from '../views/entities';
 import Events from '../views/events';
 import Event from '../views/event';
 import Highlights from '../views/highlights';
+import ImportPlan from '../views/tools/Import.Plan';
+import ImportPlanRule from '../views/tools/Import.Plan.Rule';
+import ImportPlans from '../views/tools/Import.Plans';
 import Login from '../views/login';
 import Menu from '../views/menu';
 import Organisations from '../views/organisations';
@@ -36,6 +40,7 @@ import ImportClassPieceToDB from '../views/tools/import-class-piece';
 // import DocumentOCR from '../views/tools/document-ocr';
 
 import QueryBuilder from '../views/query-builder';
+// import TestView from '../views/test-view';
 // import Graph2 from '../views/graph-2';
 
 const indexRoutes = [
@@ -285,6 +290,37 @@ const indexRoutes = [
         component: QueryBuilder,
         showMenu: true,
       },
+      {
+        path: '/import-plans',
+        name: 'Import Data Plans',
+        icon: 'fa fa-circle-o',
+        component: ImportPlans,
+        showMenu: true,
+        children: [
+          {
+            path: '/import-plan/:_id',
+            name: 'Import plan',
+            icon: '',
+            component: ImportPlan,
+            showMenu: false,
+          },
+          {
+            path: '/data-cleaning/:importId/:_id',
+            name: 'Data cleaning',
+            icon: '',
+            component: Datacleaning,
+            showMenu: false,
+          },
+          {
+            path: '/import-plan-rule-entity/:importId/:_id',
+            name: 'Import plan rule',
+            icon: '',
+            component: ImportPlanRule,
+            showMenu: false,
+          },
+        ],
+      },
+
       /* {
         path: '/ocr-document',
         name: 'OCR Document',

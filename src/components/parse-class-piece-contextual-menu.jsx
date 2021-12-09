@@ -74,6 +74,7 @@ const ContextualMenu = (props) => {
       </ul>
     );
   }
+
   if (linkingActive) {
     headerText = 'Linking';
     menuItems = (

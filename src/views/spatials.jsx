@@ -357,7 +357,7 @@ const Spatial = () => {
         <BatchActions
           items={selectedItems}
           removeSelected={removeSelected}
-          type="Event"
+          type="Spatial"
           relationProperties={[]}
           deleteSelected={deleteSelected}
           selectAll={toggleSelectedAll}

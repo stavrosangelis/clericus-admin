@@ -221,38 +221,40 @@ class ViewResource extends Component {
     return metadataOutput;
   }
 
-  parseMetadataItems(metaItems) {
+  parseMetadataItems(metaItems = null) {
     let i = 0;
     const items = [];
-    Object.keys(metaItems).forEach((metaKey) => {
-      const value = metaItems[metaKey];
-      let newRow = [];
-      if (typeof value !== 'object') {
-        newRow = (
-          <div key={i}>
-            <Label>{metaKey}</Label> : {metaItems[metaKey]}
-          </div>
-        );
-      } else if (metaKey !== 'data' && metaKey !== 'XPKeywords') {
-        const newRows = (
-          <div className="list-items">{this.parseMetadataItems(value)}</div>
-        );
-        newRow = (
-          <div key={i}>
-            <div className="metadata-title">{metaKey}</div>
-            {newRows}
-          </div>
-        );
-      } else {
-        newRow = (
-          <div key={i}>
-            <Label>{metaKey}</Label> : {value.join(' ')}
-          </div>
-        );
-      }
-      items.push(newRow);
-      i += 1;
-    });
+    if (metaItems !== null) {
+      Object.keys(metaItems).forEach((metaKey) => {
+        const value = metaItems[metaKey];
+        let newRow = [];
+        if (typeof value !== 'object') {
+          newRow = (
+            <div key={i}>
+              <Label>{metaKey}</Label> : {metaItems[metaKey]}
+            </div>
+          );
+        } else if (metaKey !== 'data' && metaKey !== 'XPKeywords') {
+          const newRows = (
+            <div className="list-items">{this.parseMetadataItems(value)}</div>
+          );
+          newRow = (
+            <div key={i}>
+              <div className="metadata-title">{metaKey}</div>
+              {newRows}
+            </div>
+          );
+        } else {
+          newRow = (
+            <div key={i}>
+              <Label>{metaKey}</Label> : {value.join(' ')}
+            </div>
+          );
+        }
+        items.push(newRow);
+        i += 1;
+      });
+    }
     return items;
   }
 

@@ -554,6 +554,7 @@ const PageActions = (props) => {
     'contact-forms',
     'users',
     'usergroups',
+    'imports',
   ];
 
   if (noStatus.indexOf(pageType) === -1 && typeof status !== 'undefined') {

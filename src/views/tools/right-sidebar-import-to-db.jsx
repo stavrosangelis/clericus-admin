@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Tooltip, Button } from 'reactstrap';
 import PropTypes from 'prop-types';
+import '../../assets/scss/parse-classpieces-toolbox.scss';
 
 export default class ParseClassPieceToolbox extends Component {
   constructor(props) {
@@ -10,7 +11,7 @@ export default class ParseClassPieceToolbox extends Component {
       tooltipIdentifyDuplicates: false,
       tooltipSelectAll: false,
       tooltipImportSelected: false,
-      classes: 'dropdown',
+      visible: false,
     };
 
     this.toggleTooltip = this.toggleTooltip.bind(this);
@@ -18,12 +19,8 @@ export default class ParseClassPieceToolbox extends Component {
   }
 
   handleClick() {
-    const { classes } = this.state;
-    if (classes === 'dropdown') {
-      this.setState({ classes: 'dropdown show' });
-    } else {
-      this.setState({ classes: 'dropdown' });
-    }
+    const { visible } = this.state;
+    this.setState({ visible: !visible });
   }
 
   toggleTooltip(tooltip) {
@@ -38,13 +35,14 @@ export default class ParseClassPieceToolbox extends Component {
       tooltipSelectAll,
       tooltipIdentifyDuplicates,
       tooltipImportSelected,
-      classes,
+      visible,
     } = this.state;
     const {
       selectAll,
       selectAllBtn,
       identifyDuplicates,
       identifyDuplicatesBtn,
+      importSelected,
       importSelectedBtn,
     } = this.props;
     const selectAllTooltip = (
@@ -87,24 +85,26 @@ export default class ParseClassPieceToolbox extends Component {
       </Tooltip>
     );
 
+    const active = visible ? ' active' : '';
     return (
-      <div className="fixed-plugin">
-        <div className={classes}>
-          <div
-            onClick={() => this.handleClick()}
-            onKeyDown={() => false}
-            role="button"
-            tabIndex={0}
-            aria-label="action"
-          >
-            <i className="fa fa-cog fa-2x" />
+      <div className={`fixed-plugin${active}`}>
+        <div
+          className="fixed-plugin-toggle"
+          onClick={() => this.handleClick()}
+          onKeyDown={() => this.handleClick()}
+          role="button"
+          tabIndex={0}
+          aria-label="toggle sidebar toolbox"
+        >
+          <i className="fa fa-cog fa-2x" />
+        </div>
+        <div className="menu">
+          <div className="header-title">
+            <h4>Toolbox</h4>
           </div>
-          <ul className="dropdown-menu">
-            <li className="header-title">
-              <h4 style={{ marginTop: '5px' }}>Toolbox</h4>
-            </li>
-            <li className="adjustments-line" />
-            <li className="button-container">
+          <div className="menu-body">
+            <div className="spacer" />
+            <div className="button-container">
               <div style={{ position: 'relative' }}>
                 {selectAllTooltip}
                 <Button
@@ -121,8 +121,9 @@ export default class ParseClassPieceToolbox extends Component {
                   {selectAllBtn}{' '}
                 </Button>
               </div>
-            </li>
-            <li className="button-container">
+            </div>
+            <div className="spacer" />
+            <div className="button-container">
               <div style={{ position: 'relative' }}>
                 {identifyDuplicatesTooltip}
                 <Button
@@ -139,8 +140,9 @@ export default class ParseClassPieceToolbox extends Component {
                   {identifyDuplicatesBtn}{' '}
                 </Button>
               </div>
-            </li>
-            <li className="button-container">
+            </div>
+            <div className="spacer" />
+            <div className="button-container">
               <div style={{ position: 'relative' }}>
                 {importSelectedTooltip}
                 <Button
@@ -148,7 +150,7 @@ export default class ParseClassPieceToolbox extends Component {
                   outline
                   block
                   size="sm"
-                  onClick={identifyDuplicatesBtn}
+                  onClick={importSelected}
                 >
                   <i
                     className="fa fa-question-circle pull-left"
@@ -157,10 +159,8 @@ export default class ParseClassPieceToolbox extends Component {
                   {importSelectedBtn}{' '}
                 </Button>
               </div>
-            </li>
-            <li className="adjustments-line" />
-            <li className="adjustments-line" />
-          </ul>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -169,15 +169,17 @@ export default class ParseClassPieceToolbox extends Component {
 
 ParseClassPieceToolbox.defaultProps = {
   selectAll: () => {},
-  identifyDuplicates: () => {},
   selectAllBtn: [],
+  identifyDuplicates: () => {},
   identifyDuplicatesBtn: [],
+  importSelected: () => {},
   importSelectedBtn: [],
 };
 ParseClassPieceToolbox.propTypes = {
   selectAll: PropTypes.func,
+  selectAllBtn: PropTypes.object,
   identifyDuplicates: PropTypes.func,
-  selectAllBtn: PropTypes.array,
-  identifyDuplicatesBtn: PropTypes.array,
-  importSelectedBtn: PropTypes.array,
+  identifyDuplicatesBtn: PropTypes.object,
+  importSelected: PropTypes.func,
+  importSelectedBtn: PropTypes.object,
 };

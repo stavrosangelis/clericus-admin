@@ -121,7 +121,6 @@ const Draggable = (props) => {
       let newTranslateX = translateX + newX;
       let newTranslateY = translateY + newY;
 
-      // console.log(e.pageX, state.x, newX, translateX, newTranslateX)
       if (newTranslateX < 0) {
         newTranslateX = 0;
       }
@@ -335,6 +334,8 @@ const Draggable = (props) => {
         width: state.width,
         x: newX,
         y: newY,
+        top: state.top,
+        left: state.left,
         rotate: state.rotateDegree,
       });
       return false;

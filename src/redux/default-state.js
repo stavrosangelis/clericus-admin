@@ -68,6 +68,13 @@ const defaultState = {
     status: null,
     searchInput: '',
   },
+  importsPagination: {
+    limit: 25,
+    page: 1,
+    orderField: 'label',
+    orderDesc: false,
+    searchInput: '',
+  },
   usersPagination: {
     limit: 25,
     page: 1,

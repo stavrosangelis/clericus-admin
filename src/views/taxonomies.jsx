@@ -235,8 +235,13 @@ export default class Taxonomies extends Component {
 
   list(taxonomies) {
     const output = [];
+    const { taxonomy: stateTaxonomy } = this.state;
     for (let i = 0; i < taxonomies.length; i += 1) {
       const taxonomy = taxonomies[i];
+      const active =
+        stateTaxonomy !== null && stateTaxonomy._id === taxonomy._id
+          ? ' active'
+          : '';
       const item = (
         <Button
           color="secondary"
@@ -245,7 +250,7 @@ export default class Taxonomies extends Component {
           onClick={() => {
             this.loadItem(taxonomy._id);
           }}
-          className="taxonomy-btn"
+          className={`taxonomy-btn${active}`}
         >
           {taxonomy.label} <Badge color="secondary">{taxonomy.terms}</Badge>
         </Button>

@@ -47,6 +47,9 @@ const TableRow = (props) => {
       case 'edit':
         value = <i className="fa fa-pencil" />;
         break;
+      case 'details':
+        value = <i className="fa fa-eye" />;
+        break;
       case 'isDefault':
         value = getValue(row, propsCopy) ? (
           <i className="fa fa-check-circle-o success" />
