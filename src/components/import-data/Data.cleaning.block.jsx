@@ -62,7 +62,7 @@ const DataCleaning = (props) => {
 
   const load = useCallback(async () => {
     setLoading(false);
-    const responseData = await getData(`data-cleaning`, { importId: _id });
+    const responseData = await getData(`data-cleaning`, { importPlanId: _id });
     const { data } = responseData.data;
     setItems(data);
     updateLength(data.length);
@@ -82,7 +82,7 @@ const DataCleaning = (props) => {
     setSaving(true);
     const updateData = {
       label,
-      importId: _id,
+      importPlanId: _id,
     };
     const update = await putData(`data-cleaning-instance`, updateData);
     if (update.status) {

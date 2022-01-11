@@ -14,6 +14,7 @@ import Columns from '../../components/import-data/Columns';
 import Datacleaning from '../../components/import-data/Data.cleaning.block';
 import ImportPlanRulesEntities from '../../components/import-data/Import.plan.rules.entities.block';
 import ImportPlanRulesRelations from '../../components/import-data/Import.plan.rules.relations.block';
+import IngestDataBlock from '../../components/import-data/Ingest.Data.Block';
 
 import '../../assets/scss/import.scss';
 
@@ -60,6 +61,14 @@ const Import = (props) => {
   const [importRulesData, setImportRulesData] = useState([]);
   const [importRulesLoading, setImportRulesLoading] = useState(true);
   const [importRulesRelations, setImportRulesRelations] = useState([]);
+  const [completeInterval, setCompleteInterval] = useState(false);
+  const [ingestionStatus, setIngestionStatus] = useState({
+    _id: '',
+    msg: '',
+    progress: 0,
+    started: '',
+    status: 0,
+  });
 
   // refs
   const containerRef = useRef(null);
@@ -67,10 +76,12 @@ const Import = (props) => {
   const columnsBlockRef = useRef(null);
   const dataCleaningBlockRef = useRef(null);
   const importPlanBlockRef = useRef(null);
+  const ingestBlockRef = useRef(null);
   const fileBlockButtonRef = useRef(null);
   const columnsBlockButtonRef = useRef(null);
   const dataCleaningBlockButtonRef = useRef(null);
   const importPlanBlockButtonRef = useRef(null);
+  const ingestBlockButtonRef = useRef(null);
 
   const toggleTooltips = (value) => {
     const copy = {
@@ -86,8 +97,8 @@ const Import = (props) => {
   const loadImportRules = useCallback(async () => {
     setImportRulesLoading(false);
     const responseData = await getData(`import-plan-rules`, {
-      importId: _id,
-      limit: 100,
+      importPlanId: _id,
+      limit: 500,
     });
     const { data } = responseData.data;
     setImportRulesData(data);
@@ -95,13 +106,21 @@ const Import = (props) => {
 
   const load = useCallback(async () => {
     setLoading(false);
-    const responseData = await getData(`import`, { _id });
+    const responseData = await getData(`import-plan`, { _id });
     const { data } = responseData;
     setItem(data);
     setLabel(data.label);
     const relations = data.relations || [];
     const parsedRelations = relations.map((r) => JSON.parse(r));
     setImportRulesRelations(parsedRelations);
+  }, [_id]);
+
+  const loadImportStatus = useCallback(async () => {
+    const { data } = await getData(`import-plan-status`, { _id });
+    setIngestionStatus(data);
+    if (data.status !== 1) {
+      setCompleteInterval(true);
+    }
   }, [_id]);
 
   const reloadImportRules = () => {
@@ -124,6 +143,20 @@ const Import = (props) => {
     }
   }, [loading, load, loadImportRules]);
 
+  useEffect(() => {
+    let interval = null;
+    const status = item?.ingestionStatus || 0;
+    if (status === 1 && interval === null && !completeInterval) {
+      interval = setInterval(() => {
+        loadImportStatus();
+      }, 2000);
+    }
+    if (interval !== null) {
+      return () => clearInterval(interval);
+    }
+    return false;
+  }, [item, loadImportStatus, completeInterval]);
+
   const updateActive = (value = 0) => {
     setActiveStep(value);
     let col = null;
@@ -139,6 +172,9 @@ const Import = (props) => {
         break;
       case 3:
         col = importPlanBlockRef.current;
+        break;
+      case 4:
+        col = ingestBlockRef.current;
         break;
       default:
         col = fileBlockRef.current;
@@ -163,10 +199,19 @@ const Import = (props) => {
       if (dataCleaningLength > 0) {
         newStep = 3;
       }
+      if (importRulesData.length > 0 && importRulesRelations.length > 0) {
+        newStep = 4;
+      }
     }
     setStep(newStep);
     setTimeout(() => updateActive(newStep), 500);
-  }, [item, colData, dataCleaningLength]);
+  }, [
+    item,
+    colData,
+    dataCleaningLength,
+    importRulesData,
+    importRulesRelations,
+  ]);
 
   const reload = () => {
     setLoading(true);
@@ -197,6 +242,7 @@ const Import = (props) => {
   const active1 = activeStep === 1 ? ' active' : '';
   const active2 = activeStep === 2 ? ' active' : '';
   const active3 = activeStep === 3 ? ' active' : '';
+  const active4 = activeStep === 4 ? ' active' : '';
 
   const fileBlock = (
     <div className={`column${active0}`} ref={fileBlockRef}>
@@ -207,7 +253,7 @@ const Import = (props) => {
     step > 0 ? (
       <div className={`column${active1}`} ref={columnsBlockRef}>
         <Columns
-          importId={_id}
+          importPlanId={_id}
           updateColumns={updateColumns}
           update={updateColumnsStatus}
         />
@@ -222,6 +268,18 @@ const Import = (props) => {
           _id={item._id}
           columns={colData}
           updateLength={setDatacleaningLength}
+        />
+      </div>
+    ) : (
+      []
+    );
+  const ingestBlock =
+    step > 3 ? (
+      <div className={`column${active4}`} ref={ingestBlockRef}>
+        <IngestDataBlock
+          _id={_id}
+          ingestionStatus={ingestionStatus}
+          reload={reload}
         />
       </div>
     ) : (
@@ -351,6 +409,40 @@ const Import = (props) => {
     ) : (
       []
     );
+  const ingestBlockButtonArrow =
+    step > 4 ? <i className="fa fa-angle-right" /> : [];
+  const ingestBlockButton =
+    step > 3 ? (
+      <span>
+        <button
+          type="button"
+          className={`progress-nav-item${active4}`}
+          onClick={() => updateActive(4)}
+          ref={ingestBlockButtonRef}
+          onFocus={() => toggleTooltips('ingestBlock')}
+          onBlur={() => toggleTooltips('ingestBlock')}
+          onMouseEnter={() => toggleTooltips('ingestBlock')}
+          onMouseLeave={() => toggleTooltips('ingestBlock')}
+        >
+          <i className="fa fa-eye" />
+        </button>
+        {ingestBlockButtonArrow}
+        {ingestBlockButtonRef.current !== null ? (
+          <Tooltip
+            placement="top"
+            isOpen={tooltips.ingestBlock}
+            target={ingestBlockButtonRef.current}
+            toggle={() => toggleTooltips('ingestBlock')}
+          >
+            <small>Preview results</small>
+          </Tooltip>
+        ) : (
+          []
+        )}
+      </span>
+    ) : (
+      []
+    );
 
   const progressNav = (
     <div className="progress-nav">
@@ -384,9 +476,9 @@ const Import = (props) => {
       {columnsBlockButton}
       {dataCleaningBlockButton}
       {importPlanBlockButton}
+      {ingestBlockButton}
     </div>
   );
-
   return (
     <div>
       <Suspense fallback={[]}>
@@ -405,6 +497,7 @@ const Import = (props) => {
         {columnsBlock}
         {dataCleaningBlock}
         {importPlanBlock}
+        {ingestBlock}
       </div>
     </div>
   );

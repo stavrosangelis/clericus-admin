@@ -27,7 +27,7 @@ const defaultRuleValues = {
 const DataCleaning = (props) => {
   // props
   const { match } = props;
-  const { importId, _id } = match.params;
+  const { importPlanId, _id } = match.params;
 
   // state
   const [loading, setLoading] = useState(true);
@@ -56,10 +56,10 @@ const DataCleaning = (props) => {
 
   const loadImportData = useCallback(async () => {
     // import data
-    const responseData = await getData(`import`, { _id: importId });
+    const responseData = await getData(`import-plan`, { _id: importPlanId });
     const { data } = responseData;
     setImportData(data);
-  }, [importId]);
+  }, [importPlanId]);
 
   const load = useCallback(async () => {
     if (loading) {
@@ -154,7 +154,7 @@ const DataCleaning = (props) => {
       label: importLabel,
       icon: 'fa fa-file-text',
       active: false,
-      path: `/import-plan/${importId}`,
+      path: `/import-plan/${importPlanId}`,
     },
     {
       label: itemLabel,
@@ -257,7 +257,7 @@ const DataCleaning = (props) => {
       _id,
       label,
       type,
-      importId,
+      importPlanId,
       rule: ruleValues,
       completed: false,
       output,
@@ -323,7 +323,7 @@ const DataCleaning = (props) => {
       _id,
       label,
       type,
-      importId,
+      importPlanId,
       rule: ruleValues,
       completed: false,
       output,
@@ -388,7 +388,7 @@ const DataCleaning = (props) => {
   );
 
   const redirectElem = redirect ? (
-    <Redirect to={`/import-plan/${importId}`} />
+    <Redirect to={`/import-plan/${importPlanId}`} />
   ) : (
     []
   );

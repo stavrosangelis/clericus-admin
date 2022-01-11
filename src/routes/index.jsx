@@ -10,6 +10,7 @@ import Event from '../views/event';
 import Highlights from '../views/highlights';
 import ImportPlan from '../views/tools/Import.Plan';
 import ImportPlanRule from '../views/tools/Import.Plan.Rule';
+import ImportPlanPreviewResults from '../views/tools/Import.Plan.Preview.Results';
 import ImportPlans from '../views/tools/Import.Plans';
 import Login from '../views/login';
 import Menu from '../views/menu';
@@ -305,17 +306,24 @@ const indexRoutes = [
             showMenu: false,
           },
           {
-            path: '/data-cleaning/:importId/:_id',
+            path: '/data-cleaning/:importPlanId/:_id',
             name: 'Data cleaning',
             icon: '',
             component: Datacleaning,
             showMenu: false,
           },
           {
-            path: '/import-plan-rule-entity/:importId/:_id',
+            path: '/import-plan-rule-entity/:importPlanId/:_id',
             name: 'Import plan rule',
             icon: '',
             component: ImportPlanRule,
+            showMenu: false,
+          },
+          {
+            path: '/import-plan-results-preview/:_id',
+            name: 'Import plan results preview',
+            icon: '',
+            component: ImportPlanPreviewResults,
             showMenu: false,
           },
         ],

@@ -13,7 +13,7 @@ export const organisationProperties = [
   { label: '_id', type: '_id' },
   { label: 'label', type: 'string' },
   { label: 'labelSoundex', type: 'string' },
-  { label: 'alternateAppellation', type: 'list' },
+  { label: 'alternateAppelations', type: 'list' },
   { label: 'description', type: 'string' },
   {
     label: 'organisationType',
@@ -35,7 +35,7 @@ export const personProperties = [
   { label: 'middleName', type: 'string' },
   { label: 'lastName', type: 'string' },
   {
-    label: 'alternateAppellation',
+    label: 'alternateAppelations',
     type: 'list',
     children: [
       { label: 'firstName', type: 'string' },

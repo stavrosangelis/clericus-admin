@@ -6,7 +6,7 @@ import { getData, returnLetter } from '../../helpers';
 
 const Columns = (props) => {
   // props
-  const { importId, updateColumns, update } = props;
+  const { importPlanId, updateColumns, update } = props;
 
   // state
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const Columns = (props) => {
 
   const load = useCallback(async () => {
     setLoading(false);
-    const response = await getData('import', { _id: importId });
+    const response = await getData('import-plan', { _id: importPlanId });
     if (response.status) {
       const { data: responseData } = response;
       const completed = responseData.columnsParsed || false;
@@ -30,7 +30,7 @@ const Columns = (props) => {
         updateColumns(responseData.columns);
       }
     }
-  }, [importId, updateColumns]);
+  }, [importPlanId, updateColumns]);
 
   useEffect(() => {
     let interval = null;
@@ -76,7 +76,9 @@ const Columns = (props) => {
               />
             </Button>
           </CardTitle>
-          <Collapse isOpen={open}>{output}</Collapse>
+          <Collapse isOpen={open}>
+            <div className="import-columns-container">{output}</div>
+          </Collapse>
         </CardBody>
       </Card>
     </div>
@@ -84,11 +86,11 @@ const Columns = (props) => {
 };
 
 Columns.defaultProps = {
-  importId: '',
+  importPlanId: '',
   update: false,
 };
 Columns.propTypes = {
-  importId: PropTypes.string,
+  importPlanId: PropTypes.string,
   updateColumns: PropTypes.func.isRequired,
   update: PropTypes.bool,
 };

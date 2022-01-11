@@ -1,0 +1,101 @@
+.import-plan-preview-table th {
+  background-color: #eee;
+}
+.import-plan-preview-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.import-plan-preview-table-container {
+  position: relative;
+}
+.import-plan-preview-table-container .th-content-container {
+  position: relative;
+}
+.import-plan-preview-table-container .th-content-container > .th-content {
+  display: block;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.import-plan-preview-table-container .col-resize {
+  cursor: col-resize;
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 2px;
+  height: 94px;
+  z-index: 8;
+}
+.col-resize:active {
+  background-color: #666;
+}
+.import-plan-preview-entities {
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+.import-plan-preview-entities .heading {
+  font-size: 18px;
+  font-weight: bold;
+}
+.import-plan-preview-entities-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.import-plan-preview-entity {
+  border: 2px solid #6b1f16;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #fff;
+}
+.import-plan-preview-entities-items.events .import-plan-preview-entity {
+  border-color: #F9CD1B;
+}
+.import-plan-preview-entities-items.organisations .import-plan-preview-entity {
+  border-color: #9B8CF2;
+}
+.import-plan-preview-entities-items.people .import-plan-preview-entity {
+  border-color: #5DC910;
+}
+.import-plan-preview-entities-items.resources .import-plan-preview-entity {
+  border-color: #00CBFF;
+}
+.import-plan-preview-entities-items.spatials .import-plan-preview-entity {
+  border-color: #875d1f;
+}
+.import-plan-preview-entities-items.temporals .import-plan-preview-entity {
+  border-color: #2eeace;
+}
+.import-plan-preview-selected-row {
+  width: 200px;
+  margin-bottom: 15px;
+}
+.import-plan-preview-selected-row input {
+  width: 100px;
+  display: inline-block;
+  margin-right: 15px;
+}
+.import-plan-preview-selected-row-remove {
+  display: inline-block;
+}
+.import-plan-preview-entities-container {
+  position: relative;
+}
+.svg-container {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+.children-block {
+  margin-bottom: 10px;
+  padding-left: 20px;
+}
+.children-block:nth-child(odd) {
+  background-color: #eee;
+}

@@ -3083,10 +3083,18 @@ textarea.form-control {
   background-color: #f0f0f0;
 }
 .links-list {
-  margin: 0;
-  padding: 0 0 0 15px;
+  margin: 0 -15px 0 0;
+  padding: 0 15px 0 30px;
+  max-height: 400px;
+  overflow: auto;
 }
 .responsive-tbody {
   max-height: 500px;
   overflow-y: auto;
+}
+.import-columns-container {
+  max-height: 1000px;
+  overflow: auto;
+  padding: 0 15px 0 0;
+  margin-right: -15px;
 }

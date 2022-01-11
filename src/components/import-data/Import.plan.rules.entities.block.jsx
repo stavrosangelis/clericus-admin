@@ -66,7 +66,7 @@ const ImportPlanRulesEntities = (props) => {
     setSaving(true);
     const updateData = {
       label,
-      importId: _id,
+      importPlanId: _id,
     };
     const update = await putData(`import-plan-rule`, updateData);
     if (update.status) {

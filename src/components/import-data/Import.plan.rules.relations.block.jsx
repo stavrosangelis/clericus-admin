@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
   ModalHeader,
@@ -49,52 +49,60 @@ const ImportPlanRulesRelations = (props) => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedRoleCustom, setSelectedRoleCustom] = useState('');
   const [index, setIndex] = useState(-1);
+  const [itemsOutput, setItemsOutput] = useState([]);
+
+  const listRef = useRef(null);
 
   const toggle = () => {
     setOpen(!open);
   };
 
-  const toggleModal = (indexParam = null) => {
-    if (indexParam !== null && indexParam > -1) {
-      setIndex(indexParam);
-      const item = items[indexParam];
-
-      const newSelectedSourceNodeFind = rules.find((r) => r._id === item.srcId);
-      const newSelectedTargetNodeFind = rules.find(
-        (r) => r._id === item.targetId
-      );
-      const newSelectedSourceNode = {
-        value: item.srcId,
-        label: newSelectedSourceNodeFind.label,
-        type: item.srcType,
-      };
-      const newSelectedTargetNode = {
-        value: item.srcId,
-        label: newSelectedTargetNodeFind.label,
-        type: item.targetType,
-      };
-      const newRole =
-        typeof item.role !== 'undefined' && item.role !== ''
-          ? { value: item.role, label: columns[item.role] }
-          : null;
-      const newRoleCustom = item.roleCustom || '';
-      setSelectedSourceNode(newSelectedSourceNode);
-      setSelectedTargetNode(newSelectedTargetNode);
-      setSelectedRelation({
-        value: item.relationLabel,
-        label: item.relationLabel,
-      });
-      setSelectedRole(newRole);
-      setSelectedRoleCustom(newRoleCustom);
-    } else {
-      setSelectedSourceNode(null);
-      setSelectedTargetNode(null);
-      setSelectedRelation(null);
-      setSelectedRole(null);
-      setSelectedRoleCustom('');
-    }
-    setModalVisible(!modalVisible);
-  };
+  const toggleModal = useCallback(
+    (indexParam = null) => {
+      if (indexParam !== null && indexParam > -1) {
+        setIndex(indexParam);
+        const item = items[indexParam];
+        const newSelectedSourceNodeFind = rules.find(
+          (r) => r._id === item.srcId
+        );
+        const newSelectedTargetNodeFind = rules.find(
+          (r) => r._id === item.targetId
+        );
+        const newSelectedSourceNode = {
+          value: item.srcId,
+          label: newSelectedSourceNodeFind.label,
+          type: item.srcType,
+        };
+        const newSelectedTargetNode = {
+          value: item.srcId,
+          label: newSelectedTargetNodeFind.label,
+          type: item.targetType,
+        };
+        const newRole =
+          typeof item.role !== 'undefined' && item.role !== ''
+            ? { value: item.role, label: columns[item.role] }
+            : null;
+        const newRoleCustom = item.roleCustom || '';
+        setSelectedSourceNode(newSelectedSourceNode);
+        setSelectedTargetNode(newSelectedTargetNode);
+        setSelectedRelation({
+          value: item.relationLabel,
+          label: item.relationLabel,
+        });
+        setSelectedRole(newRole);
+        setSelectedRoleCustom(newRoleCustom);
+      } else {
+        setIndex(-1);
+        setSelectedSourceNode(null);
+        setSelectedTargetNode(null);
+        setSelectedRelation(null);
+        setSelectedRole(null);
+        setSelectedRoleCustom('');
+      }
+      setModalVisible(!modalVisible);
+    },
+    [columns, items, modalVisible, rules]
+  );
 
   const handleChange = (option, type) => {
     switch (type) {
@@ -148,7 +156,7 @@ const ImportPlanRulesRelations = (props) => {
     const updateData = {
       index,
       relation,
-      importId: _id,
+      importPlanId: _id,
     };
     const update = await putData(`import-plan-relation`, updateData);
     if (update.status) {
@@ -164,9 +172,9 @@ const ImportPlanRulesRelations = (props) => {
       toggleModal();
     } else {
       const newErrorText = [];
-      for (let i = 0; i < update.errors.length; i += 1) {
-        const error = update.errors[i];
-        errorText.push(<div key={i}>{error.msg}</div>);
+      console.log(update);
+      if (update.error) {
+        errorText.push(<div key={0}>{update.msg}</div>);
       }
       setErrorText(newErrorText);
       setErrorVisible(true);
@@ -192,7 +200,7 @@ const ImportPlanRulesRelations = (props) => {
     e.preventDefault();
     const deleteValues = {
       index,
-      importId: _id,
+      importPlanId: _id,
     };
     const deleteAction = await deleteData(`import-plan-relation`, deleteValues);
     if (deleteAction.status) {
@@ -201,41 +209,57 @@ const ImportPlanRulesRelations = (props) => {
     }
   };
 
+  useEffect(() => {
+    const output = items.map((i, k) => {
+      const src = rules.find((r) => r._id === i.srcId);
+      const target = rules.find((r) => r._id === i.targetId);
+      const key = `${k}.${i.srcId}`;
+      const { role = null } = i;
+      const roleOutput =
+        role !== null ? (
+          <small>
+            {' '}
+            role: [{returnLetter(role).toUpperCase()}] {columns[role]}
+          </small>
+        ) : (
+          []
+        );
+      return (
+        <li key={key}>
+          <div
+            onClick={() => toggleModal(k)}
+            onKeyDown={() => toggleModal(k)}
+            role="button"
+            tabIndex="0"
+          >
+            {src.label} <small>[{i.srcType}]</small> - <i>({i.relationLabel}</i>
+            {roleOutput}) -&gt; {target.label} <small>[{i.targetType}]</small>
+          </div>
+        </li>
+      );
+    });
+    setItemsOutput(output);
+    const elem = listRef.current;
+    elem.scroll({ top: elem.scrollHeight, behavior: 'smooth' });
+  }, [items, columns, rules, toggleModal, listRef]);
+
   const openBtnActive = open ? ' active' : '';
   const errorContainerClass = errorVisible ? '' : ' hidden';
   const errorContainer = (
     <div className={`error-container${errorContainerClass}`}>{errorText}</div>
   );
 
-  const entitiesOptions = rules.map((i) => {
+  const entitiesOptions = rules.map((i, idx) => {
     if (i.rule) {
       const rule = JSON.parse(i.rule);
       const { entityType: type } = rule;
       return {
         value: i._id,
-        label: i.label,
+        label: `[${idx + 1}] ${i.label}`,
         type,
       };
     }
     return [];
-  });
-  const itemsOutput = items.map((i, k) => {
-    const src = rules.find((r) => r._id === i.srcId);
-    const target = rules.find((r) => r._id === i.targetId);
-    const key = `${k}.${i.srcId}`;
-    return (
-      <li key={key}>
-        <div
-          onClick={() => toggleModal(k)}
-          onKeyDown={() => toggleModal(k)}
-          role="button"
-          tabIndex="0"
-        >
-          {src.label} <small>[{i.srcType}]</small> - ({i.relationLabel}) -&gt;{' '}
-          {target.label} <small>[{i.targetType}]</small>
-        </div>
-      </li>
-    );
   });
 
   let refTypesListOptions = [];
@@ -333,7 +357,9 @@ const ImportPlanRulesRelations = (props) => {
           </CardTitle>
           <Collapse isOpen={open}>
             {addNewTopBtn}
-            <ol className="links-list">{itemsOutput}</ol>
+            <ol className="links-list" ref={listRef}>
+              {itemsOutput}
+            </ol>
             <div className="text-right">
               <Button color="info" size="xs" onClick={() => toggleModal()}>
                 Add new <i className="fa fa-plus" />

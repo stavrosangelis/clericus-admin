@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
 // import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import EditImport from '../../components/import-data/Edit.import';
+import EditImport from '../../components/import-data/Edit.Import';
 import { getData, renderLoader } from '../../helpers';
 import { setPaginationParams } from '../../redux/actions';
 
@@ -148,7 +148,7 @@ const ImportPlans = () => {
     if (searchInput !== '') {
       params.label = searchInput;
     }
-    const responseData = await getData(`imports`, params);
+    const responseData = await getData(`import-plans`, params);
     return responseData;
   }, [limit, page, searchInput, orderDesc, orderField]);
 

@@ -42,7 +42,7 @@ const EditImport = (props) => {
     if (_id === 'new') {
       setLabel('');
     } else if (_id !== null) {
-      const responseData = await getData(`import`, { _id });
+      const responseData = await getData(`import-plan`, { _id });
       if (responseData.status) {
         const { data } = responseData;
         setLabel(data.label);
@@ -110,7 +110,7 @@ const EditImport = (props) => {
     if (copyId !== null) {
       updateData.copyId = copyId;
     }
-    const update = await putData(`import`, updateData);
+    const update = await putData(`import-plan`, updateData);
     if (update.status) {
       setUpdateBtn(
         <span>
