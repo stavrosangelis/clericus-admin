@@ -225,7 +225,7 @@ const EditImport = (props) => {
       <DeleteModal
         _id={_id}
         label={label}
-        path="import"
+        path="import-plan"
         params={{ _id }}
         visible={deleteModalVisible}
         toggle={toggleDeleteModal}

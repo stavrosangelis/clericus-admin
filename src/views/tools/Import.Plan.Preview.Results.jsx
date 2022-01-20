@@ -57,8 +57,6 @@ const ImportPlanPreviewResults = (props) => {
     const { data } = responseData;
     setItem(data);
     setLabel(data.label);
-    // const relations = data.relations || [];
-    // const parsedRelations = relations.map((r) => JSON.parse(r));
   }, [_id, selectedRows]);
 
   useEffect(() => {

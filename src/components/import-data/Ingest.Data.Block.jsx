@@ -34,7 +34,7 @@ const IngestDataBlock = (props) => {
     reload();
     toggleIngestModal();
   };
-
+  const ingestBtnVisible = ingestionStatus.status < 2 ? '' : 'hidden';
   const ingestModal = (
     <Modal isOpen={ingestModalVisible} toggle={toggleIngestModal}>
       <ModalHeader toggle={toggleIngestModal}>Ingest Data</ModalHeader>
@@ -129,6 +129,7 @@ const IngestDataBlock = (props) => {
             </div>
             <div>
               <Button
+                className={ingestBtnVisible}
                 color="success"
                 size="sm"
                 onClick={() => toggleIngestModal()}

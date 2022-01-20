@@ -3,6 +3,15 @@ import PropTypes from 'prop-types';
 import { Button, FormGroup, Label } from 'reactstrap';
 import ColumnEntity from './Import.Rule.Column.Entity';
 
+import {
+  eventProperties,
+  organisationProperties,
+  personProperties,
+  resourceProperties,
+  spatialProperties,
+  temporalProperties,
+} from './entity.properties';
+
 const ColumnEntities = (props) => {
   const { type, columns, selectedColumns, update, remove } = props;
 
@@ -13,7 +22,34 @@ const ColumnEntities = (props) => {
     update(index, defaultVal);
   };
 
+  let properties = [];
+  switch (type) {
+    case 'Event':
+      properties = eventProperties;
+      break;
+    case 'Organisation':
+      properties = organisationProperties;
+      break;
+    case 'Person':
+      properties = personProperties;
+      break;
+    case 'Resource':
+      properties = resourceProperties;
+      break;
+    case 'Spatial':
+      properties = spatialProperties;
+      break;
+    case 'Temporal':
+      properties = temporalProperties;
+      break;
+    default:
+      properties = [];
+  }
+
   const output = selectedColumns.map((c, i) => {
+    const { property } = c;
+    const newPropertyDetails =
+      properties.find((p) => p.label === property) || null;
     const key = `c${i}`;
     return (
       <ColumnEntity
@@ -24,6 +60,8 @@ const ColumnEntities = (props) => {
         column={c}
         update={update}
         remove={remove}
+        properties={properties}
+        propertyDetails={newPropertyDetails}
       />
     );
   });

@@ -50,6 +50,7 @@
   border-radius: 4px;
   padding: 15px;
   background-color: #fff;
+  max-inline-size: 400px;
 }
 .import-plan-preview-entities-items.events .import-plan-preview-entity {
   border-color: #F9CD1B;
@@ -98,4 +99,7 @@
 }
 .children-block:nth-child(odd) {
   background-color: #eee;
+}
+.child-item {
+  margin-left: 15px;
 }

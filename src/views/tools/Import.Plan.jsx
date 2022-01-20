@@ -150,6 +150,14 @@ const Import = (props) => {
       interval = setInterval(() => {
         loadImportStatus();
       }, 2000);
+    } else {
+      setIngestionStatus({
+        _id: '',
+        msg: '',
+        progress: 0,
+        started: '',
+        status: Number(item?.ingestionStatus),
+      });
     }
     if (interval !== null) {
       return () => clearInterval(interval);

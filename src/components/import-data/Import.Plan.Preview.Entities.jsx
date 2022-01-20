@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
-const Block = (props) => {
-  const { item, rowKey } = props;
+const outputItem = (item) => {
   const output = [];
   Object.keys(item).forEach((v, i) => {
     if (item[v] !== null && item[v] !== '') {
@@ -14,29 +13,53 @@ const Block = (props) => {
             const cbkey = `${key}.${j}`;
             const newItemRows = [];
             let newItem = o;
-            if (newItem !== '' && typeof newItem === 'string') {
-              newItem = JSON.parse(o);
-            }
-            const objKeys = Object.keys(newItem);
-            objKeys.forEach((objKey) => {
-              if (newItem[objKey] !== '') {
-                const value =
-                  typeof newItem[objKey] === 'string'
-                    ? newItem[objKey]
-                    : Object.keys(newItem[objKey]).map((ok) => (
-                        <div className="child-item" key={ok}>
-                          <b>{ok}</b>: {newItem[objKey][ok]}
-                        </div>
-                      ));
-                const newItemRow = (
-                  <div className="child-item" key={objKey}>
-                    <b>{objKey}</b>: {value}
-                  </div>
-                );
-                newItemRows.push(newItemRow);
+            let isJSON = false;
+            if (
+              newItem !== null &&
+              newItem !== '' &&
+              typeof newItem === 'string'
+            ) {
+              try {
+                newItem = JSON.parse(o);
+                isJSON = true;
+              } catch (e) {
+                newItem = o;
               }
-            });
-
+            }
+            if (isJSON) {
+              const objKeys = Object.keys(newItem);
+              objKeys.forEach((objKey) => {
+                if (newItem[objKey] !== '') {
+                  const value =
+                    typeof newItem[objKey] === 'string'
+                      ? newItem[objKey]
+                      : Object.keys(newItem[objKey]).map((ok) => (
+                          <div className="child-item" key={ok}>
+                            <b>{ok}</b>: {newItem[objKey][ok]}
+                          </div>
+                        ));
+                  const newItemRow = (
+                    <div className="child-item" key={objKey}>
+                      <b>{objKey}</b>: {value}
+                    </div>
+                  );
+                  newItemRows.push(newItemRow);
+                }
+              });
+            } else if (typeof o === 'object') {
+              const oOutput = outputItem(o);
+              output.push(
+                <div key={cbkey}>
+                  <b>{v}</b>:<div className="child-item">{oOutput}</div>
+                </div>
+              );
+            } else if (o !== '') {
+              output.push(
+                <div key={cbkey}>
+                  <b>{v}</b>: {o}
+                </div>
+              );
+            }
             return (
               <div key={cbkey} className="children-block">
                 {newItemRows}
@@ -44,7 +67,12 @@ const Block = (props) => {
             );
           }) || [];
       }
-      if (v !== 'row' && v !== 'refId' && outputValue.length > 0) {
+      if (
+        v !== 'row' &&
+        v !== 'refId' &&
+        outputValue.length > 0 &&
+        !Array.isArray(outputValue)
+      ) {
         output.push(
           <div key={key}>
             <b>{v}</b>: {outputValue}
@@ -53,6 +81,13 @@ const Block = (props) => {
       }
     }
   });
+  return output;
+};
+
+const Block = (props) => {
+  const { item, rowKey } = props;
+  const output = outputItem(item);
+
   return (
     <div className="import-plan-preview-entity" id={`${rowKey}.${item.refId}`}>
       {output}

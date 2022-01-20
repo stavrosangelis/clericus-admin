@@ -1,6 +1,6 @@
 {
   "name": "clericus-admin",
-  "version": "0.84.8",
+  "version": "0.85.0",
   "description": "This is the Clericus Admin content management system interface",
   "author": "Stavros Angelis",
   "license": "ISC",
@@ -39,7 +39,7 @@
   "scripts": {
     "start": "NODE_ENV=production react-scripts start",
     "dev": "NODE_ENV=development react-scripts start",
-    "build:dev": "REACT_APP_ENV=prod.dev BUILD_PATH='./build-dev' DOMAIN=http://51.124.178.181 react-scripts build",
+    "build:dev": "REACT_APP_ENV=prod.dev BUILD_PATH='./build-dev' DOMAIN=http://devel.clericus.ie react-scripts build",
     "build": "react-scripts build",
     "test": "REACT_APP_APIPATH=http://localhost:5100/api/ react-scripts test --verbose",
     "eject": "react-scripts eject"
