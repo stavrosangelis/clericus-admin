@@ -6,7 +6,6 @@ import {
   ModalFooter,
   Form,
   FormGroup,
-  Input,
   Label,
   Collapse,
   Button,
@@ -17,7 +16,7 @@ import {
 import Select from 'react-select';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
-import { putData, deleteData, returnLetter } from '../../helpers';
+import { getData, putData, deleteData } from '../../helpers';
 
 const ImportPlanRulesRelations = (props) => {
   // props
@@ -47,11 +46,70 @@ const ImportPlanRulesRelations = (props) => {
   const [selectedTargetNode, setSelectedTargetNode] = useState(null);
   const [selectedRelation, setSelectedRelation] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedRoleCustom, setSelectedRoleCustom] = useState('');
+  const [loadingTaxonomies, setLoadingTaxonomies] = useState(true);
+  const [taxonomies, setTaxonomies] = useState([]);
+  const [taxonomyTermsOptions, setTaxonomyTermsOptions] = useState([]);
+  const [roleTaxonomy, setRoleTaxonomy] = useState(null);
   const [index, setIndex] = useState(-1);
   const [itemsOutput, setItemsOutput] = useState([]);
 
   const listRef = useRef(null);
+  const mounted = useRef(null);
+
+  const termsList = useCallback((terms, sepParam = '') => {
+    const options = [];
+    const { length } = terms;
+    for (let i = 0; i < length; i += 1) {
+      const term = terms[i];
+      const { children = [], _id: termId, label } = term;
+      let sep = sepParam;
+      const option = {
+        value: termId,
+        label: `${sep} ${label}`,
+        termLabel: label,
+      };
+      options.push(option);
+      if (children.length > 0) {
+        sep += '-';
+        const childrenOptions = termsList(children, sep);
+        options.push(...childrenOptions);
+      }
+    }
+    return options;
+  }, []);
+
+  const loadTaxonomyTerms = useCallback(
+    async (taxonomyId) => {
+      const responseData = await getData(`taxonomy`, {
+        _id: taxonomyId,
+      });
+      const { data } = responseData;
+      const options = termsList(data.taxonomyterms);
+      setTaxonomyTermsOptions(options);
+    },
+    [termsList]
+  );
+
+  useEffect(() => {
+    mounted.current = true;
+    const loadTaxonomies = async () => {
+      setLoadingTaxonomies(false);
+      const responseData = await getData(`taxonomies`, {
+        page: 1,
+        limit: 100,
+      });
+      if (mounted.current) {
+        const { data } = responseData;
+        setTaxonomies(data.data);
+      }
+    };
+    if (loadingTaxonomies) {
+      loadTaxonomies();
+    }
+    return () => {
+      mounted.current = false;
+    };
+  }, [loadingTaxonomies]);
 
   const toggle = () => {
     setOpen(!open);
@@ -78,30 +136,23 @@ const ImportPlanRulesRelations = (props) => {
           label: newSelectedTargetNodeFind.label,
           type: item.targetType,
         };
-        const newRole =
-          typeof item.role !== 'undefined' && item.role !== ''
-            ? { value: item.role, label: columns[item.role] }
-            : null;
-        const newRoleCustom = item.roleCustom || '';
         setSelectedSourceNode(newSelectedSourceNode);
         setSelectedTargetNode(newSelectedTargetNode);
         setSelectedRelation({
           value: item.relationLabel,
           label: item.relationLabel,
         });
-        setSelectedRole(newRole);
-        setSelectedRoleCustom(newRoleCustom);
+        setSelectedRole(item.role);
       } else {
         setIndex(-1);
         setSelectedSourceNode(null);
         setSelectedTargetNode(null);
         setSelectedRelation(null);
         setSelectedRole(null);
-        setSelectedRoleCustom('');
       }
       setModalVisible(!modalVisible);
     },
-    [columns, items, modalVisible, rules]
+    [items, modalVisible, rules]
   );
 
   const handleChange = (option, type) => {
@@ -119,6 +170,10 @@ const ImportPlanRulesRelations = (props) => {
         break;
       case 'role':
         setSelectedRole(option);
+        break;
+      case 'taxonomy':
+        setRoleTaxonomy(option);
+        loadTaxonomyTerms(option.value);
         break;
       default:
         break;
@@ -145,13 +200,7 @@ const ImportPlanRulesRelations = (props) => {
       relationLabel: selectedRelation.label,
     };
     if (selectedRole !== null) {
-      relation.role = selectedRole.value;
-      if (
-        Number(selectedRole.value) === columns.length - 1 &&
-        selectedRoleCustom !== ''
-      ) {
-        relation.roleCustom = selectedRoleCustom;
-      }
+      relation.role = selectedRole;
     }
     const updateData = {
       index,
@@ -215,15 +264,12 @@ const ImportPlanRulesRelations = (props) => {
       const target = rules.find((r) => r._id === i.targetId);
       const key = `${k}.${i.srcId}`;
       const { role = null } = i;
-      const roleOutput =
-        role !== null ? (
-          <small>
-            {' '}
-            role: [{returnLetter(role).toUpperCase()}] {columns[role]}
-          </small>
-        ) : (
-          []
-        );
+
+      let roleOutput = [];
+      if (role !== null) {
+        const { termLabel = '' } = role;
+        roleOutput = <small> role: [{termLabel}]</small>;
+      }
       return (
         <li key={key}>
           <div
@@ -239,8 +285,10 @@ const ImportPlanRulesRelations = (props) => {
       );
     });
     setItemsOutput(output);
-    const elem = listRef.current;
-    elem.scroll({ top: elem.scrollHeight, behavior: 'smooth' });
+    const elem = listRef.current || null;
+    if (elem !== null) {
+      elem.scroll({ top: elem.scrollHeight, behavior: 'smooth' });
+    }
   }, [items, columns, rules, toggleModal, listRef]);
 
   const openBtnActive = open ? ' active' : '';
@@ -310,38 +358,14 @@ const ImportPlanRulesRelations = (props) => {
     ) : (
       []
     );
+  const taxonomyOptions = taxonomies.map((t) => ({
+    value: t._id,
+    label: t.label,
+  }));
   if (columns.indexOf('Add custom value') === -1) {
     columns.push('Add custom value');
   }
-  const columnsLength = columns.length;
-  const roleOptions =
-    selectedRelation !== null
-      ? columns.map((c, key) => {
-          const label =
-            key === columnsLength - 1
-              ? c
-              : `[${returnLetter(key).toUpperCase()}] ${c}`;
-          return {
-            value: key,
-            label,
-          };
-        })
-      : [];
 
-  const customRole =
-    selectedRole !== null &&
-    Number(selectedRole.value) === columnsLength - 1 ? (
-      <Input
-        name="custom-role"
-        placeholder="Enter custom role"
-        type="text"
-        value={selectedRoleCustom}
-        className="form-control"
-        onChange={(e) => setSelectedRoleCustom(e.target.value)}
-      />
-    ) : (
-      []
-    );
   return (
     <div>
       <Card>
@@ -357,7 +381,7 @@ const ImportPlanRulesRelations = (props) => {
           </CardTitle>
           <Collapse isOpen={open}>
             {addNewTopBtn}
-            <ol className="links-list" ref={listRef}>
+            <ol className="links-list" id="links-list" ref={listRef}>
               {itemsOutput}
             </ol>
             <div className="text-right">
@@ -403,12 +427,16 @@ const ImportPlanRulesRelations = (props) => {
             <FormGroup>
               <Label>Role</Label>
               <Select
+                value={roleTaxonomy}
+                onChange={(v) => handleChange(v, 'taxonomy')}
+                options={taxonomyOptions}
+              />
+              <Select
                 isClearable
                 value={selectedRole}
                 onChange={(o) => handleChange(o, 'role')}
-                options={roleOptions}
+                options={taxonomyTermsOptions}
               />
-              {customRole}
             </FormGroup>
           </Form>
         </ModalBody>

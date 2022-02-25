@@ -1,32 +1,25 @@
 import React from 'react';
-import {
-  act,
-  cleanup,
-  render,
-  screen,
-  waitForElementToBeRemoved,
-  waitFor,
-} from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter as Router } from 'react-router-dom';
 import store from '../redux/store';
 import server from '../__mocks/mock-server';
 
-import ImportPlans from '../views/tools/Import.Plans';
+import ImportPlan from '../views/tools/Import.Plan';
 
 const defaultProps = {
-  limit: 25,
-  page: 1,
-  orderField: 'label',
-  orderDesc: false,
-  searchInput: '',
+  match: {
+    params: {
+      _id: '321335',
+    },
+  },
 };
 
 const Wrapper = (props) => (
   <Provider store={store()}>
     <Router>
       {/* eslint-disable-next-line */}
-      <ImportPlans {...defaultProps} {...props} />
+      <ImportPlan {...defaultProps} {...props} />
     </Router>
   </Provider>
 );
@@ -43,36 +36,47 @@ afterEach(() => {
 // Disable API mocking after the tests are done.
 afterAll(() => server.close());
 
+// patch undefined scroll function by mocking it
+window.HTMLElement.prototype.scroll = jest.fn();
+
+// tests
 describe('Render the import data view', () => {
   it('renders without error', async () => {
     await act(async () => {
       render(<Wrapper />);
 
-      screen.getByText('Import Data Plans');
+      await screen.findByText('Upload new file');
     });
   });
 
-  it('loads data', async () => {
+  it('render columns', async () => {
     await act(async () => {
       render(<Wrapper />);
 
-      screen.getByText('loading...');
+      await screen.findByText('File Columns');
     });
   });
 
-  it('finished loading', async () => {
+  it('render data cleaning', async () => {
     await act(async () => {
       render(<Wrapper />);
 
-      await waitForElementToBeRemoved(() => screen.getByText('loading...'));
-      screen.getByText('(6)');
+      await screen.findByText('data cleaning instance');
     });
   });
 
-  it('displays items', async () => {
+  it('render import plan rules', async () => {
     await act(async () => {
       render(<Wrapper />);
-      await waitFor(() => screen.getByText('Paris Toulouse'));
+
+      await screen.findByText('Main person/Entry');
     });
   });
+
+  /* it('loaded item', async () => {
+    await act(async () => {
+      render(<Wrapper />);
+      await waitFor(() => screen.findAllByText('1911 Census'));
+    });
+  }); */
 });

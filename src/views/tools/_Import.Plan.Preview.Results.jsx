@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Button, Card, CardBody, Collapse, Input, Spinner } from 'reactstrap';
 import PropTypes from 'prop-types';
 import { getData } from '../../helpers';
@@ -18,8 +18,6 @@ const ImportPlanPreviewResults = (props) => {
   const [label, setLabel] = useState('');
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState([2]);
-
-  const mounted = useRef(false);
 
   const toggleCollapse = () => {
     setCollapseOpen(!collapseOpen);
@@ -50,28 +48,22 @@ const ImportPlanPreviewResults = (props) => {
     setSelectedRows(copy);
   };
 
-  useEffect(() => {
-    mounted.current = true;
-    const load = async () => {
-      setLoading(false);
-      const responseData = await getData(`import-plan-preview-results`, {
-        _id,
-        rows: selectedRows,
-      });
-      if (mounted.current) {
-        const { data } = responseData;
-        setItem(data);
-        setLabel(data.label);
-      }
-    };
+  const load = useCallback(async () => {
+    setLoading(false);
+    const responseData = await getData(`import-plan-preview-results`, {
+      _id,
+      rows: selectedRows,
+    });
+    const { data } = responseData;
+    setItem(data);
+    setLabel(data.label);
+  }, [_id, selectedRows]);
 
+  useEffect(() => {
     if (loading) {
       load();
     }
-    return () => {
-      mounted.current = false;
-    };
-  }, [loading, _id, selectedRows]);
+  }, [loading, load]);
 
   const breadcrumbsItems = [
     {

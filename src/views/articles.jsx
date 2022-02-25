@@ -158,10 +158,6 @@ const Articles = () => {
   );
 
   const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
     const statusParam = status !== '' ? status : null;
     const params = {
       page,
@@ -177,28 +173,8 @@ const Articles = () => {
       params.categoryId = activeType;
     }
     const responseData = await getData(`articles`, params);
-    const { data: newData } = responseData;
-    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-    if (currentPage > newData.totalPages && newData.totalPages > 0) {
-      currentPage = newData.totalPages;
-    }
-    const newItems = await prepareItems(newData.data);
-    setItems(newItems);
-    setTableLoading(false);
-    updateStorePagination({ pageParam: currentPage });
-    setTotalPages(newData.totalPages);
-    setTotalItems(newData.totalItems);
-  }, [
-    activeType,
-    limit,
-    page,
-    searchInput,
-    status,
-    prepareItems,
-    orderDesc,
-    orderField,
-    updateStorePagination,
-  ]);
+    return responseData;
+  }, [activeType, limit, page, searchInput, status, orderDesc, orderField]);
 
   const handleChange = (e) => {
     const { target } = e;
@@ -280,6 +256,28 @@ const Articles = () => {
   };
 
   useEffect(() => {
+    let unmount = false;
+    const update = async () => {
+      unmount = false;
+      const responseData = await load();
+      const { data: newData } = responseData;
+      let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
+      if (currentPage > newData.totalPages && newData.totalPages > 0) {
+        currentPage = newData.totalPages;
+      }
+      const newItems = await prepareItems(newData.data);
+      if (!unmount) {
+        setLoading(false);
+        setReLoading(false);
+        setPrevReLoading(false);
+        setTableLoading(true);
+        setItems(newItems);
+        setTableLoading(false);
+        updateStorePagination({ pageParam: currentPage });
+        setTotalPages(newData.totalPages);
+        setTotalItems(newData.totalItems);
+      }
+    };
     if (prevLimit !== limit) {
       setPrevLimit(limit);
     }
@@ -301,27 +299,35 @@ const Articles = () => {
     if (reLoading && !prevReLoading) {
       setPrevReLoading(reLoading);
       clearSelectedAll();
-      load();
+      update();
     }
     if (
-      loading ||
-      prevLimit !== limit ||
-      prevPage !== page ||
-      prevActiveType !== activeType ||
-      prevStatus !== status ||
-      prevOrderField !== orderField ||
-      prevOrderDesc !== orderDesc ||
-      (reLoading && !prevReLoading)
+      !unmount &&
+      (loading ||
+        prevLimit !== limit ||
+        prevPage !== page ||
+        prevActiveType !== activeType ||
+        prevStatus !== status ||
+        prevOrderField !== orderField ||
+        prevOrderDesc !== orderDesc ||
+        (reLoading && !prevReLoading))
     ) {
       clearSelectedAll();
-      load();
+      update();
     }
+    return () => {
+      unmount = true;
+    };
   }, [
-    loading,
+    activeType,
     clearSelectedAll,
+    loading,
+    limit,
     load,
     orderField,
     orderDesc,
+    page,
+    prepareItems,
     prevLimit,
     prevPage,
     prevActiveType,
@@ -330,10 +336,8 @@ const Articles = () => {
     prevOrderDesc,
     prevReLoading,
     reLoading,
-    limit,
-    page,
-    activeType,
     status,
+    updateStorePagination,
   ]);
 
   const pageActions = (

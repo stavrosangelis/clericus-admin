@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import ImportPlanPreviewRow from './Import.Plan.Preview.Row';
 import ImportPlanPreviewEntities from './Import.Plan.Preview.Entities';
@@ -6,32 +6,47 @@ import ImportPlanPreviewEntities from './Import.Plan.Preview.Entities';
 const ImportPlanPreviewRows = (props) => {
   const { columns, rows, rules, relations, selectedRows } = props;
 
+  const prevRelations = useRef([]);
+
   const [preparedRelations, setPreparedRelations] = useState([]);
 
   useEffect(() => {
-    const newRelations = [];
-    const sLength = selectedRows.length;
-    const rLength = relations.length;
-    for (let i = 0; i < sLength; i += 1) {
-      const selectedRow = selectedRows[i];
-      const rowRelations = {
-        row: selectedRow,
-        relations: [],
-      };
-      for (let j = 0; j < rLength; j += 1) {
-        const r = relations[j];
-        const rValues = JSON.parse(r);
-        const { srcId, targetId, srcType } = rValues;
-        const newRelation = {
-          srcId,
-          targetId,
-          srcType,
+    if (prevRelations.current !== relations) {
+      prevRelations.current = relations;
+      const newRelations = [];
+      const sLength = selectedRows.length;
+      const rLength = relations.length;
+      for (let i = 0; i < sLength; i += 1) {
+        const selectedRow = selectedRows[i];
+        const rowRelations = {
+          row: selectedRow,
+          relations: [],
         };
-        rowRelations.relations.push(newRelation);
+        for (let j = 0; j < rLength; j += 1) {
+          const r = relations[j];
+          const rValues = JSON.parse(r);
+          const {
+            srcId,
+            targetId,
+            srcType,
+            relationLabel: label,
+            role = 0,
+            roleCustom = '',
+          } = rValues;
+          const newRelation = {
+            srcId,
+            targetId,
+            srcType,
+            label,
+            role,
+            roleCustom,
+          };
+          rowRelations.relations.push(newRelation);
+        }
+        newRelations.push(rowRelations);
       }
-      newRelations.push(rowRelations);
+      setPreparedRelations(newRelations);
     }
-    setPreparedRelations(newRelations);
   }, [relations, selectedRows]);
 
   const blocks = rows.map((row) => {

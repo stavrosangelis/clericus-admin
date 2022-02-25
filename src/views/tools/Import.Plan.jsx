@@ -20,7 +20,7 @@ import '../../assets/scss/import.scss';
 
 const Breadcrumbs = lazy(() => import('../../components/breadcrumbs'));
 
-function scrollTo(containerParam = null, elementParam = null) {
+function scrollToElem(containerParam = null, elementParam = null) {
   const container = containerParam;
   const element = elementParam;
   if (container !== null && element !== null) {
@@ -31,10 +31,12 @@ function scrollTo(containerParam = null, elementParam = null) {
     const marginLeft = style['margin-left'].replace('px', '');
     const marginNum = Number(marginLeft) || 0;
     const left = elLeft + scrollLeft - cLeft - marginNum;
-    container.scrollTo({
-      left,
-      behaviour: 'smooth',
-    });
+    if (typeof container.scrollTo !== 'undefined') {
+      container.scrollTo({
+        left,
+        behaviour: 'smooth',
+      });
+    }
   }
 }
 
@@ -71,6 +73,7 @@ const Import = (props) => {
   });
 
   // refs
+  const mounted = useRef(false);
   const containerRef = useRef(null);
   const fileBlockRef = useRef(null);
   const columnsBlockRef = useRef(null);
@@ -95,32 +98,25 @@ const Import = (props) => {
   };
 
   const loadImportRules = useCallback(async () => {
-    setImportRulesLoading(false);
     const responseData = await getData(`import-plan-rules`, {
       importPlanId: _id,
       limit: 500,
     });
     const { data } = responseData.data;
-    setImportRulesData(data);
+    return data;
   }, [_id]);
 
   const load = useCallback(async () => {
-    setLoading(false);
     const responseData = await getData(`import-plan`, { _id });
     const { data } = responseData;
-    setItem(data);
-    setLabel(data.label);
-    const relations = data.relations || [];
-    const parsedRelations = relations.map((r) => JSON.parse(r));
-    setImportRulesRelations(parsedRelations);
+    return data;
   }, [_id]);
 
   const loadImportStatus = useCallback(async () => {
     const { data } = await getData(`import-plan-status`, { _id });
-    setIngestionStatus(data);
-    if (data.status !== 1) {
-      setCompleteInterval(true);
-    }
+    const { progress = 0 } = data;
+    data.progress = Number(progress);
+    return data;
   }, [_id]);
 
   const reloadImportRules = () => {
@@ -131,24 +127,60 @@ const Import = (props) => {
   };
 
   useEffect(() => {
+    mounted.current = true;
+    const updateRules = async () => {
+      const rules = await loadImportRules();
+      if (mounted.current) {
+        setImportRulesLoading(false);
+        setImportRulesData(rules);
+      }
+    };
     if (importRulesLoading) {
-      loadImportRules();
+      updateRules();
     }
+    return () => {
+      mounted.current = false;
+    };
   }, [importRulesLoading, loadImportRules]);
 
   useEffect(() => {
+    mounted.current = true;
+    const updateData = async () => {
+      const data = await load();
+      const rules = await loadImportRules();
+      if (mounted.current) {
+        setLoading(false);
+        setItem(data);
+        setLabel(data.label);
+        const relations = data.relations || [];
+        const parsedRelations = relations.map((r) => JSON.parse(r));
+        setImportRulesRelations(parsedRelations);
+
+        setImportRulesData(rules);
+      }
+    };
     if (loading) {
-      load();
-      loadImportRules();
+      updateData();
     }
+    return () => {
+      mounted.current = false;
+    };
   }, [loading, load, loadImportRules]);
 
   useEffect(() => {
+    mounted.current = true;
     let interval = null;
     const status = item?.ingestionStatus || 0;
+
     if (status === 1 && interval === null && !completeInterval) {
-      interval = setInterval(() => {
-        loadImportStatus();
+      interval = setInterval(async () => {
+        const data = await loadImportStatus();
+        if (mounted.current) {
+          setIngestionStatus(data);
+          if (data.status !== 1) {
+            setCompleteInterval(true);
+          }
+        }
       }, 2000);
     } else {
       setIngestionStatus({
@@ -162,7 +194,9 @@ const Import = (props) => {
     if (interval !== null) {
       return () => clearInterval(interval);
     }
-    return false;
+    return () => {
+      mounted.current = false;
+    };
   }, [item, loadImportStatus, completeInterval]);
 
   const updateActive = (value = 0) => {
@@ -189,7 +223,9 @@ const Import = (props) => {
         break;
     }
     if (col !== null) {
-      scrollTo(containerRef.current, col);
+      if (containerRef.current !== null) {
+        scrollToElem(containerRef.current, col);
+      }
     }
   };
 
@@ -514,6 +550,10 @@ Import.defaultProps = {
   match: null,
 };
 Import.propTypes = {
-  match: PropTypes.object,
+  match: PropTypes.shape({
+    params: PropTypes.shape({
+      _id: PropTypes.string,
+    }),
+  }),
 };
 export default Import;

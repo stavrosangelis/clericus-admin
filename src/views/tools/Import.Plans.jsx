@@ -1,4 +1,11 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import { Card, CardBody, Spinner } from 'reactstrap';
 // import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -54,6 +61,8 @@ const ImportPlans = () => {
 
   const [editId, setEditId] = useState('new');
   const [editImportVisible, setEditImportVisible] = useState(false);
+
+  const mounted = useRef(false);
 
   const toggleImportVisible = (_id = null) => {
     setEditImportVisible(!editImportVisible);
@@ -135,10 +144,6 @@ const ImportPlans = () => {
   );
 
   const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
     const params = {
       page,
       limit,
@@ -187,7 +192,6 @@ const ImportPlans = () => {
   };
 
   useEffect(() => {
-    let unmount = false;
     if (prevLimit !== limit) {
       setPrevLimit(limit);
     }
@@ -204,13 +208,13 @@ const ImportPlans = () => {
       setPrevReLoading(reLoading);
     }
     if (
-      !unmount &&
-      (loading ||
-        prevLimit !== limit ||
-        prevPage !== page ||
-        prevOrderDesc !== orderDesc ||
-        (reLoading && !prevReLoading))
+      loading ||
+      prevLimit !== limit ||
+      prevPage !== page ||
+      prevOrderDesc !== orderDesc ||
+      (reLoading && !prevReLoading)
     ) {
+      mounted.current = true;
       const update = async () => {
         const responseData = await load();
         const { data: newData } = responseData;
@@ -220,16 +224,22 @@ const ImportPlans = () => {
         if (currentPage > newData.totalPages && newData.totalPages > 0) {
           currentPage = newData.totalPages;
         }
-        updateStorePagination({ pageParam: currentPage });
-        setItems(newItems);
-        setTotalPages(newData.totalPages);
-        setTotalItems(newData.totalItems);
-        setTableLoading(false);
+        if (mounted.current) {
+          setItems(newItems);
+          setLoading(false);
+          setReLoading(false);
+          setPrevReLoading(false);
+          setTableLoading(true);
+          updateStorePagination({ pageParam: currentPage });
+          setTotalPages(newData.totalPages);
+          setTotalItems(newData.totalItems);
+          setTableLoading(false);
+        }
       };
       update();
     }
     return () => {
-      unmount = true;
+      mounted.current = false;
     };
   }, [
     loading,

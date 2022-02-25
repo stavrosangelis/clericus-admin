@@ -32,7 +32,8 @@
   background-color: #666;
 }
 .import-plan-preview-entities {
-  margin-bottom: 20px;
+  margin: 100px 0 ;
+  padding-left: 240px;
   position: relative;
   z-index: 2;
 }
@@ -43,7 +44,8 @@
 .import-plan-preview-entities-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 60px;
+  justify-content: center;
 }
 .import-plan-preview-entity {
   border: 2px solid #6b1f16;
@@ -84,6 +86,7 @@
 }
 .import-plan-preview-entities-container {
   position: relative;
+  padding-top: 100px;
 }
 .svg-container {
   position: absolute;

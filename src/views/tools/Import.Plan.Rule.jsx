@@ -54,7 +54,6 @@ const ImportPlanRule = (props) => {
     if (loading) {
       loadImportData();
     }
-
     setLoading(false);
     // item data
     const itemResponseData = await getData(`import-plan-rule`, { _id });

@@ -30,3 +30,6 @@ yarn-error.log*
 # test mock data and old test
 /src/__test-data
 /src/__old-tests
+
+# local ssl cert
+/cert

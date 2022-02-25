@@ -65,10 +65,17 @@ const RelatedEntitiesBlock = (props) => {
       const { label } = reference.ref;
       const { _id } = reference.ref;
       const url = `/event/${_id}`;
+      const termRole = reference.term.role || null;
+      const roleLabel = reference.term.roleLabel || '';
+      const role =
+        termRole !== null
+          ? [' ', <Label key="label">as {roleLabel}</Label>]
+          : [];
       const row = (
         <div key={_id} className="ref-item">
           <Link to={url} href={url}>
             <i>{reference.term.label}</i> <b>{label}</b>
+            {role}
           </Link>
           <div
             className="delete-ref"

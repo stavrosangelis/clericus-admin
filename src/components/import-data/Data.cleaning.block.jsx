@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   Modal,
   ModalHeader,
@@ -39,6 +39,8 @@ const DataCleaning = (props) => {
   const [redirect, setRedirect] = useState(false);
   const [newId, setNewId] = useState(null);
 
+  const mounted = useRef(null);
+
   const toggle = () => {
     setOpen(!open);
   };
@@ -61,18 +63,28 @@ const DataCleaning = (props) => {
   }, [redirect]);
 
   const load = useCallback(async () => {
-    setLoading(false);
     const responseData = await getData(`data-cleaning`, { importPlanId: _id });
-    const { data } = responseData.data;
-    setItems(data);
-    updateLength(data.length);
-  }, [_id, updateLength]);
+    const { data = [] } = responseData.data;
+    return data;
+  }, [_id]);
 
   useEffect(() => {
+    mounted.current = true;
+    const loadData = async () => {
+      const data = await load();
+      if (mounted.current) {
+        setLoading(false);
+        setItems(data);
+        updateLength(data.length);
+      }
+    };
     if (loading) {
-      load();
+      loadData();
     }
-  }, [loading, load]);
+    return () => {
+      mounted.current = false;
+    };
+  }, [loading, load, updateLength]);
 
   const formSubmit = async (e) => {
     e.preventDefault();

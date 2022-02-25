@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Collapse, Button, Card, CardTitle, CardBody } from 'reactstrap';
 
@@ -14,25 +14,35 @@ const Columns = (props) => {
   const [data, setData] = useState([]);
   const [open, setOpen] = useState(true);
 
+  const mounted = useRef(false);
+
   const toggle = () => {
     setOpen(!open);
   };
 
-  const load = useCallback(async () => {
-    setLoading(false);
-    const response = await getData('import-plan', { _id: importPlanId });
-    if (response.status) {
-      const { data: responseData } = response;
-      const completed = responseData.columnsParsed || false;
-      if (completed) {
-        setRunning(false);
-        setData(responseData.columns);
-        updateColumns(responseData.columns);
-      }
-    }
-  }, [importPlanId, updateColumns]);
+  const loadData = useCallback(async () => {
+    const _id = importPlanId || 0;
+    const response = await getData('import-plan', { _id });
+    return response;
+  }, [importPlanId]);
 
   useEffect(() => {
+    mounted.current = true;
+    const load = async () => {
+      const response = await loadData();
+      if (mounted.current) {
+        setLoading(false);
+        if (response.status) {
+          const { data: responseData } = response;
+          const completed = responseData.columnsParsed || false;
+          if (completed) {
+            setRunning(false);
+            setData(responseData.columns);
+            updateColumns(responseData.columns);
+          }
+        }
+      }
+    };
     let interval = null;
     if (loading) {
       load();
@@ -45,8 +55,10 @@ const Columns = (props) => {
     if (interval !== null) {
       return () => clearInterval(interval);
     }
-    return false;
-  }, [running, load, loading]);
+    return () => {
+      mounted.current = false;
+    };
+  }, [running, loading, loadData, updateColumns]);
 
   useEffect(() => {
     if (update) {

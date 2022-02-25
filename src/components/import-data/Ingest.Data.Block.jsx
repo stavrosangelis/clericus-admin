@@ -31,10 +31,12 @@ const IngestDataBlock = (props) => {
 
   const ingestData = async () => {
     await putData(`import-plan-ingest`, { _id });
-    reload();
     toggleIngestModal();
+    setTimeout(() => {
+      reload();
+    }, 1000);
   };
-  const ingestBtnVisible = ingestionStatus.status < 2 ? '' : 'hidden';
+  const ingestBtnVisible = Number(ingestionStatus.status) === 0 ? '' : 'hidden';
   const ingestModal = (
     <Modal isOpen={ingestModalVisible} toggle={toggleIngestModal}>
       <ModalHeader toggle={toggleIngestModal}>Ingest Data</ModalHeader>
@@ -87,6 +89,7 @@ const IngestDataBlock = (props) => {
       statusLabel = '';
       break;
   }
+
   const progress =
     ingestionStatus.status !== 1 ? (
       []
