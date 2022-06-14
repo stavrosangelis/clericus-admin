@@ -14,11 +14,11 @@ import {
   CardTitle,
   CardBody,
 } from 'reactstrap';
-import { Link, Redirect } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { putData, getData } from '../../helpers';
 
-const DataCleaning = (props) => {
+function DataCleaning(props) {
   // props
   const { _id, updateLength } = props;
 
@@ -40,6 +40,7 @@ const DataCleaning = (props) => {
   const [newId, setNewId] = useState(null);
 
   const mounted = useRef(null);
+  const navigate = useNavigate();
 
   const toggle = () => {
     setOpen(!open);
@@ -57,10 +58,11 @@ const DataCleaning = (props) => {
   };
 
   useEffect(() => {
-    if (redirect) {
+    if (redirect && newId !== null) {
+      navigate(`/data-cleaning/${_id}/${newId}`);
       setRedirect(false);
     }
-  }, [redirect]);
+  }, [redirect, newId, _id, navigate]);
 
   const load = useCallback(async () => {
     const responseData = await getData(`data-cleaning`, { importPlanId: _id });
@@ -149,15 +151,8 @@ const DataCleaning = (props) => {
     </li>
   ));
 
-  const redirectElem =
-    newId !== null && redirect ? (
-      <Redirect to={`/data-cleaning/${_id}/${newId}`} />
-    ) : (
-      []
-    );
   return (
-    <div>
-      {redirectElem}
+    <>
       <Card>
         <CardBody>
           <CardTitle onClick={() => toggle()}>
@@ -170,7 +165,7 @@ const DataCleaning = (props) => {
           </CardTitle>
           <Collapse isOpen={open}>
             <ol className="links-list">{itemsOutput}</ol>
-            <div className="text-right">
+            <div className="text-end">
               <Button color="info" size="xs" onClick={() => toggleModal()}>
                 Add new <i className="fa fa-plus" />
               </Button>
@@ -209,9 +204,9 @@ const DataCleaning = (props) => {
           </Button>
         </ModalFooter>
       </Modal>
-    </div>
+    </>
   );
-};
+}
 
 DataCleaning.propTypes = {
   _id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,

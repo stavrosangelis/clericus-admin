@@ -19,7 +19,7 @@ import {
   toggleClearQueryBuildResults,
 } from '../../redux/actions';
 
-const QueryModalRelated = (props) => {
+function QueryModalRelated(props) {
   // props
   const {
     open,
@@ -263,7 +263,7 @@ const QueryModalRelated = (props) => {
       </Modal>
     </div>
   );
-};
+}
 QueryModalRelated.defaultProps = {
   open: false,
   toggleModalOpen: () => {},

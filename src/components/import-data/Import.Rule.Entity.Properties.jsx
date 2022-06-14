@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Input } from 'reactstrap';
 
-const EntityProperties = (props) => {
+function EntityProperties(props) {
   const { properties, property, setProperty } = props;
   const options = properties.map((p) => (
     <option key={p.label} value={p.label} type={p.type}>
@@ -33,7 +33,7 @@ const EntityProperties = (props) => {
       {options}
     </Input>
   );
-};
+}
 EntityProperties.propTypes = {
   properties: PropTypes.array.isRequired,
   property: PropTypes.oneOfType([PropTypes.string, PropTypes.number])

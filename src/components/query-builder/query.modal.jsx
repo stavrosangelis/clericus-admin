@@ -21,7 +21,7 @@ import {
   toggleClearQueryBuildResults,
 } from '../../redux/actions';
 
-const QueryModalMain = (props) => {
+function QueryModalMain(props) {
   // props
   const { open, toggleModalOpen, queryBlocks, entities, update, users } = props;
 
@@ -275,7 +275,7 @@ const QueryModalMain = (props) => {
       </Modal>
     </div>
   );
-};
+}
 QueryModalMain.defaultProps = {
   open: false,
   toggleModalOpen: () => {},

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 const entityColor = (typeParam = 'event') => {
@@ -30,117 +30,198 @@ const entityColor = (typeParam = 'event') => {
   return color;
 };
 
-const outputItem = (item, rowKey, type) => {
-  const borderColor = entityColor(type);
+const isJSON = (value) => {
+  if (value.length === 0) {
+    return false;
+  }
+  if (typeof value === 'string') {
+    try {
+      JSON.parse(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
+};
 
+const parseArray = (values) => {
+  const output = [];
+  values.forEach((v) => {
+    const value = isJSON(v) ? JSON.parse(v) : v;
+    output.push(value);
+  });
+  return output;
+};
+
+const prepareValue = (key, value) => {
+  const output = {};
+  if (value !== null) {
+    switch (typeof value) {
+      case 'string':
+        output[key] = value;
+        break;
+      case 'object':
+        if (Array.isArray(value) && value.length > 0) {
+          output[key] = parseArray(value);
+        } else {
+          output[key] = value;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  if (Object.keys(output).length === 0) {
+    return null;
+  }
+  return output;
+};
+
+const prepareItem = (item) => {
+  const keys = Object.keys(item);
+  const output = {};
+  keys.forEach((key) => {
+    const value = item[key];
+    const parsedVal = prepareValue(key, value);
+    if (parsedVal !== null) {
+      output[key] = parsedVal[key];
+    }
+  });
+  return output;
+};
+
+function Block(props) {
+  const { item, rowKey, type, select, selectedBlocks } = props;
+  const borderColor = entityColor(type);
+  const pi = prepareItem(item);
+  const output = [];
   let y = 28;
   let width = 28;
   let height = 28;
-  const output = [];
-  Object.keys(item).forEach((v, i) => {
-    if (item[v] !== null && item[v] !== '') {
-      let key = `${v}.${i}`;
-      let outputValue = typeof item[v] !== 'string' ? [] : item[v];
-      if (Array.isArray(item[v]) && item[v].length > 0) {
-        outputValue =
-          item[v].map((o, j) => {
-            const cbkey = `${key}.${j}`;
-            const newItemRows = [];
-            let newItem = o;
-            let isJSON = false;
-            if (
-              newItem !== null &&
-              newItem !== '' &&
-              typeof newItem === 'string'
-            ) {
-              try {
-                newItem = JSON.parse(o);
-                isJSON = true;
-              } catch (e) {
-                newItem = o;
-              }
-            }
-            if (isJSON) {
-              const objKeys = Object.keys(newItem);
-              objKeys.forEach((objKey) => {
-                if (newItem[objKey] !== '') {
-                  const value =
-                    typeof newItem[objKey] === 'string'
-                      ? newItem[objKey]
-                      : Object.keys(newItem[objKey]).map((ok) => (
-                          <div className="child-item" key={ok}>
-                            <b>{ok}</b>: {newItem[objKey][ok]}
-                          </div>
-                        ));
-                  const newItemRow = (
-                    <div className="child-item" key={objKey}>
-                      <b>{objKey}</b>: {value}
-                    </div>
-                  );
-                  newItemRows.push(newItemRow);
-                }
-              });
-            } else if (typeof o === 'object') {
-              const oOutput = outputItem(o, cbkey, type);
-              output.push(
-                <div key={cbkey}>
-                  <b>{v}</b>:<div className="child-item">{oOutput}</div>
-                </div>
-              );
-            } else if (o !== '') {
-              output.push(
-                <div key={cbkey}>
-                  <b>{v}</b>: {o}
-                </div>
-              );
-            }
-            return (
-              <div key={cbkey} className="children-block">
-                {newItemRows}
-              </div>
-            );
-          }) || [];
+  const rowChars = 28;
+  const keys = Object.keys(pi);
+  keys.forEach((k, idx) => {
+    const value = pi[k];
+    if (!Array.isArray(value) && value !== '') {
+      let itemKey = `${k}.${idx}`;
+      const string = `${k}: ${value}`;
+      const charLength = string.length;
+      const newWidth = charLength * 13;
+      if (newWidth > width && newWidth <= 300) {
+        width = newWidth;
       }
-      if (
-        v !== 'row' &&
-        v !== 'refId' &&
-        outputValue.length > 0 &&
-        !Array.isArray(outputValue)
-      ) {
-        const string = `${v}: ${outputValue}`;
-        const charLength = string.length;
-        const newWidth = charLength * 13;
-        if (newWidth > width && newWidth <= 300) {
-          width = newWidth;
-        }
-        const rowChars = 28;
-        if (string.length <= rowChars) {
+
+      if (string.length <= rowChars) {
+        output.push(
+          <tspan key={itemKey} x="15" y={y}>
+            {string}
+          </tspan>
+        );
+        y += 20;
+        height += 20;
+      } else {
+        const rowsLength = charLength / rowChars;
+        for (let j = 0; j < rowsLength; j += 1) {
+          const start = j * rowChars;
+          const end = start + rowChars;
+          const chunk = string.substring(start, end);
+          itemKey = `${itemKey}.${j}`;
           output.push(
-            <tspan key={key} x="15" y={y}>
-              {string}
+            <tspan key={itemKey} x="15" y={y}>
+              {chunk}
             </tspan>
           );
           y += 20;
           height += 20;
-        } else {
-          const rowsLength = charLength / rowChars;
-          for (let j = 0; j < rowsLength; j += 1) {
-            const start = j * rowChars;
-            const end = start + rowChars;
-            const chunk = string.substring(start, end);
-            key = `${key}.${j}`;
+        }
+      }
+    }
+    if (Array.isArray(value) && value.length > 0) {
+      const itemKey = `${k}.${idx}`;
+      output.push(
+        <tspan key={itemKey} x="15" y={y}>
+          {k}:
+        </tspan>
+      );
+      y += 20;
+      height += 20;
+      value.forEach((subItem, sIdx) => {
+        if (typeof subItem === 'string') {
+          let subItemKey = `${itemKey}.${sIdx}`;
+          const string = `${sIdx + 1}: ${subItem}`;
+          // console.log(sk, subItem);
+          const charLength = string.length;
+          const newWidth = charLength * 13;
+          if (newWidth > width && newWidth <= 300) {
+            width = newWidth;
+          }
+          if (string.length <= rowChars) {
             output.push(
-              <tspan key={key} x="15" y={y}>
-                {chunk}
+              <tspan key={subItemKey} x="30" y={y}>
+                {string}
               </tspan>
             );
             y += 20;
             height += 20;
+          } else {
+            const rowsLength = charLength / rowChars;
+            for (let j = 0; j < rowsLength; j += 1) {
+              const start = j * rowChars;
+              const end = start + rowChars;
+              const chunk = string.substring(start, end);
+              subItemKey = `${subItemKey}.${j}`;
+              output.push(
+                <tspan key={subItemKey} x="30" y={y}>
+                  {chunk}
+                </tspan>
+              );
+              y += 20;
+              height += 20;
+            }
           }
+        } else {
+          const subKeys = Object.keys(subItem);
+          subKeys.forEach((subKey, skIdx) => {
+            const subVal = subItem[subKey];
+            let subItemKey = `${itemKey}.${sIdx}.${skIdx}`;
+            const string = `${subKey}: ${subVal}`;
+            const charLength = string.length;
+            const newWidth = charLength * 13;
+            if (newWidth > width && newWidth <= 300) {
+              width = newWidth;
+            }
+
+            if (string.length <= rowChars) {
+              output.push(
+                <tspan key={subItemKey} x="30" y={y}>
+                  {string}
+                </tspan>
+              );
+              y += 20;
+              height += 20;
+            } else {
+              const rowsLength = charLength / rowChars;
+              for (let j = 0; j < rowsLength; j += 1) {
+                const start = j * rowChars;
+                const end = start + rowChars;
+                const chunk = string.substring(start, end);
+                subItemKey = `${subItemKey}.${j}`;
+                output.push(
+                  <tspan key={subItemKey} x="30" y={y}>
+                    {chunk}
+                  </tspan>
+                );
+                y += 20;
+                height += 20;
+              }
+            }
+          });
         }
-      }
+      });
     }
   });
+
   const { length: labelCharLength = 0 } = type;
   const labelWidth = labelCharLength * 6;
   const labelX = width - labelWidth;
@@ -151,41 +232,49 @@ const outputItem = (item, rowKey, type) => {
   if (refId !== '') {
     id += `.${refId}`;
   }
+  const strippedId = id.split('.')[1] || null;
+  let strokeWidth = 2;
+  if (selectedBlocks.indexOf(strippedId) > -1) {
+    strokeWidth = 10;
+  }
   return (
-    <svg id={id} width={width + 2} height={height + 2}>
-      <rect
-        width={width}
-        height={height}
-        x="1"
-        y="1"
-        rx="12"
-        ry="12"
-        style={{
-          fill: 'rgb(255, 255, 255)',
-          strokeWidth: 2,
-          stroke: borderColor,
-        }}
-      />
-      <text x="28" y="15" style={{ fill: '#333', fontSize: '15px' }}>
-        {output}
-        <tspan style={{ fontSize: '10px' }} x={labelX} y={labelY}>
-          {type}
-        </tspan>
-      </text>
-    </svg>
+    <div
+      onClick={(e) => select(e, id)}
+      onKeyDown={(e) => select(e, id)}
+      role="button"
+      tabIndex="0"
+    >
+      <svg id={id} width={width + 2} height={height + 2}>
+        <rect
+          width={width}
+          height={height}
+          x="1"
+          y="1"
+          rx="12"
+          ry="12"
+          style={{
+            fill: 'rgb(255, 255, 255)',
+            strokeWidth,
+            stroke: borderColor,
+          }}
+        />
+        <text x="28" y="15" style={{ fill: '#333', fontSize: '15px' }}>
+          {output}
+          <tspan style={{ fontSize: '10px' }} x={labelX} y={labelY}>
+            {type}
+          </tspan>
+        </text>
+      </svg>
+    </div>
   );
-};
-
-const Block = (props) => {
-  const { item, rowKey, type } = props;
-  const output = outputItem(item, rowKey, type);
-  return output;
-};
+}
 
 Block.propTypes = {
   item: PropTypes.object.isRequired,
   rowKey: PropTypes.number.isRequired,
   type: PropTypes.string.isRequired,
+  select: PropTypes.func.isRequired,
+  selectedBlocks: PropTypes.array.isRequired,
 };
 
 let svgLinesH = [];
@@ -225,8 +314,18 @@ const uniqueLineV = (x1Param, y1Param, x2Param, y2Param) => {
   return { x1, y1, x2, y2 };
 };
 
-const SVGLine = (props) => {
-  const { count, label, role = null, srcId, targetId, srcType, rowKey } = props;
+function SVGLine(props) {
+  const {
+    count,
+    label,
+    role = null,
+    srcId,
+    targetId,
+    srcType,
+    selectedBlocks,
+    selectedBlock,
+    rowKey,
+  } = props;
 
   const space = 15;
   const srcElement = document.getElementById(srcId) || null;
@@ -252,21 +351,21 @@ const SVGLine = (props) => {
     const parts = count > 1 ? (count / 2) * space : 0;
     const lowerPoint = smiddle + parts;
 
-    const { x1: l1x1, y1: l1y1, x2: l1x21, y2: l1y2 } = uniqueLineH(
-      sx,
-      lowerPoint,
-      sx - 30,
-      lowerPoint
-    );
+    const {
+      x1: l1x1,
+      y1: l1y1,
+      x2: l1x21,
+      y2: l1y2,
+    } = uniqueLineH(sx, lowerPoint, sx - 30, lowerPoint);
     let l1x2 = l1x21;
 
     // line 2
-    const { x1: l2x1, y1: l2y1, x2: l2x2, y2: l2y21 } = uniqueLineV(
-      l1x2 + 1,
-      l1y1 - 1,
-      l1x2 + 1,
-      ty - 30
-    );
+    const {
+      x1: l2x1,
+      y1: l2y1,
+      x2: l2x2,
+      y2: l2y21,
+    } = uniqueLineV(l1x2 + 1, l1y1 - 1, l1x2 + 1, ty - 30);
     let l2y2 = l2y21;
     if (l1x2 !== l2x1) {
       l1x2 = l2x1;
@@ -274,24 +373,24 @@ const SVGLine = (props) => {
 
     // line 3
     const l3hw = twidth / 2;
-    const { x1: l3x1, y1: l3y1, x2: l3x21, y2: l3y2 } = uniqueLineH(
-      l2x1,
-      l2y2,
-      tx + l3hw + 15,
-      l2y2
-    );
+    const {
+      x1: l3x1,
+      y1: l3y1,
+      x2: l3x21,
+      y2: l3y2,
+    } = uniqueLineH(l2x1, l2y2, tx + l3hw + 15, l2y2);
     if (l2y2 !== l3y1) {
       l2y2 = l3y1;
     }
     let l3x2 = l3x21;
 
     // line 4
-    const { x1: l4x1, y1: l4y1, x2: l4x2, y2: l4y2 } = uniqueLineV(
-      l3x2 - 1,
-      l3y1 - 1,
-      l3x2 - 1,
-      ty
-    );
+    const {
+      x1: l4x1,
+      y1: l4y1,
+      x2: l4x2,
+      y2: l4y2,
+    } = uniqueLineV(l3x2 - 1, l3y1 - 1, l3x2 - 1, ty);
     if (l4x1 !== l3x2) {
       l3x2 = l4x1;
     }
@@ -317,6 +416,21 @@ const SVGLine = (props) => {
     const textLength = labelText.length * 7;
     const textHalfWidth = textLength / 2;
     const textX = textCenter - textHalfWidth;
+    const strippedSrcId = srcId.split('.')[1] || null;
+    const strippedTargetId = targetId.split('.')[1] || null;
+    let strokeWidth = 3;
+    let fontSize = '11px';
+    let fontWeight = 'normal';
+    if (
+      (selectedBlock === strippedSrcId || selectedBlock === strippedTargetId) &&
+      (selectedBlocks.indexOf(strippedSrcId) > -1 ||
+        selectedBlocks.indexOf(strippedTargetId) > -1)
+    ) {
+      strokeWidth = 8;
+      fontSize = '13px';
+      fontWeight = 'bold';
+    }
+
     return (
       <svg
         className="svg-container"
@@ -330,7 +444,7 @@ const SVGLine = (props) => {
           x2={l1x2}
           y2={l1y2}
           stroke={color}
-          strokeWidth="3"
+          strokeWidth={strokeWidth}
         />
         <line
           x1={l2x1}
@@ -338,7 +452,7 @@ const SVGLine = (props) => {
           x2={l2x2}
           y2={l2y2}
           stroke={color}
-          strokeWidth="3"
+          strokeWidth={strokeWidth}
         />
         <line
           x1={l3x1}
@@ -346,7 +460,7 @@ const SVGLine = (props) => {
           x2={l3x2}
           y2={l3y2}
           stroke={color}
-          strokeWidth="3"
+          strokeWidth={strokeWidth}
         />
         <line
           x1={l4x1}
@@ -354,7 +468,7 @@ const SVGLine = (props) => {
           x2={l4x2}
           y2={l4y2}
           stroke={color}
-          strokeWidth="3"
+          strokeWidth={strokeWidth}
         />
         <rect
           width={textLength}
@@ -366,26 +480,73 @@ const SVGLine = (props) => {
             opacity: '0.7',
           }}
         />
-        <text x={textX} y={l3y1 + 15} style={{ fill: color, fontSize: '11px' }}>
+        <text
+          x={textX}
+          y={l3y1 + 15}
+          style={{ fill: color, fontSize, fontWeight }}
+        >
           {labelText}
         </text>
       </svg>
     );
   }
   return [];
+}
+
+SVGLine.defaultProps = {
+  role: null,
+  selectedBlock: null,
 };
 SVGLine.propTypes = {
+  count: PropTypes.number.isRequired,
   label: PropTypes.string.isRequired,
+  role: PropTypes.object,
+  rowKey: PropTypes.number.isRequired,
+  selectedBlock: PropTypes.string,
   srcId: PropTypes.string.isRequired,
   srcType: PropTypes.string.isRequired,
   targetId: PropTypes.string.isRequired,
+  selectedBlocks: PropTypes.array.isRequired,
 };
 
-const ImportPlanPreviewEntities = (props) => {
+function ImportPlanPreviewEntities(props) {
   const { rules, relations, rowKey } = props;
   const [renderComplete, setRenderComplete] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [relationsOutput, setRelationsOutput] = useState([]);
+  const [selectedBlock, setSelectedBlock] = useState(null);
+  const [selectedBlocks, setSelectedBlocks] = useState([]);
+  const [scale, setScale] = useState(1);
+  const [containerHeight, setContainerHeight] = useState('auto');
+
+  const entitiesContainer = useRef(null);
+
+  const updateSelectedBlock = useCallback(
+    (e, val) => {
+      e.preventDefault();
+      setSelectedBlocks([]);
+      const itemId = val.split('.')[1] || null;
+      if (itemId !== null) {
+        setSelectedBlock(itemId);
+        const itemRelations =
+          relations[0].relations.filter(
+            (r) => r.srcId === itemId || r.targetId === itemId
+          ) || [];
+        const relatedIds = [];
+        itemRelations.forEach((ir) => {
+          if (relatedIds.indexOf(ir.srcId) === -1) {
+            relatedIds.push(ir.srcId);
+          }
+          if (relatedIds.indexOf(ir.targetId) === -1) {
+            relatedIds.push(ir.targetId);
+          }
+        });
+        setSelectedBlocks(relatedIds);
+      }
+      return false;
+    },
+    [relations]
+  );
 
   const render = useCallback(() => {
     const newBlocks = [];
@@ -415,6 +576,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="person"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -447,6 +610,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="event"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -479,6 +644,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="organisation"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -511,6 +678,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="resource"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -543,6 +712,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="spatial"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -575,6 +746,8 @@ const ImportPlanPreviewEntities = (props) => {
               type="temporal"
               index={i}
               rowKey={rowKey}
+              select={updateSelectedBlock}
+              selectedBlocks={selectedBlocks}
             />
           );
         }
@@ -589,7 +762,7 @@ const ImportPlanPreviewEntities = (props) => {
       newBlocks.push(outputTemporals);
     }
     setBlocks(newBlocks);
-  }, [rules, rowKey]);
+  }, [rules, rowKey, selectedBlocks, updateSelectedBlock]);
 
   const countRelations = useCallback(
     (srcId = null, rowRelations = []) => {
@@ -651,13 +824,15 @@ const ImportPlanPreviewEntities = (props) => {
             srcType={srcType}
             count={count}
             role={role}
+            selectedBlocks={selectedBlocks}
+            selectedBlock={selectedBlock}
           />
         );
         newOutput.push(newLine);
       }
     }
     setRelationsOutput(newOutput);
-  }, [relations, rowKey, countRelations]);
+  }, [relations, rowKey, countRelations, selectedBlocks, selectedBlock]);
 
   useEffect(() => {
     let timeout = null;
@@ -684,16 +859,76 @@ const ImportPlanPreviewEntities = (props) => {
     };
   }, [renderComplete, renderRelations, blocks]);
 
-  return (
-    <div
-      className="import-plan-preview-entities-container"
-      id={`import-plan-preview-entities-container-${rowKey}`}
-    >
-      {relationsOutput}
-      {blocks}
+  useEffect(() => {
+    render();
+  }, [selectedBlocks, render]);
+
+  const updateZoom = (value) => {
+    let newScale = parseFloat(scale, 10).toFixed(1);
+    if (value === 'plus') {
+      if (newScale < 2) {
+        newScale = parseFloat(newScale, 10) + 0.1;
+      }
+    }
+    if (value === 'minus') {
+      if (newScale > 0.1) {
+        newScale = parseFloat(newScale, 10) - 0.1;
+      }
+    }
+    setScale(newScale);
+    setTimeout(() => {
+      const height =
+        entitiesContainer !== null && entitiesContainer.current !== null
+          ? entitiesContainer.current.getBoundingClientRect().height
+          : 'auto';
+      setContainerHeight(height);
+    }, 300);
+  };
+
+  const zoomPanel = (
+    <div className="zoom-container preview-data-zoom-container">
+      <div
+        className="zoom-action"
+        onClick={() => updateZoom('plus')}
+        onKeyDown={() => false}
+        role="button"
+        tabIndex={0}
+        aria-label="select event"
+      >
+        <i className="fa fa-plus" />
+      </div>
+      <div
+        className="zoom-action"
+        onClick={() => updateZoom('minus')}
+        onKeyDown={() => false}
+        role="button"
+        tabIndex={0}
+        aria-label="select event"
+      >
+        <i className="fa fa-minus" />
+      </div>
     </div>
   );
-};
+
+  const containerStyle = {
+    transform: `scale(${scale})`,
+  };
+
+  return (
+    <div style={{ height: containerHeight }}>
+      {zoomPanel}
+      <div
+        ref={entitiesContainer}
+        className="import-plan-preview-entities-container"
+        id={`import-plan-preview-entities-container-${rowKey}`}
+        style={containerStyle}
+      >
+        {relationsOutput}
+        {blocks}
+      </div>
+    </div>
+  );
+}
 ImportPlanPreviewEntities.defaultProps = {
   rules: null,
   relations: [],

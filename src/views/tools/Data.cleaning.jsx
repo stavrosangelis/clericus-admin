@@ -1,4 +1,11 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import PropTypes from 'prop-types';
 import {
   Button,
@@ -10,13 +17,12 @@ import {
   Label,
   Spinner,
 } from 'reactstrap';
-import { Redirect } from 'react-router-dom';
 import Rule from '../../components/import-data/Data.cleaning.rule';
 import OutputResults from '../../components/import-data/Output.Results';
-import DeleteModal from '../../components/Delete.Modal';
+import DeleteModal from '../../components/Delete.modal';
 import { getData, putData, returnLetter } from '../../helpers';
 
-const Breadcrumbs = lazy(() => import('../../components/breadcrumbs'));
+const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
 
 const defaultRuleValues = {
   type: '',
@@ -24,7 +30,7 @@ const defaultRuleValues = {
   entityType: '',
 };
 
-const DataCleaning = (props) => {
+function DataCleaning(props) {
   // props
   const { match } = props;
   const { importPlanId, _id } = match.params;
@@ -54,47 +60,50 @@ const DataCleaning = (props) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [redirect, setRedirect] = useState(false);
 
+  const mounted = useRef(false);
+
   const loadImportData = useCallback(async () => {
     // import data
     const responseData = await getData(`import-plan`, { _id: importPlanId });
-    const { data } = responseData;
-    setImportData(data);
+    const { data = null } = responseData;
+    return data;
   }, [importPlanId]);
 
-  const load = useCallback(async () => {
-    if (loading) {
-      loadImportData();
-    }
-
-    setLoading(false);
-    // item data
-    const itemResponseData = await getData(`data-cleaning-instance`, { _id });
-    const { data: itemData } = itemResponseData;
-    setItem(itemData);
-    if (itemData.rule !== null) {
-      setRuleValues(itemData.rule);
-      const completed = itemData.completed || false;
-      if (completed) {
-        setRunning(false);
-        setOutputData(JSON.parse(itemData.outputData));
-        setExecBtn(
-          <span>
-            Completed successfully <i className="fa fa-check" />
-          </span>
-        );
-        setTimeout(() => {
-          setExecBtn(
-            <span>
-              Execute <i className="fa fa-chevron-right" />
-            </span>
-          );
-        }, 2000);
-      }
-    }
-    setLabel(itemData.label);
-  }, [_id, loadImportData, loading]);
-
   useEffect(() => {
+    mounted.current = true;
+
+    const load = async () => {
+      const itemResponseData = await getData(`data-cleaning-instance`, { _id });
+      const { data: itemData } = itemResponseData;
+      if (mounted.current) {
+        setLoading(false);
+        const newImportData = await loadImportData();
+        setImportData(newImportData);
+        setItem(itemData);
+        if (itemData.rule !== null) {
+          setRuleValues(itemData.rule);
+          const completed = itemData.completed || false;
+          if (completed) {
+            setRunning(false);
+            setOutputData(JSON.parse(itemData.outputData));
+            setExecBtn(
+              <span>
+                Completed successfully <i className="fa fa-check" />
+              </span>
+            );
+            setTimeout(() => {
+              setExecBtn(
+                <span>
+                  Execute <i className="fa fa-chevron-right" />
+                </span>
+              );
+            }, 2000);
+          }
+        }
+        setLabel(itemData.label);
+      }
+    };
+
     let interval = null;
     if (loading) {
       load();
@@ -106,10 +115,15 @@ const DataCleaning = (props) => {
       }, 10000);
     }
     if (interval !== null) {
-      return () => clearInterval(interval);
+      return () => {
+        mounted.current = false;
+        clearInterval(interval);
+      };
     }
-    return false;
-  }, [running, loading, load]);
+    return () => {
+      mounted.current = false;
+    };
+  }, [_id, loading, loadImportData, running]);
 
   useEffect(() => {
     if (outputData.length > 0) {
@@ -188,6 +202,19 @@ const DataCleaning = (props) => {
         entityType,
       };
       await getData(`data-cleaning-db-entries`, params);
+      setRunning(true);
+    }
+  }, [item, _id, ruleValues]);
+
+  const returnWFDates = useCallback(async () => {
+    if (item !== null && item.rule !== null) {
+      const { columns: selectedColumns, entityType } = ruleValues;
+      const params = {
+        _id,
+        columns: selectedColumns,
+        entityType,
+      };
+      await getData(`data-cleaning-wf-dates`, params);
       setRunning(true);
     }
   }, [item, _id, ruleValues]);
@@ -358,6 +385,8 @@ const DataCleaning = (props) => {
       returnUnique();
     } else if (type === 'db-entries') {
       returnDBentries();
+    } else if (type === 'wf-dates') {
+      returnWFDates();
     }
     return true;
   };
@@ -387,11 +416,11 @@ const DataCleaning = (props) => {
     []
   );
 
-  const redirectElem = redirect ? (
+  const redirectElem = null; /* redirect ?  (
     <Redirect to={`/import-plan/${importPlanId}`} />
   ) : (
     []
-  );
+  ); */
 
   const { type: returnType } = ruleValues || null;
 
@@ -455,7 +484,7 @@ const DataCleaning = (props) => {
                   />
                 </div>
               </div>
-              <CardFooter className="text-right">
+              <CardFooter className="text-end">
                 <Button
                   type="button"
                   outline
@@ -494,7 +523,7 @@ const DataCleaning = (props) => {
       />
     </div>
   );
-};
+}
 
 DataCleaning.defaultProps = {
   match: null,

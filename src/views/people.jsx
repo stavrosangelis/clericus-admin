@@ -1,20 +1,17 @@
 import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
-import { Label, Card, CardBody, Spinner } from 'reactstrap';
+import axios from 'axios';
+import { Label, Card, CardBody } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  deleteData,
-  getData,
-  getResourceThumbnailURL,
-  renderLoader,
-} from '../helpers';
+import { deleteData, getResourceThumbnailURL, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const Breadcrumbs = lazy(() => import('../components/Breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
 const BatchActions = lazy(() => import('../components/add-batch-relations'));
 const List = lazy(() => import('../components/List'));
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
 const heading = 'People';
 const breadcrumbsItems = [
   { label: heading, icon: 'pe-7s-users', active: true, path: '' },
@@ -39,21 +36,21 @@ const columns = [
   {
     props: ['thumbnail'],
     label: 'Thumbnail',
-    link: { element: 'self', path: 'person' },
+    link: { element: 'self', path: '/person' },
     order: false,
     align: 'center',
   },
   {
     props: ['firstName'],
     label: 'First Name',
-    link: { element: 'self', path: 'person' },
+    link: { element: 'self', path: '/person' },
     order: true,
     orderLabel: 'firstName',
   },
   {
     props: ['lastName'],
     label: 'Last Name',
-    link: { element: 'self', path: 'person' },
+    link: { element: 'self', path: '/person' },
     order: true,
     orderLabel: 'lastName',
   },
@@ -63,7 +60,7 @@ const columns = [
     link: {
       element: 'organisations',
       key: '_id',
-      path: 'organisation',
+      path: '/organisation',
       type: 'array',
     },
     order: false,
@@ -93,7 +90,7 @@ const columns = [
   {
     props: ['edit'],
     label: 'Edit',
-    link: { element: 'self', path: 'person' },
+    link: { element: 'self', path: '/person' },
     order: false,
     align: 'center',
   },
@@ -106,54 +103,39 @@ const searchElements = [
   { element: 'description', label: 'Description' },
 ];
 
-const People = () => {
+function People() {
   // redux
   const dispatch = useDispatch();
-  const resourcesTypes = useSelector((state) => state.resourcesTypes);
-  const personTypes = useSelector((state) => state.personTypes);
-  const limit = useSelector((state) => state.peoplePagination.limit);
-  const activeType = useSelector((state) => state.peoplePagination.activeType);
-  const page = useSelector((state) => state.peoplePagination.page);
-  const orderField = useSelector((state) => state.peoplePagination.orderField);
-  const orderDesc = useSelector((state) => state.peoplePagination.orderDesc);
-  const status = useSelector((state) => state.peoplePagination.status);
-  const searchInput = useSelector(
-    (state) => state.peoplePagination.searchInput
+  const { resourcesTypes, personTypes, peoplePagination } = useSelector(
+    (state) => state
   );
-  const advancedSearchInputs = useSelector(
-    (state) => state.peoplePagination.advancedSearchInputs
-  );
-  const classpieceSearchInput = useSelector(
-    (state) => state.peoplePagination.classpieceSearchInput
-  );
-  const classpieceId = useSelector(
-    (state) => state.peoplePagination.classpieceId
-  );
+  const {
+    activeType,
+    advancedSearchInputs,
+    classpieceId,
+    classpieceSearchInput,
+    limit,
+    orderDesc,
+    orderField,
+    page,
+    searchInput,
+    status,
+    totalItems,
+    totalPages,
+  } = peoplePagination;
 
   // state
   const [loading, setLoading] = useState(true);
-  const [tableLoading, setTableLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
   const [allChecked, setAllChecked] = useState(false);
   const [advancedSearch, setAdvancedSearch] = useState(false);
   const [classpieceItems, setClasspieceItems] = useState([]);
-  const [gotoPageVal, setGotoPage] = useState(page);
-
-  const [prevLimit, setPrevLimit] = useState(25);
-  const [prevPage, setPrevPage] = useState(1);
-  const [prevActiveType, setPrevActiveType] = useState(null);
-  const [prevStatus, setPrevStatus] = useState(null);
-  const [prevOrderField, setPrevOrderField] = useState('firstName');
-  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
-  const [prevClasspieceId, setPrevClasspieceId] = useState(null);
-  const [reLoading, setReLoading] = useState(false);
-  const [prevReLoading, setPrevReLoading] = useState(false);
+  const [gotoPage, setGotoPage] = useState(page);
 
   const prepareItems = useCallback((itemsParam) => {
     const newItems = [];
-    for (let i = 0; i < itemsParam.length; i += 1) {
+    const { length } = itemsParam;
+    for (let i = 0; i < length; i += 1) {
       const item = itemsParam[i];
       item.checked = false;
       item.organisations = item.affiliations;
@@ -165,202 +147,309 @@ const People = () => {
 
   const updateStorePagination = useCallback(
     ({
-      limitParam = null,
-      pageParam = null,
       activeTypeParam = null,
-      orderFieldParam = null,
-      orderDescParam = null,
-      statusParam = null,
-      searchInputParam = null,
       advancedSearchInputsParam = null,
-      classpieceSearchInputParam = null,
       classpieceIdParam = null,
+      classpieceSearchInputParam = null,
+      limitParam = null,
+      orderDescParam = null,
+      orderFieldParam = null,
+      pageParam = null,
+      searchInputParam = null,
+      statusParam = null,
+      totalItemsParam = null,
+      totalPagesParam = null,
     }) => {
-      const limitCopy = limitParam === null ? limit : limitParam;
-      const pageCopy = pageParam === null ? page : pageParam;
-      const activeTypeCopy =
-        activeTypeParam === null ? activeType : activeTypeParam;
-      const orderFieldCopy =
-        orderFieldParam === null ? orderField : orderFieldParam;
-      const orderDescCopy =
-        orderDescParam === null ? orderDesc : orderDescParam;
-      const statusCopy = statusParam === null ? status : statusParam;
-      const searchInputCopy =
-        searchInputParam === null ? searchInput : searchInputParam;
-      const advancedSearchInputsCopy =
-        advancedSearchInputsParam === null
-          ? advancedSearchInputs
-          : advancedSearchInputsParam;
-      const classpieceSearchInputCopy =
-        classpieceSearchInputParam === null
-          ? classpieceSearchInput
-          : classpieceSearchInputParam;
-      const classpieceIdCopy =
-        classpieceIdParam === null ? classpieceId : classpieceIdParam;
-      const payload = {
-        limit: limitCopy,
-        activeType: activeTypeCopy,
-        page: pageCopy,
-        status: statusCopy,
-        orderField: orderFieldCopy,
-        orderDesc: orderDescCopy,
-        searchInput: searchInputCopy,
-        advancedSearchInputs: advancedSearchInputsCopy,
-        classpieceSearchInput: classpieceSearchInputCopy,
-        classpieceId: classpieceIdCopy,
-      };
+      const payload = {};
+      if (activeTypeParam !== null) {
+        payload.activeType = activeTypeParam;
+      }
+      if (advancedSearchInputsParam !== null) {
+        payload.advancedSearchInputs = advancedSearchInputsParam;
+      }
+      if (classpieceIdParam !== null) {
+        payload.classpieceId = classpieceIdParam;
+      }
+      if (classpieceSearchInputParam !== null) {
+        payload.classpieceSearchInput = classpieceSearchInputParam;
+      }
+      if (limitParam !== null) {
+        payload.limit = limitParam;
+      }
+      if (orderDescParam !== null) {
+        payload.orderDesc = orderDescParam;
+      }
+      if (orderFieldParam !== null) {
+        payload.orderField = orderFieldParam;
+      }
+      if (pageParam !== null) {
+        payload.page = Number(pageParam);
+      }
+      if (searchInputParam !== null) {
+        payload.searchInput = searchInputParam;
+      }
+      if (statusParam !== null) {
+        payload.status = statusParam;
+      }
+      if (totalItemsParam !== null) {
+        payload.totalItems = totalItemsParam;
+      }
+      if (totalPagesParam !== null) {
+        payload.totalPages = totalPagesParam;
+      }
       dispatch(setPaginationParams('people', payload));
     },
-    [
-      dispatch,
-      activeType,
-      advancedSearchInputs,
-      classpieceSearchInput,
-      classpieceId,
-      limit,
-      orderDesc,
-      orderField,
-      page,
-      searchInput,
-      status,
-    ]
+    [dispatch]
   );
 
-  const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
-    const statusParam = status !== '' ? status : null;
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status: statusParam,
-    };
-    if (classpieceId !== null && classpieceId !== '') {
-      params.classpieceId = classpieceId;
+  const reload = (e = null) => {
+    if (e !== null) {
+      e.preventDefault();
     }
-    if (searchInput !== '' && !advancedSearch) {
-      params.label = searchInput;
-    } else if (advancedSearchInputs.length > 0 && advancedSearch) {
-      for (let i = 0; i < advancedSearchInputs.length; i += 1) {
-        const advancedSearchInput = advancedSearchInputs[i];
-        params[advancedSearchInput.select] = advancedSearchInput.input;
-      }
-    }
-    if (activeType !== null && activeType !== '') {
-      params.personType = activeType;
-    }
-    const responseData = await getData(`people`, params);
-    const { data: newData } = responseData;
-    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-    if (currentPage > newData.totalPages && newData.totalPages > 0) {
-      currentPage = newData.totalPages;
-    }
-    const newItems = await prepareItems(newData.data);
-    setItems(newItems);
-    setTableLoading(false);
-    updateStorePagination({ pageParam: currentPage });
-    setTotalPages(newData.totalPages);
-    setTotalItems(newData.totalItems);
-  }, [
-    activeType,
-    advancedSearchInputs,
-    limit,
-    page,
-    searchInput,
-    status,
-    updateStorePagination,
-    advancedSearch,
-    classpieceId,
-    prepareItems,
-    orderDesc,
-    orderField,
-  ]);
+    setLoading(true);
+  };
 
-  const handleChange = (e) => {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    updateStorePagination({
-      [`${name}Param`]: value,
-    });
+  const updatePage = useCallback(
+    (value) => {
+      if (value > 0 && value !== page) {
+        updateStorePagination({ pageParam: value });
+        reload();
+      }
+    },
+    [page, updateStorePagination]
+  );
+
+  const gotoPageFn = (e) => {
+    e.preventDefault();
+    if (gotoPage > 0 && gotoPage !== page) {
+      updateStorePagination({ pageParam: gotoPage });
+      reload();
+    }
   };
 
   const updateLimit = (value) => {
     updateStorePagination({ limitParam: value });
+    reload();
   };
 
   const setActiveType = (type) => {
     updateStorePagination({ activeTypeParam: type });
-  };
-
-  const updatePage = (value) => {
-    if (value > 0 && value !== page) {
-      updateStorePagination({ pageParam: value });
-      setGotoPage(value);
-    }
-  };
-
-  const gotoPage = () => {
-    if (Number(gotoPageVal) > 0 && gotoPageVal !== page) {
-      updateStorePagination({ pageParam: gotoPageVal });
-    }
+    reload();
   };
 
   const setStatus = (statusParam = null) => {
     updateStorePagination({ statusParam });
+    reload();
+  };
+
+  const handleChange = (e) => {
+    const { name, value = '' } = e.target;
+    switch (name) {
+      case 'gotoPage':
+        setGotoPage(value);
+        break;
+      case 'searchInput':
+        updateStorePagination({ searchInputParam: value });
+        break;
+      case 'classpieceSearchInput':
+        updateStorePagination({ classpieceSearchInputParam: value });
+        break;
+      default:
+        break;
+    }
   };
 
   const clearSearch = () => {
     updateStorePagination({ searchInputParam: '' });
-    setLoading(true);
+    reload();
   };
 
   const selectClasspiece = useCallback(
     (value) => {
       updateStorePagination({ classpieceIdParam: value });
+      reload();
     },
     [updateStorePagination]
   );
 
+  const toggleSelected = (i) => {
+    const index = i - (Number(page) - 1) * limit;
+    const copy = [...items];
+    copy[index].checked = !copy[index].checked;
+    setItems(copy);
+  };
+
+  const toggleSelectedAll = useCallback(() => {
+    const copy = [...items];
+    const newAllChecked = !allChecked;
+    const newItems = [];
+    for (let i = 0; i < copy.length; i += 1) {
+      const item = copy[i];
+      item.checked = newAllChecked;
+      newItems.push(item);
+    }
+    setAllChecked(newAllChecked);
+  }, [allChecked, items]);
+
+  useEffect(() => {
+    if (orderField !== '') {
+      reload();
+    }
+  }, [orderDesc, orderField]);
+
+  useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    if (loading) {
+      const load = async () => {
+        const loadData = async () => {
+          const statusParam = status !== '' ? status : null;
+          const params = {
+            page,
+            limit,
+            orderField,
+            orderDesc,
+            status: statusParam,
+          };
+          const { length: advancedLength = 0 } = advancedSearchInputs;
+          if (classpieceId !== null && classpieceId !== '') {
+            params.classpieceId = classpieceId;
+          }
+          if (searchInput !== '' && !advancedSearch) {
+            params.label = searchInput;
+          } else if (advancedLength > 0 && advancedSearch) {
+            for (let i = 0; i < advancedLength; i += 1) {
+              const advancedSearchInput = advancedSearchInputs[i];
+              params[advancedSearchInput.select] = advancedSearchInput.input;
+            }
+          }
+          if (activeType !== null && activeType !== '') {
+            params.personType = activeType;
+          }
+          const responseData = await axios({
+            method: 'get',
+            url: `${APIPath}people`,
+            crossDomain: true,
+            params,
+            signal: controller.signal,
+          })
+            .then((response) => {
+              const { data: rData = null } = response;
+              return rData;
+            })
+            .catch((error) => {
+              console.log(error);
+              return { data: null };
+            });
+          return responseData;
+        };
+        if (allChecked) {
+          toggleSelectedAll();
+        }
+        const responseData = await loadData();
+        if (!unmounted) {
+          setLoading(false);
+          setItems([]);
+          const { data } = responseData;
+          const {
+            currentPage = 0,
+            data: newData = [],
+            totalItems: totalItemsResp,
+            totalPages: totalPagesResp,
+          } = data;
+          const cPage = currentPage > 0 ? currentPage : 1;
+          if (cPage !== 1 && cPage > totalPagesResp && totalPagesResp > 0) {
+            updatePage(totalPagesResp);
+          } else {
+            updateStorePagination({
+              totalItemsParam: totalItemsResp,
+              totalPagesParam: totalPagesResp,
+            });
+            const newItems = await prepareItems(newData);
+            setItems(newItems);
+          }
+        }
+      };
+      load();
+    }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [
+    activeType,
+    advancedSearch,
+    advancedSearchInputs,
+    allChecked,
+    classpieceId,
+    limit,
+    loading,
+    orderDesc,
+    orderField,
+    page,
+    prepareItems,
+    searchInput,
+    status,
+    toggleSelectedAll,
+    totalPages,
+    updatePage,
+    updateStorePagination,
+  ]);
+
   const classpieceSearch = useCallback(
     async (e) => {
       e.preventDefault();
-      const classpieceType =
-        resourcesTypes.length > 0
-          ? resourcesTypes.find((t) => t.labelId === 'Classpiece')._id
-          : '';
       if (classpieceSearchInput < 2) {
         return false;
       }
-      const params = {
-        page: 1,
-        limit: 25,
-        label: classpieceSearchInput,
-        systemType: classpieceType,
+      const loadData = async () => {
+        const systemType =
+          resourcesTypes.length > 0
+            ? resourcesTypes.find((t) => t.labelId === 'Classpiece')._id
+            : '';
+        const params = {
+          page: 1,
+          limit: 25,
+          label: classpieceSearchInput,
+          systemType,
+        };
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}resources`,
+          crossDomain: true,
+          params,
+        })
+          .then((response) => {
+            const { data: rData = null } = response;
+            return rData;
+          })
+          .catch((error) => {
+            console.log(error);
+            return { data: null };
+          });
+        return responseData;
       };
-      const responseData = await getData(`resources`, params);
+
+      const responseData = await loadData();
       if (responseData.status) {
         const data = responseData.data.data.map((item) => {
-          let thumbnailImage = [];
           const thumbnailPath = getResourceThumbnailURL(item);
-          if (thumbnailPath !== null) {
-            thumbnailImage = <img src={thumbnailPath} alt={item.label} />;
-          }
+          const { _id = '', label = '' } = item;
+          const thumbnailImage =
+            thumbnailPath !== null ? (
+              <img src={thumbnailPath} alt={label} />
+            ) : null;
           return (
             <div
               className="classpiece-result"
-              key={item._id}
-              onClick={() => selectClasspiece(item._id)}
+              key={_id}
+              onClick={() => selectClasspiece(_id)}
               onKeyDown={() => false}
               role="button"
               tabIndex={0}
               aria-label="select classpiece"
             >
-              {thumbnailImage} <Label>{item.label}</Label>
+              {thumbnailImage} <Label>{label}</Label>
             </div>
           );
         });
@@ -390,134 +479,31 @@ const People = () => {
     updateStorePagination({ advancedSearchInputsParam: value });
   };
 
-  const toggleSelected = (i) => {
-    const index = i - (Number(page) - 1) * limit;
-    const copy = [...items];
-    copy[index].checked = !copy[index].checked;
-    setItems(copy);
-  };
-
-  const toggleSelectedAll = () => {
-    const copy = [...items];
-    const newAllChecked = !allChecked;
-    const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
-      const item = copy[i];
-      item.checked = newAllChecked;
-      newItems.push(item);
-    }
-    setAllChecked(newAllChecked);
-  };
-
-  const clearSelectedAll = useCallback(() => {
-    const copy = [...items];
-    const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
-      const item = copy[i];
-      item.checked = false;
-      newItems.push(item);
-    }
-    setAllChecked(false);
-  }, [items]);
-
-  const reload = () => {
-    setReLoading(true);
-  };
-
-  useEffect(() => {
-    if (prevLimit !== limit) {
-      setPrevLimit(limit);
-    }
-    if (prevActiveType !== activeType) {
-      setPrevActiveType(activeType);
-    }
-    if (prevPage !== page) {
-      setPrevPage(page);
-    }
-    if (prevStatus !== status) {
-      setPrevStatus(status);
-    }
-    if (prevOrderField !== orderField) {
-      setPrevOrderField(orderField);
-    }
-    if (prevOrderDesc !== orderDesc) {
-      setPrevOrderDesc(orderDesc);
-    }
-    if (prevClasspieceId !== classpieceId) {
-      setPrevClasspieceId(classpieceId);
-    }
-    if (reLoading && !prevReLoading) {
-      setPrevReLoading(reLoading);
-    }
-    if (
-      loading ||
-      prevLimit !== limit ||
-      prevPage !== page ||
-      prevActiveType !== activeType ||
-      prevStatus !== status ||
-      prevOrderField !== orderField ||
-      prevOrderDesc !== orderDesc ||
-      prevClasspieceId !== classpieceId ||
-      (reLoading && !prevReLoading)
-    ) {
-      clearSelectedAll();
-      load();
-    }
-  }, [
-    activeType,
-    limit,
-    loading,
-    page,
-    status,
-    classpieceId,
-    clearSelectedAll,
-    load,
-    orderField,
-    orderDesc,
-    prevLimit,
-    prevPage,
-    prevActiveType,
-    prevStatus,
-    prevOrderField,
-    prevOrderDesc,
-    prevClasspieceId,
-    prevReLoading,
-    reLoading,
-  ]);
-
   const deleteSelected = async () => {
-    const selectedItems = items
-      .filter((item) => item.checked)
-      .map((item) => item._id);
-    const data = {
-      _ids: selectedItems,
-    };
-    const responseData = await deleteData(`people`, data);
+    const _ids = items.filter((item) => item.checked).map((item) => item._id);
+    const responseData = await deleteData(`people`, { _ids });
     if (responseData) {
       setAllChecked(false);
-      setReLoading(true);
+      reload();
     }
-    return true;
   };
 
   const removeSelected = (_id = null) => {
-    if (_id == null) {
-      return false;
+    if (_id !== null) {
+      const copy = [...items];
+      const newItems = copy.map((item) => {
+        const itemCopy = item;
+        if (itemCopy._id === _id) {
+          itemCopy.checked = false;
+        }
+        return itemCopy;
+      });
+      setItems(newItems);
     }
-    const copy = [...items];
-    const newItems = copy.map((item) => {
-      const itemCopy = item;
-      if (itemCopy._id === _id) {
-        itemCopy.checked = false;
-      }
-      return itemCopy;
-    });
-    setItems(newItems);
-    return true;
   };
 
   const pageActions = (
-    <Suspense fallback={renderLoader()}>
+    <Suspense fallback={null}>
       <PageActions
         activeType={activeType}
         advancedSearch={advancedSearch}
@@ -529,10 +515,12 @@ const People = () => {
         clearSearch={clearSearch}
         current_page={page}
         defaultLimit={25}
-        gotoPage={gotoPage}
-        gotoPageValue={gotoPageVal}
+        gotoPage={gotoPageFn}
+        gotoPageValue={gotoPage}
         handleChange={handleChange}
         limit={limit}
+        orderDesc={orderDesc}
+        orderField={orderField}
         page={page}
         pageType="people"
         reload={reload}
@@ -551,35 +539,12 @@ const People = () => {
     </Suspense>
   );
 
-  let content = (
-    <div>
-      {pageActions}
-      <div className="row">
-        <div className="col-12">
-          <div style={{ padding: '40pt', textAlign: 'center' }}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </div>
-        </div>
-      </div>
-      {pageActions}
-    </div>
-  );
+  const listIndex = (Number(page) - 1) * limit;
+  const selectedItems = items.filter((item) => item.checked);
 
-  if (!loading) {
-    const listIndex = (Number(page) - 1) * limit;
-    const addNewBtn = (
-      <Link
-        className="btn btn-outline-secondary add-new-item-btn"
-        to="/person/new"
-        href="/person/new"
-      >
-        <i className="fa fa-plus" />
-      </Link>
-    );
-    const selectedItems = items.filter((item) => item.checked);
-
-    const batchActions = (
-      <Suspense fallback={[]}>
+  const batchActions = (
+    <div className="batch-actions">
+      <Suspense fallback={null}>
         <BatchActions
           items={selectedItems}
           removeSelected={removeSelected}
@@ -591,48 +556,12 @@ const People = () => {
           reload={reload}
         />
       </Suspense>
-    );
-    const table = tableLoading ? (
-      <div style={{ padding: '40pt', textAlign: 'center' }}>
-        <Spinner type="grow" color="info" /> <i>loading...</i>
-      </div>
-    ) : (
-      <Suspense fallback={renderLoader()}>
-        <List
-          columns={columns}
-          items={items}
-          listIndex={listIndex}
-          type="people"
-          allChecked={allChecked}
-          toggleSelectedAll={toggleSelectedAll}
-          toggleSelected={toggleSelected}
-        />
-      </Suspense>
-    );
-
-    content = (
-      <div className="people-container">
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <Card>
-              <CardBody className="people-card">
-                <div className="pull-right">{batchActions}</div>
-                {table}
-                <div className="pull-right">{batchActions}</div>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-        {pageActions}
-        {addNewBtn}
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div>
-      <Suspense fallback={[]}>
+    <div className="container-fluid">
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
@@ -640,10 +569,35 @@ const People = () => {
           <h2>
             {heading} <small>({totalItems})</small>
           </h2>
+          {pageActions}
+          <Card>
+            <CardBody className="people-card">
+              {batchActions}
+              <Suspense fallback={renderLoader()}>
+                <List
+                  columns={columns}
+                  items={items}
+                  listIndex={listIndex}
+                  loading={loading}
+                  type="people"
+                  allChecked={allChecked}
+                  toggleSelectedAll={toggleSelectedAll}
+                  toggleSelected={toggleSelected}
+                />
+              </Suspense>
+              {batchActions}
+            </CardBody>
+          </Card>
+          {pageActions}
         </div>
       </div>
-      {content}
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/person/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
     </div>
   );
-};
+}
 export default People;

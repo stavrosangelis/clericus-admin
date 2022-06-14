@@ -19,7 +19,7 @@ import icpThumbnail from '../../assets/img/icp-logo.jpg';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const RelatedPeople = (props) => {
+function RelatedPeople(props) {
   const [items, setItems] = useState([]);
   const [label, setLabel] = useState('');
   const debouncedLabel = useDebounce(label, 500);
@@ -118,7 +118,7 @@ const RelatedPeople = (props) => {
     <Spinner color="info" size="sm" className={loadingMoreVisible} />
   );
   const loadMoreVisibleClass = loadMoreVisible ? '' : 'hidden';
-  const list = items.map((item, i) => {
+  const list = items.map((item) => {
     let thumbnailImage = [];
     const thumbnailURL = getThumbnailURL(item);
     if (thumbnailURL !== null) {
@@ -221,7 +221,7 @@ const RelatedPeople = (props) => {
 
   const selectedHeading =
     selectedPeople.length > 0 ? <h4>Selected people</h4> : '';
-  const selectedPeopleOutput = selectedPeople.map((item, i) => {
+  const selectedPeopleOutput = selectedPeople.map((item) => {
     let itemLabel = '';
     if (item.lastName !== '') {
       itemLabel += item.lastName;
@@ -330,7 +330,7 @@ const RelatedPeople = (props) => {
       </ModalFooter>
     </Modal>
   );
-};
+}
 
 RelatedPeople.defaultProps = {
   open: false,

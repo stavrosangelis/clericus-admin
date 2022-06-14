@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { getResourceThumbnailURL } from '../../../helpers';
 
-const Row = (props) => {
+function Row(props) {
   // props
   const { item, page, index, limit, toggleSelected } = props;
 
@@ -98,7 +98,7 @@ const Row = (props) => {
       </td>
     </tr>
   );
-};
+}
 
 Row.defaultProps = {
   item: {},

@@ -2,6 +2,7 @@ const defaultState = {
   // settings
   settings: {},
   seedRedirect: false,
+  navOpen: false,
 
   // languageCodes
   languageCodes: [],
@@ -11,28 +12,32 @@ const defaultState = {
   loginErrorText: [],
   sessionActive: false,
   sessionUser: null,
-  loginRedirect: false,
 
+  // pagination parameters
   resourcesPagination: {
-    limit: 24,
     activeType: null,
-    page: 1,
+    limit: 24,
     orderField: 'label',
     orderDesc: false,
+    page: 1,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   peoplePagination: {
-    limit: 25,
     activeType: null,
-    page: 1,
+    advancedSearchInputs: [],
+    classpieceId: null,
+    classpieceSearchInput: '',
+    limit: 25,
     orderField: 'firstName',
     orderDesc: false,
+    page: 1,
     status: null,
     searchInput: '',
-    advancedSearchInputs: [],
-    classpieceSearchInput: '',
-    classpieceId: null,
+    totalItems: 0,
+    totalPages: 0,
   },
   organisationsPagination: {
     limit: 25,
@@ -42,6 +47,8 @@ const defaultState = {
     activeType: null,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   eventsPagination: {
     limit: 25,
@@ -51,6 +58,8 @@ const defaultState = {
     activeType: null,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   temporalsPagination: {
     limit: 25,
@@ -59,6 +68,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   spatialsPagination: {
     limit: 25,
@@ -67,6 +78,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   importsPagination: {
     limit: 25,
@@ -74,6 +87,8 @@ const defaultState = {
     orderField: 'label',
     orderDesc: false,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   usersPagination: {
     limit: 25,
@@ -82,6 +97,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   usergroupsPagination: {
     limit: 25,
@@ -90,6 +107,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   articlesPagination: {
     limit: 25,
@@ -99,6 +118,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   slideshowPagination: {
     limit: 25,
@@ -107,6 +128,8 @@ const defaultState = {
     orderDesc: false,
     status: null,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   contactFormsPagination: {
     limit: 25,
@@ -114,6 +137,8 @@ const defaultState = {
     orderField: 'createdAt',
     orderDesc: true,
     searchInput: '',
+    totalItems: 0,
+    totalPages: 0,
   },
   queryBuilderPagination: {
     limit: 25,
@@ -122,7 +147,8 @@ const defaultState = {
     orderField: 'label',
     orderDesc: false,
     status: null,
-    total_pages: null,
+    totalItems: 0,
+    totalPages: 0,
   },
   userGroups: [],
 

@@ -12,7 +12,7 @@ const getValue = (row = null, props = []) => {
   return row[props[0]];
 };
 
-const GridItem = (props) => {
+function GridItem(props) {
   const { row, columns, index, type, toggleSelected } = props;
   const itemContent = [];
   let documentRow = false;
@@ -163,7 +163,7 @@ const GridItem = (props) => {
     </div>
   );
   return itemOutput;
-};
+}
 
 GridItem.defaultProps = {
   row: null,

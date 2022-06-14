@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  Form,
-  FormGroup,
-  Input,
-  InputGroup,
-  InputGroupAddon,
-} from 'reactstrap';
+import { Button, Form, FormGroup, Input, InputGroup } from 'reactstrap';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import DatePicker from 'react-datepicker';
@@ -16,7 +9,7 @@ import {
   queryBuildRelatedRemove,
 } from '../../redux/actions';
 
-const ElementBlock = (props) => {
+function ElementBlock(props) {
   const dispatch = useDispatch();
   const { elements, add, index, defaultValues, name: rstateName } = props;
   const [elementName, setElementName] = useState('');
@@ -286,17 +279,13 @@ const ElementBlock = (props) => {
   };
 
   const btn = add ? (
-    <InputGroupAddon addonType="append">
-      <Button color="secondary" outline onClick={() => addRow()}>
-        <i className="fa fa-plus" />
-      </Button>
-    </InputGroupAddon>
+    <Button color="secondary" outline onClick={() => addRow()}>
+      <i className="fa fa-plus" />
+    </Button>
   ) : (
-    <InputGroupAddon addonType="append">
-      <Button color="secondary" outline onClick={() => removeRow()}>
-        <i className="fa fa-minus" />
-      </Button>
-    </InputGroupAddon>
+    <Button color="secondary" outline onClick={() => removeRow()}>
+      <i className="fa fa-minus" />
+    </Button>
   );
 
   return (
@@ -337,7 +326,7 @@ const ElementBlock = (props) => {
       </FormGroup>
     </Form>
   );
-};
+}
 
 ElementBlock.defaultProps = {
   add: false,

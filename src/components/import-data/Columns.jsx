@@ -4,7 +4,7 @@ import { Collapse, Button, Card, CardTitle, CardBody } from 'reactstrap';
 
 import { getData, returnLetter } from '../../helpers';
 
-const Columns = (props) => {
+function Columns(props) {
   // props
   const { importPlanId, updateColumns, update } = props;
 
@@ -52,11 +52,11 @@ const Columns = (props) => {
         load();
       }, 5000);
     }
-    if (interval !== null) {
-      return () => clearInterval(interval);
-    }
     return () => {
       mounted.current = false;
+      if (interval !== null) {
+        clearInterval(interval);
+      }
     };
   }, [running, loading, loadData, updateColumns]);
 
@@ -95,7 +95,7 @@ const Columns = (props) => {
       </Card>
     </div>
   );
-};
+}
 
 Columns.defaultProps = {
   importPlanId: '',

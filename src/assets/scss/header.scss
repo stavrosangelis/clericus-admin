@@ -1,7 +1,6 @@
 .main-panel > .navbar {
   margin: 0;
 }
-
 .navbar {
   padding: 6px 0;
   height: 55px;
@@ -13,4 +12,7 @@
 .top-nav-link-btn {
   color: #333;
   padding: 12px 0.5rem;
+}
+.navbar-toggler:focus {
+  box-shadow: none;
 }

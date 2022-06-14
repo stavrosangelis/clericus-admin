@@ -1,0 +1,104 @@
+.map-search-container {
+  z-index: 99999;
+  position: absolute;
+  top: 90px;
+  left: 12px;
+  display: block;
+}
+.map-search-icon {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+  border-radius: 50%;
+  text-align: center;
+  transition: 0.2s all;
+  cursor: pointer;
+  display: block;
+}
+.map-search-icon:hover {
+  background-color: #f0f0f0;
+}
+.map-search-icon:active {
+  background-color: #e0e0e0;
+}
+.map-search-input {
+  position: absolute;
+  left: 34px;
+  top: 0;
+  width: 340px;
+  display: block;
+}
+.map-search-input input {
+  line-height: 14px;
+}
+
+.map-loading-spinner {
+  position: absolute;
+  top: 10px;
+  right: 5px;
+}
+.spatial-search.map-loading-spinner {
+  top: 36px;
+}
+.map-results-block {
+  position: absolute;
+  top: 36px;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  width: 100%;
+  background-color: #fff;
+}
+
+.spatial-search.map-results-block {
+  top: 64px;
+  background-color: #fff;
+  z-index: 9999;
+}
+.map-results-head {
+  text-align: right;
+  font-size: 11px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+.map-results-body {
+  max-width: 100%;
+  display: block;
+  overflow-y: scroll;
+  overflow-y: -moz-scrollbars-vertical;
+  max-height: 180px;
+}
+.map-item {
+  padding: 5px 10px;
+  border-top: 1px solid #ddd;
+/*  transition: 0.4s all; */
+}
+.map-item:first-child {
+  border-top: 0 none;
+}
+.map-item:hover {
+  background-color: #f0f0f0;
+}
+.map-item:active {
+  background-color: #e0e0e0;
+}
+.geoname-item-code {
+  font-size: 12px;
+}
+.map-container {
+  width: 100%;
+  height: 400px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid #999;
+  margin: 15px 0;
+}
+.leaflet-container {
+  display: block;
+  width: 100%;
+  height: 400px;
+  position: relative;
+}
+.custom-marker {
+  background-repeat: no-repeat  !important;
+}

@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Collapse, Button, Card, CardTitle, CardBody } from 'reactstrap';
 import PropTypes from 'prop-types';
 import UploadFile from './Upload.file';
-import DeleteModal from '../Delete.Modal';
+import DeleteModal from '../Delete.modal';
 
-const Fileblock = (props) => {
+const { REACT_APP_APIPATH: APIPath } = process.env;
+
+function Fileblock(props) {
   // props
   const { item, update } = props;
 
@@ -40,6 +42,21 @@ const Fileblock = (props) => {
     typeof item.uploadedFile !== 'undefined' &&
     item.uploadedFile !== null
   ) {
+    const { paths } = item.uploadedFileDetails;
+    const { path } = JSON.parse(paths[0]) || '';
+    const dPath = `${APIPath}import-plan-file-download/${item._id}`;
+    const fileLink =
+      path !== '' ? (
+        <a href={dPath} download className="import-file-link">
+          <i className="fa fa-file-excel-o" />
+          <b>{item.uploadedFileDetails.filename}</b>
+        </a>
+      ) : (
+        <span>
+          <i className="fa fa-file-excel-o" />
+          <b>{item.uploadedFileDetails.filename}</b>
+        </span>
+      );
     fileBlock = (
       <Card>
         <CardBody>
@@ -52,14 +69,7 @@ const Fileblock = (props) => {
           >
             <i className="fa fa-times" />
           </Button>
-          <a
-            href={item.uploadedFileDetails.paths[0].path}
-            download
-            className="import-file-link"
-          >
-            <i className="fa fa-file-excel-o" />
-            <b>{item.uploadedFileDetails.filename}</b>
-          </a>
+          {fileLink}
         </CardBody>
         <DeleteModal
           label={item.uploadedFileDetails.filename}
@@ -91,7 +101,7 @@ const Fileblock = (props) => {
       </Card>
     </div>
   );
-};
+}
 
 Fileblock.defaultProps = {
   item: null,

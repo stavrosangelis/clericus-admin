@@ -8,6 +8,7 @@ const List = (props) => {
     columns,
     items,
     listIndex,
+    loading,
     type,
     allChecked,
     toggleSelectedAll,
@@ -30,6 +31,7 @@ const List = (props) => {
       columns={columns}
       items={items}
       listIndex={listIndex}
+      loading={loading}
       type={type}
       toggleSelected={toggleSelected}
       toggleSelectedAll={toggleSelectedAll}
@@ -45,16 +47,20 @@ List.defaultProps = {
   listIndex: 0,
   allChecked: false,
   grid: false,
+  loading: false,
+  toggleSelected: () => {},
+  toggleSelectedAll: () => {},
 };
 List.propTypes = {
   columns: PropTypes.array,
   items: PropTypes.array,
   listIndex: PropTypes.number,
   type: PropTypes.string.isRequired,
-  toggleSelected: PropTypes.func.isRequired,
-  toggleSelectedAll: PropTypes.func.isRequired,
+  toggleSelected: PropTypes.func,
+  toggleSelectedAll: PropTypes.func,
   allChecked: PropTypes.bool,
   grid: PropTypes.bool,
+  loading: PropTypes.bool,
 };
 
 export default List;

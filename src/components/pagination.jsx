@@ -2,16 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Pagination, PaginationItem, PaginationLink } from 'reactstrap';
 import PropTypes from 'prop-types';
 
-const MainPagination = (props) => {
+import '../assets/scss/pagination.scss';
+
+function MainPagination(props) {
   // props
-  const {
-    currentPage,
-    totalPages,
-    pagination_function: paginationFunction,
-  } = props;
+  const { currentPage, totalPages, paginationFn, className } = props;
 
   // state
   const [paginationItems, setPaginationItems] = useState([]);
+
   useEffect(() => {
     const createPagination = () => {
       let prevPage = 0;
@@ -26,20 +25,14 @@ const MainPagination = (props) => {
       const newPaginationItems = [];
       const paginationFirstItem = (
         <li key="first">
-          <PaginationLink
-            className="href-btn"
-            onClick={() => paginationFunction(1)}
-          >
+          <PaginationLink onClick={() => paginationFn(1)}>
             <i className="fa-step-backward fa" />
           </PaginationLink>
         </li>
       );
       const paginationPrevItem = (
         <li key="prev">
-          <PaginationLink
-            className="href-btn"
-            onClick={() => paginationFunction(prevPage)}
-          >
+          <PaginationLink onClick={() => paginationFn(prevPage)}>
             <i className="fa-backward fa" />
           </PaginationLink>
         </li>
@@ -52,10 +45,7 @@ const MainPagination = (props) => {
         const pageActive = currentPage === pageNum ? 'active' : '';
         let paginationItem = (
           <PaginationItem key={pageNum} className={pageActive}>
-            <PaginationLink
-              className="href-btn"
-              onClick={() => paginationFunction(pageNum)}
-            >
+            <PaginationLink onClick={() => paginationFn(pageNum)}>
               {pageNum}
             </PaginationLink>
           </PaginationItem>
@@ -84,20 +74,14 @@ const MainPagination = (props) => {
 
       const paginationNextItem = (
         <PaginationItem key="next">
-          <PaginationLink
-            className="href-btn"
-            onClick={() => paginationFunction(nextPage)}
-          >
+          <PaginationLink onClick={() => paginationFn(nextPage)}>
             <i className="fa-forward fa" />
           </PaginationLink>
         </PaginationItem>
       );
       const paginationLastItem = (
         <PaginationItem key="last">
-          <PaginationLink
-            className="href-btn"
-            onClick={() => paginationFunction(totalPages)}
-          >
+          <PaginationLink onClick={() => paginationFn(totalPages)}>
             <i className="fa-step-forward fa" />
           </PaginationLink>
         </PaginationItem>
@@ -108,25 +92,25 @@ const MainPagination = (props) => {
       return newPaginationItems;
     };
     setPaginationItems(createPagination());
-  }, [currentPage, totalPages, paginationFunction]);
+  }, [currentPage, totalPages, paginationFn]);
 
+  const classNameString = className !== '' ? ` ${className}` : '';
   return (
-    <div className="pagination-container">
+    <div className={`pagination-container${classNameString}`}>
       <Pagination>{paginationItems}</Pagination>
     </div>
   );
-};
+}
 
 MainPagination.defaultProps = {
-  currentPage: 1,
-  totalPages: 1,
-  pagination_function: () => {},
+  className: '',
 };
 
 MainPagination.propTypes = {
-  currentPage: PropTypes.number,
-  totalPages: PropTypes.number,
-  pagination_function: PropTypes.func,
+  className: PropTypes.string,
+  currentPage: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+  paginationFn: PropTypes.func.isRequired,
 };
 
 export default MainPagination;

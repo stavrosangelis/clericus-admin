@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 
-const LazyList = (props) => {
+function LazyList(props) {
   const {
     limit: propsLimit,
     range: propsRange,
@@ -177,7 +177,7 @@ const LazyList = (props) => {
       <ul className={listClassName}>{list}</ul>
     </div>
   );
-};
+}
 
 LazyList.defaultProps = {
   limit: 50,

@@ -13,10 +13,10 @@ import {
 } from 'reactstrap';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
-import DeleteModal from '../Delete.Modal';
+import DeleteModal from '../Delete.modal';
 import { getData, putData } from '../../helpers';
 
-const EditImport = (props) => {
+function EditImport(props) {
   // props
   const { _id, visible, toggle, reload, items } = props;
 
@@ -234,7 +234,7 @@ const EditImport = (props) => {
       />
     </div>
   );
-};
+}
 EditImport.defaultProps = {
   _id: null,
   items: [],

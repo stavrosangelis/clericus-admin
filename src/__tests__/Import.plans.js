@@ -1,3 +1,4 @@
+/* globals afterAll, afterEach, beforeAll, describe, it */
 import React from 'react';
 import {
   act,
@@ -10,9 +11,9 @@ import {
 import { Provider } from 'react-redux';
 import { BrowserRouter as Router } from 'react-router-dom';
 import store from '../redux/store';
-import server from '../__mocks/mock-server';
+import server from '../__mocks__/mock-server';
 
-import ImportPlans from '../views/tools/Import.Plans';
+import ImportPlans from '../views/tools/Import.plans';
 
 const defaultProps = {
   limit: 25,
@@ -22,14 +23,16 @@ const defaultProps = {
   searchInput: '',
 };
 
-const Wrapper = (props) => (
-  <Provider store={store()}>
-    <Router>
-      {/* eslint-disable-next-line */}
-      <ImportPlans {...defaultProps} {...props} />
-    </Router>
-  </Provider>
-);
+function Wrapper(props) {
+  return (
+    <Provider store={store()}>
+      <Router>
+        {/* eslint-disable-next-line */}
+        <ImportPlans {...defaultProps} {...props} />
+      </Router>
+    </Provider>
+  );
+}
 
 // Enable API mocking before tests.
 beforeAll(() => server.listen());

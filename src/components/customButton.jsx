@@ -3,7 +3,7 @@ import { Button } from 'reactstrap';
 import cx from 'classnames';
 import PropTypes from 'prop-types';
 
-const CustomButton = (props) => {
+function CustomButton(props) {
   const {
     simple,
     round,
@@ -49,7 +49,7 @@ const CustomButton = (props) => {
       ) : null}
     </Button>
   );
-};
+}
 
 CustomButton.defaultProps = {
   simple: '',

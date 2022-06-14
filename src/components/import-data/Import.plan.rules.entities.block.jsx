@@ -14,11 +14,11 @@ import {
   CardTitle,
   CardBody,
 } from 'reactstrap';
-import { Link, Redirect } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { putData } from '../../helpers';
 
-const ImportPlanRulesEntities = (props) => {
+function ImportPlanRulesEntities(props) {
   // props
   const { _id, items, reloadFn } = props;
 
@@ -37,6 +37,8 @@ const ImportPlanRulesEntities = (props) => {
   const [redirect, setRedirect] = useState(false);
   const [newId, setNewId] = useState(null);
 
+  const navigate = useNavigate();
+
   const toggle = () => {
     setOpen(!open);
   };
@@ -53,10 +55,11 @@ const ImportPlanRulesEntities = (props) => {
   };
 
   useEffect(() => {
-    if (redirect) {
+    if (redirect && newId !== null) {
+      navigate(`/import-plan-rule-entity/${_id}/${newId}`);
       setRedirect(false);
     }
-  }, [redirect]);
+  }, [redirect, _id, newId, navigate]);
 
   const formSubmit = async (e) => {
     e.preventDefault();
@@ -121,16 +124,9 @@ const ImportPlanRulesEntities = (props) => {
     </li>
   ));
 
-  const redirectElem =
-    newId !== null && redirect ? (
-      <Redirect to={`/import-plan-rule-entity/${_id}/${newId}`} />
-    ) : (
-      []
-    );
-
   const addNewTopBtn =
     items.length > 2 ? (
-      <div className="text-right">
+      <div className="text-end">
         <Button color="info" size="xs" onClick={() => toggleModal()}>
           Add new <i className="fa fa-plus" />
         </Button>
@@ -140,8 +136,7 @@ const ImportPlanRulesEntities = (props) => {
     );
 
   return (
-    <div>
-      {redirectElem}
+    <>
       <Card>
         <CardBody>
           <CardTitle onClick={() => toggle()}>
@@ -156,7 +151,7 @@ const ImportPlanRulesEntities = (props) => {
           <Collapse isOpen={open}>
             {addNewTopBtn}
             <ol className="links-list">{itemsOutput}</ol>
-            <div className="text-right">
+            <div className="text-end">
               <Button color="info" size="xs" onClick={() => toggleModal()}>
                 Add new <i className="fa fa-plus" />
               </Button>
@@ -195,9 +190,9 @@ const ImportPlanRulesEntities = (props) => {
           </Button>
         </ModalFooter>
       </Modal>
-    </div>
+    </>
   );
-};
+}
 
 ImportPlanRulesEntities.propTypes = {
   _id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,

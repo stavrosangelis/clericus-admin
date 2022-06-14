@@ -1,11 +1,12 @@
+/* globals afterAll, afterEach, beforeAll, describe, it, jest */
 import React from 'react';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter as Router } from 'react-router-dom';
 import store from '../redux/store';
-import server from '../__mocks/mock-server';
+import server from '../__mocks__/mock-server';
 
-import ImportPlan from '../views/tools/Import.Plan';
+import ImportPlan from '../views/tools/Import.plan';
 
 const defaultProps = {
   match: {
@@ -15,14 +16,16 @@ const defaultProps = {
   },
 };
 
-const Wrapper = (props) => (
-  <Provider store={store()}>
-    <Router>
-      {/* eslint-disable-next-line */}
-      <ImportPlan {...defaultProps} {...props} />
-    </Router>
-  </Provider>
-);
+function Wrapper(props) {
+  return (
+    <Provider store={store()}>
+      <Router>
+        {/* eslint-disable-next-line */}
+        <ImportPlan {...defaultProps} {...props} />
+      </Router>
+    </Provider>
+  );
+}
 
 // Enable API mocking before tests.
 beforeAll(() => server.listen());
@@ -46,6 +49,7 @@ describe('Render the import data view', () => {
       render(<Wrapper />);
 
       await screen.findByText('Upload new file');
+      // await screen.findByRole('heading', { level: 2, name: '1911 Census' });
     });
   });
 
@@ -61,7 +65,7 @@ describe('Render the import data view', () => {
     await act(async () => {
       render(<Wrapper />);
 
-      await screen.findByText('data cleaning instance');
+      await screen.findByText('Data cleaning / disambiguation');
     });
   });
 
@@ -73,10 +77,12 @@ describe('Render the import data view', () => {
     });
   });
 
-  /* it('loaded item', async () => {
+  it('render import plan loaded item', async () => {
     await act(async () => {
       render(<Wrapper />);
-      await waitFor(() => screen.findAllByText('1911 Census'));
+      await waitFor(() =>
+        screen.findByRole('heading', { level: 2, name: '1911 Census' })
+      );
     });
-  }); */
+  });
 });

@@ -20,7 +20,7 @@ const fileTypes = [
 ];
 
 // text/csv
-const UploadFile = (props) => {
+function UploadFile(props) {
   // props
   const { _id, update } = props;
   // state
@@ -312,7 +312,7 @@ const UploadFile = (props) => {
       </Card>
     </div>
   );
-};
+}
 
 UploadFile.defaultProps = {
   _id: null,

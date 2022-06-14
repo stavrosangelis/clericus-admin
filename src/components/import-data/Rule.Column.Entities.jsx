@@ -12,7 +12,7 @@ import {
   temporalProperties,
 } from './entity.properties';
 
-const ColumnEntities = (props) => {
+function ColumnEntities(props) {
   const { type, columns, selectedColumns, update, remove } = props;
 
   const defaultVal = { value: 0, label: columns[0], property: '' };
@@ -88,7 +88,7 @@ const ColumnEntities = (props) => {
       </div>
     </div>
   );
-};
+}
 
 ColumnEntities.defaultProps = {
   type: '',

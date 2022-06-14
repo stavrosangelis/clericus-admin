@@ -5,7 +5,7 @@ import { getPersonThumbnailURL } from '../../../helpers';
 import defaultThumbnail from '../../../assets/img/spcc.jpg';
 import icpThumbnail from '../../../assets/img/icp-logo.jpg';
 
-const Row = (props) => {
+function Row(props) {
   const { item, page, index, limit, toggleSelected } = props;
 
   const countPage = page - 1;
@@ -132,7 +132,7 @@ const Row = (props) => {
       </td>
     </tr>
   );
-};
+}
 
 Row.defaultProps = {
   item: {},

@@ -1,3 +1,4 @@
+/* globals afterAll, afterEach, beforeAll, describe, it */
 import React from 'react';
 import {
   act,
@@ -10,9 +11,9 @@ import {
 import { Provider } from 'react-redux';
 import { BrowserRouter as Router } from 'react-router-dom';
 import store from '../redux/store';
-import server from '../__mocks/mock-server';
+import server from '../__mocks__/mock-server';
 
-import Articles from '../views/articles';
+import Articles from '../views/Articles';
 
 // Enable API mocking before tests.
 beforeAll(() => server.listen());
@@ -36,14 +37,16 @@ const defaultProps = {
     },
   },
 };
-const Wrapper = (props) => (
-  <Provider store={store()}>
-    <Router>
-      {/* eslint-disable-next-line */}
-      <Articles {...defaultProps} {...props} />
-    </Router>
-  </Provider>
-);
+function Wrapper(props) {
+  return (
+    <Provider store={store()}>
+      <Router>
+        {/* eslint-disable-next-line */}
+        <Articles {...defaultProps} {...props} />
+      </Router>
+    </Provider>
+  );
+}
 
 // Enable API mocking before tests.
 beforeAll(() => server.listen());

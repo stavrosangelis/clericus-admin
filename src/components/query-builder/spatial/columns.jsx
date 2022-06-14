@@ -1,14 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const Columns = (props) => {
-  const {
-    allChecked,
-    toggleSelectedAll,
-    updateOrdering,
-    orderField,
-    orderDesc,
-  } = props;
+function Columns(props) {
+  const { allChecked, toggleSelectedAll, updateSort, orderField, orderDesc } =
+    props;
 
   let labelOrderIcon = [];
   let regionOrderIcon = [];
@@ -74,41 +69,32 @@ const Columns = (props) => {
         </div>
       </th>
       <th style={{ width: '40px' }}>#</th>
-      <th className="ordering-label" onClick={() => updateOrdering('label')}>
+      <th className="ordering-label" onClick={() => updateSort('label')}>
         Label {labelOrderIcon}
       </th>
-      <th className="ordering-label" onClick={() => updateOrdering('region')}>
+      <th className="ordering-label" onClick={() => updateSort('region')}>
         Region {regionOrderIcon}
       </th>
-      <th className="ordering-label" onClick={() => updateOrdering('country')}>
+      <th className="ordering-label" onClick={() => updateSort('country')}>
         Country {countryOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('locationType')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('locationType')}>
         Type {typeOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('createdAt')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('createdAt')}>
         Created {createdOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('updatedAt')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('updatedAt')}>
         Updated {updatedOrderIcon}
       </th>
       <th style={{ width: '30px' }} aria-label="edit" />
     </tr>
   );
-};
+}
 Columns.defaultProps = {
   allChecked: false,
   toggleSelectedAll: () => {},
-  updateOrdering: () => {},
+  updateSort: () => {},
   orderField: '',
   orderDesc: false,
 };
@@ -116,7 +102,7 @@ Columns.defaultProps = {
 Columns.propTypes = {
   allChecked: PropTypes.bool,
   toggleSelectedAll: PropTypes.func,
-  updateOrdering: PropTypes.func,
+  updateSort: PropTypes.func,
   orderField: PropTypes.string,
   orderDesc: PropTypes.bool,
 };

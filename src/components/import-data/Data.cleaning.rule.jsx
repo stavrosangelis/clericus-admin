@@ -11,7 +11,7 @@ import ColumnEntities from './Rule.Column.Entities';
   }
 */
 
-const Rule = (props) => {
+function Rule(props) {
   // props
   const { columns, ruleValues, updateValues } = props;
   // state
@@ -67,7 +67,7 @@ const Rule = (props) => {
   };
 
   let columnsBlock = [];
-  if (type === 'unique') {
+  if (type === 'unique' || type === 'wf-dates') {
     columnsBlock = (
       <div className="row">
         <div className="col">
@@ -137,6 +137,7 @@ const Rule = (props) => {
               <option value="">-- select type --</option>
               <option value="unique">Unique Values</option>
               <option value="db-entries">Identify DB entries</option>
+              <option value="wf-dates">Well-formed Dates</option>
             </Input>
           </FormGroup>
         </div>
@@ -144,7 +145,7 @@ const Rule = (props) => {
       {columnsBlock}
     </div>
   );
-};
+}
 
 Rule.defaultProps = {
   columns: [],

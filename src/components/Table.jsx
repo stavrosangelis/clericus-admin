@@ -1,35 +1,35 @@
 import React from 'react';
-import { Table } from 'reactstrap';
+import { Table, Spinner } from 'reactstrap';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { setPaginationOrder } from '../redux/actions';
 import TableRow from './TableRow';
 
-const TableComponent = (props) => {
+function TableComponent(props) {
   const dispatch = useDispatch();
   const {
     columns,
     items,
     listIndex,
+    loading,
     type,
     allChecked,
     toggleSelectedAll,
     toggleSelected,
   } = props;
 
-  const orderField = useSelector(
-    (state) => state[`${type}Pagination`].orderField
-  );
-  const orderDir = useSelector((state) => state[`${type}Pagination`].orderDir);
+  const { [`${type}Pagination`]: pagination } = useSelector((state) => state);
+
+  const { orderDir, orderField } = pagination;
 
   const columnsOutput = columns.map((c, i) => {
     const key = `heading-${i}`;
     let output = null;
-    const { label } = c;
+    const { label, order = false, orderLabel = '', width = '' } = c;
     const style = {};
-    if (typeof c.width !== 'undefined' && c.width !== '') {
-      style.width = c.width;
+    if (width !== '') {
+      style.width = width;
     }
     if (label === 'checked') {
       output = (
@@ -52,12 +52,9 @@ const TableComponent = (props) => {
         </th>
       );
     } else {
-      let icon = [];
-      let className = '';
-      if (c.order) {
-        className = 're-order';
-      }
-      if (orderField === c.orderLabel) {
+      let icon = null;
+      const className = order ? 're-order' : '';
+      if (orderField === orderLabel) {
         if (orderDir === 'asc') {
           icon = <i className="fa fa-caret-up" />;
         }
@@ -65,9 +62,9 @@ const TableComponent = (props) => {
           icon = <i className="fa fa-caret-down" />;
         }
       }
-      const fn = c.order
+      const fn = order
         ? () => {
-            dispatch(setPaginationOrder(type, c.orderLabel));
+            dispatch(setPaginationOrder(type, orderLabel));
           }
         : () => false;
       output = (
@@ -79,19 +76,29 @@ const TableComponent = (props) => {
     return output;
   });
 
-  const tBody = items.map((item, i) => {
-    const index = i + listIndex;
-    return (
-      <TableRow
-        key={item._id}
-        row={item}
-        columns={columns}
-        index={index}
-        type={type}
-        toggleSelected={toggleSelected}
-      />
-    );
-  });
+  const tBody = loading ? (
+    <tr>
+      <td colSpan={columns.length}>
+        <div style={{ padding: '40pt', textAlign: 'center' }}>
+          <Spinner type="grow" color="info" /> <i>loading...</i>
+        </div>
+      </td>
+    </tr>
+  ) : (
+    items.map((item, i) => {
+      const index = i + listIndex;
+      return (
+        <TableRow
+          key={item._id}
+          row={item}
+          columns={columns}
+          index={index}
+          type={type}
+          toggleSelected={toggleSelected}
+        />
+      );
+    })
+  );
 
   return (
     <Table hover responsive>
@@ -104,12 +111,13 @@ const TableComponent = (props) => {
       </tfoot>
     </Table>
   );
-};
+}
 
 TableComponent.defaultProps = {
   columns: [],
   items: [],
   allChecked: false,
+  loading: false,
 };
 TableComponent.propTypes = {
   columns: PropTypes.array,
@@ -119,6 +127,7 @@ TableComponent.propTypes = {
   allChecked: PropTypes.bool,
   toggleSelectedAll: PropTypes.func.isRequired,
   toggleSelected: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
 };
 
 export default TableComponent;

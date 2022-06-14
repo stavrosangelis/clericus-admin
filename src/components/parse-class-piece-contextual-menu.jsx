@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const ContextualMenu = (props) => {
+function ContextualMenu(props) {
   const {
     targetFace,
     selectionsActive,
@@ -108,7 +108,7 @@ const ContextualMenu = (props) => {
       {menuItems}
     </div>
   );
-};
+}
 ContextualMenu.defaultProps = {
   targetFace: false,
   selectionsActive: false,

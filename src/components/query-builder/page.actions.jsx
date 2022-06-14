@@ -11,9 +11,9 @@ import {
   toggleQueryBuilderSubmit,
 } from '../../redux/actions';
 
-const MainPagination = lazy(() => import('../pagination'));
+const MainPagination = lazy(() => import('../Pagination'));
 
-const PageActions = () => {
+function PageActions() {
   // redux store
   const dispatch = useDispatch();
   const paginationParams = useSelector((state) => state.queryBuilderPagination);
@@ -122,6 +122,6 @@ const PageActions = () => {
       </div>
     </div>
   );
-};
+}
 
 export default PageActions;

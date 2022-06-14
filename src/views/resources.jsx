@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
+import axios from 'axios';
 import { Spinner } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { deleteData, getData, renderLoader } from '../helpers';
+import { deleteData, renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
-const Breadcrumbs = lazy(() => import('../components/breadcrumbs'));
+const Breadcrumbs = lazy(() => import('../components/Breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
 const BatchActions = lazy(() => import('../components/add-batch-relations'));
 const List = lazy(() => import('../components/List'));
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
 const heading = 'Resources';
 const breadcrumbsItems = [
   { label: heading, icon: 'pe-7s-photo', active: true, path: '' },
@@ -26,14 +28,14 @@ const columns = [
   {
     props: ['thumbnail'],
     label: 'Thumbnail',
-    link: { element: 'self', path: 'resource' },
+    link: { element: 'self', path: '/resource' },
     order: true,
     orderLabel: 'thumbnail',
   },
   {
     props: ['label'],
     label: 'Label',
-    link: { element: 'self', path: 'resource' },
+    link: { element: 'self', path: '/resource' },
     order: true,
     orderLabel: 'label',
   },
@@ -61,45 +63,34 @@ const columns = [
   },
 ];
 
-const Resources = () => {
+function Resources() {
   // redux
   const dispatch = useDispatch();
-  const resourceTypes = useSelector((state) => state.resourcesTypes);
+  const { resourcesTypes, resourcesPagination } = useSelector((state) => state);
 
-  const limit = useSelector((state) => state.resourcesPagination.limit);
-  const activeType = useSelector(
-    (state) => state.resourcesPagination.activeType
-  );
-  const page = useSelector((state) => state.resourcesPagination.page);
-  const orderField = useSelector(
-    (state) => state.resourcesPagination.orderField
-  );
-  const orderDesc = useSelector((state) => state.resourcesPagination.orderDesc);
-  const status = useSelector((state) => state.resourcesPagination.status);
-  const searchInput = useSelector(
-    (state) => state.resourcesPagination.searchInput
-  );
+  const {
+    activeType,
+    limit,
+    page,
+    orderField,
+    orderDesc,
+    status,
+    searchInput,
+    totalItems,
+    totalPages,
+  } = resourcesPagination;
 
   // state
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
   const [allChecked, setAllChecked] = useState(false);
-  const [gotoPageVal, setGotoPage] = useState(page);
-  const [prevLimit, setPrevLimit] = useState(24);
-  const [prevPage, setPrevPage] = useState(1);
-  const [prevActiveType, setPrevActiveType] = useState(null);
-  const [prevStatus, setPrevStatus] = useState(null);
-  const [prevOrderField, setPrevOrderField] = useState('label');
-  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
-  const [reLoading, setReLoading] = useState(false);
-  const [prevReLoading, setPrevReLoading] = useState(false);
+  const [gotoPage, setGotoPage] = useState(page);
 
   const prepareItems = useCallback((itemsParam) => {
     const newItems = [];
-    for (let i = 0; i < itemsParam.length; i += 1) {
+    const { length } = itemsParam;
+    for (let i = 0; i < length; i += 1) {
       const item = itemsParam[i];
       item.checked = false;
       newItems.push(item);
@@ -116,132 +107,105 @@ const Resources = () => {
       orderDescParam = null,
       statusParam = null,
       searchInputParam = null,
+      totalItemsParam = null,
+      totalPagesParam = null,
     }) => {
-      const limitCopy = limitParam === null ? limit : limitParam;
-      const pageCopy = pageParam === null ? page : pageParam;
-      const activeTypeCopy =
-        activeTypeParam === null ? activeType : activeTypeParam;
-      const orderFieldCopy =
-        orderFieldParam === null ? orderField : orderFieldParam;
-      const orderDescCopy =
-        orderDescParam === null ? orderDesc : orderDescParam;
-      const statusCopy = statusParam === null ? status : statusParam;
-      const searchInputCopy =
-        searchInputParam === null ? searchInput : searchInputParam;
-      const payload = {
-        limit: limitCopy,
-        activeType: activeTypeCopy,
-        page: pageCopy,
-        status: statusCopy,
-        orderField: orderFieldCopy,
-        orderDesc: orderDescCopy,
-        searchInput: searchInputCopy,
-      };
+      const payload = {};
+      if (limitParam !== null) {
+        payload.limit = limitParam;
+      }
+      if (pageParam !== null) {
+        payload.page = Number(pageParam);
+      }
+      if (activeTypeParam !== null) {
+        payload.activeType = activeTypeParam;
+      }
+      if (orderFieldParam !== null) {
+        payload.orderField = orderFieldParam;
+      }
+      if (orderDescParam !== null) {
+        payload.orderDesc = orderDescParam;
+      }
+      if (statusParam !== null) {
+        payload.status = statusParam;
+      }
+      if (searchInputParam !== null) {
+        payload.searchInput = searchInputParam;
+      }
+      if (totalItemsParam !== null) {
+        payload.totalItems = totalItemsParam;
+      }
+      if (totalPagesParam !== null) {
+        payload.totalPages = totalPagesParam;
+      }
       dispatch(setPaginationParams('resources', payload));
     },
-    [
-      dispatch,
-      limit,
-      activeType,
-      page,
-      orderField,
-      orderDesc,
-      status,
-      searchInput,
-    ]
+    [dispatch]
   );
 
-  const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
-    const statusParam = status !== '' ? status : null;
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-      status: statusParam,
-    };
-    if (searchInput !== '') {
-      params.label = searchInput;
+  const reload = (e = null) => {
+    if (e !== null) {
+      e.preventDefault();
     }
-    if (activeType !== null && activeType !== '') {
-      params.systemType = activeType;
-    }
-    const responseData = await getData(`resources`, params);
-    const { data: newData } = responseData;
-    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-    if (currentPage > newData.totalPages && newData.totalPages > 0) {
-      currentPage = newData.totalPages;
-    }
-    const newItems = await prepareItems(newData.data);
-    setItems(newItems);
-    setTableLoading(false);
-    updateStorePagination({ pageParam: currentPage });
-    setTotalPages(newData.totalPages);
-    setTotalItems(newData.totalItems);
-  }, [
-    activeType,
-    limit,
-    page,
-    searchInput,
-    status,
-    updateStorePagination,
-    prepareItems,
-    orderDesc,
-    orderField,
-  ]);
+    setLoading(true);
+  };
 
-  const handleChange = (e) => {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    updateStorePagination({
-      [`${name}Param`]: value,
-    });
+  const updatePage = useCallback(
+    (value) => {
+      if (value > 0 && value !== page) {
+        updateStorePagination({ pageParam: value });
+        reload();
+      }
+    },
+    [page, updateStorePagination]
+  );
+
+  const gotoPageFn = (e) => {
+    e.preventDefault();
+    if (gotoPage > 0 && gotoPage !== page) {
+      updateStorePagination({ pageParam: gotoPage });
+      reload();
+    }
   };
 
   const updateLimit = (value) => {
     updateStorePagination({ limitParam: value });
+    reload();
+  };
+
+  const updateSort = (orderFieldParam) => {
+    const orderDescParam = orderField === orderFieldParam ? !orderDesc : false;
+    updateStorePagination({ orderFieldParam, orderDescParam });
+    reload();
   };
 
   const setActiveType = (type) => {
     updateStorePagination({ activeTypeParam: type });
-  };
-
-  const updatePage = (value) => {
-    if (value > 0 && value !== page) {
-      updateStorePagination({ pageParam: value });
-      setGotoPage(value);
-    }
-  };
-
-  const gotoPage = () => {
-    if (Number(gotoPageVal) > 0 && gotoPageVal !== page) {
-      updateStorePagination({ pageParam: gotoPageVal });
-    }
+    reload();
   };
 
   const setStatus = (statusParam = null) => {
     updateStorePagination({ statusParam });
+    reload();
   };
 
-  const updateOrdering = (orderFieldParam = '') => {
-    if (orderFieldParam !== '') {
-      const orderDescParam =
-        orderFieldParam === orderField ? !orderDesc : false;
-      updateStorePagination({
-        orderFieldParam,
-        orderDescParam,
-      });
+  const handleChange = (e) => {
+    const { name, value = '' } = e.target;
+    switch (name) {
+      case 'gotoPage':
+        setGotoPage(value);
+        break;
+      case 'searchInput':
+        updateStorePagination({ searchInputParam: value });
+        break;
+      default:
+        break;
     }
   };
 
   const clearSearch = () => {
     updateStorePagination({ searchInputParam: '' });
-    setLoading(true);
+    reload();
   };
 
   const toggleSelected = (i) => {
@@ -251,128 +215,142 @@ const Resources = () => {
     setItems(copy);
   };
 
-  const toggleSelectedAll = () => {
+  const toggleSelectedAll = useCallback(() => {
     const copy = [...items];
     const newAllChecked = !allChecked;
     const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
+    const { length } = copy;
+    for (let i = 0; i < length; i += 1) {
       const item = copy[i];
       item.checked = newAllChecked;
       newItems.push(item);
     }
     setAllChecked(newAllChecked);
-  };
-
-  const clearSelectedAll = useCallback(() => {
-    const copy = [...items];
-    const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
-      const item = copy[i];
-      item.checked = false;
-      newItems.push(item);
-    }
-    setAllChecked(false);
-  }, [items]);
-
-  const reload = () => {
-    setReLoading(true);
-  };
+  }, [allChecked, items]);
 
   useEffect(() => {
-    if (prevLimit !== limit) {
-      setPrevLimit(limit);
-    }
-    if (prevActiveType !== activeType) {
-      setPrevActiveType(activeType);
-    }
-    if (prevPage !== page) {
-      setPrevPage(page);
-    }
-    if (prevStatus !== status) {
-      setPrevStatus(status);
-    }
-    if (prevOrderField !== orderField) {
-      setPrevOrderField(orderField);
-    }
-    if (prevOrderDesc !== orderDesc) {
-      setPrevOrderDesc(orderDesc);
-    }
-    if (reLoading && !prevReLoading) {
-      setPrevReLoading(reLoading);
-    }
-    if (
-      loading ||
-      prevLimit !== limit ||
-      prevPage !== page ||
-      prevActiveType !== activeType ||
-      prevStatus !== status ||
-      prevOrderField !== orderField ||
-      prevOrderDesc !== orderDesc ||
-      (reLoading && !prevReLoading)
-    ) {
-      clearSelectedAll();
+    let unmounted = false;
+    const controller = new AbortController();
+    const load = async () => {
+      const loadData = async () => {
+        const statusParam = status !== '' ? status : null;
+        const params = {
+          page,
+          limit,
+          orderField,
+          orderDesc,
+          status: statusParam,
+        };
+        if (searchInput !== '') {
+          params.label = searchInput;
+        }
+        if (activeType !== null && activeType !== '') {
+          params.systemType = activeType;
+        }
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}resources`,
+          crossDomain: true,
+          params,
+          signal: controller.signal,
+        })
+          .then((response) => {
+            const { data: rData = null } = response;
+            return rData;
+          })
+          .catch((error) => {
+            console.log(error);
+            return { data: null };
+          });
+        return responseData;
+      };
+      if (allChecked) {
+        toggleSelectedAll();
+      }
+      const responseData = await loadData();
+      if (!unmounted) {
+        setLoading(false);
+        setItems([]);
+        setTableLoading(true);
+        if (responseData !== null) {
+          const { data } = responseData;
+          const {
+            currentPage = 0,
+            data: newData = [],
+            totalItems: totalItemsResp,
+            totalPages: totalPagesResp,
+          } = data;
+          const cPage = currentPage > 0 ? currentPage : 1;
+          if (cPage !== 1 && cPage > totalPagesResp && totalPagesResp > 0) {
+            updatePage(totalPagesResp);
+          } else {
+            updateStorePagination({
+              totalItemsParam: totalItemsResp,
+              totalPagesParam: totalPagesResp,
+            });
+            const newItems = await prepareItems(newData);
+            setItems(newItems);
+            setTableLoading(false);
+          }
+        }
+      }
+    };
+    if (loading) {
       load();
     }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
   }, [
-    loading,
-    clearSelectedAll,
-    load,
-    orderField,
-    orderDesc,
-    prevLimit,
-    prevPage,
-    prevActiveType,
-    prevStatus,
-    prevOrderField,
-    prevOrderDesc,
-    prevReLoading,
-    reLoading,
     activeType,
+    allChecked,
     limit,
+    loading,
+    orderDesc,
+    orderField,
     page,
+    prepareItems,
+    searchInput,
     status,
+    toggleSelectedAll,
+    totalPages,
+    updateStorePagination,
+    updatePage,
   ]);
 
   const deleteSelected = async () => {
-    const selectedItems = items
-      .filter((item) => item.checked)
-      .map((item) => item._id);
-    const data = {
-      _ids: selectedItems,
-    };
-    const responseData = await deleteData(`resources`, data);
+    const _ids = items.filter((item) => item.checked).map((item) => item._id);
+    const responseData = await deleteData(`resources`, { _ids });
     if (responseData) {
       setAllChecked(false);
-      setReLoading(true);
+      reload();
     }
-    return true;
   };
 
   const removeSelected = (_id = null) => {
-    if (_id == null) {
-      return false;
+    if (_id !== null) {
+      const copy = [...items];
+      const newItems = copy.map((item) => {
+        const itemCopy = item;
+        if (itemCopy._id === _id) {
+          itemCopy.checked = false;
+        }
+        return itemCopy;
+      });
+      setItems(newItems);
     }
-    const copy = [...items];
-    const newItems = copy.map((item) => {
-      const itemCopy = item;
-      if (itemCopy._id === _id) {
-        itemCopy.checked = false;
-      }
-      return itemCopy;
-    });
-    setItems(newItems);
-    return true;
   };
 
   const pageActions = (
-    <Suspense fallback={renderLoader()}>
+    <Suspense fallback={null}>
       <PageActions
         activeType={activeType}
         clearSearch={clearSearch}
         current_page={page}
         defaultLimit={24}
-        gotoPage={gotoPage}
-        gotoPageValue={gotoPageVal}
+        gotoPage={gotoPageFn}
+        gotoPageValue={gotoPage}
         handleChange={handleChange}
         limit={limit}
         orderDesc={orderDesc}
@@ -385,54 +363,43 @@ const Resources = () => {
         setStatus={setStatus}
         status={status}
         totalPages={totalPages}
-        types={resourceTypes}
+        types={resourcesTypes}
         updateLimit={updateLimit}
-        updateOrdering={updateOrdering}
+        updateSort={updateSort}
         updatePage={updatePage}
       />
     </Suspense>
   );
 
   let content = (
-    <div>
-      {pageActions}
-      <div className="row">
-        <div className="col-12">
-          <div style={{ padding: '40pt', textAlign: 'center' }}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </div>
+    <div className="row">
+      <div className="col-12">
+        <div style={{ padding: '40pt', textAlign: 'center' }}>
+          <Spinner type="grow" color="info" /> <i>loading...</i>
         </div>
       </div>
-      {pageActions}
     </div>
   );
 
   if (!loading) {
     const listIndex = (Number(page) - 1) * limit;
-    const addNewBtn = (
-      <Link
-        className="btn btn-outline-secondary add-new-item-btn"
-        to="/resource/new"
-        href="/resource/new"
-      >
-        <i className="fa fa-plus" />
-      </Link>
-    );
     const selectedItems = items.filter((item) => item.checked);
 
     const batchActions = (
-      <Suspense fallback={[]}>
-        <BatchActions
-          items={selectedItems}
-          removeSelected={removeSelected}
-          type="Event"
-          relationProperties={[]}
-          deleteSelected={deleteSelected}
-          selectAll={toggleSelectedAll}
-          allChecked={allChecked}
-          reload={reload}
-        />
-      </Suspense>
+      <div className="batch-actions">
+        <Suspense fallback={null}>
+          <BatchActions
+            items={selectedItems}
+            removeSelected={removeSelected}
+            type="Event"
+            relationProperties={[]}
+            deleteSelected={deleteSelected}
+            selectAll={toggleSelectedAll}
+            allChecked={allChecked}
+            reload={reload}
+          />
+        </Suspense>
+      </div>
     );
     const resourcesOutput = tableLoading ? (
       <div style={{ padding: '40pt', textAlign: 'center' }}>
@@ -454,26 +421,19 @@ const Resources = () => {
     );
 
     content = (
-      <div className="resources-container">
-        {pageActions}
-        <div className="text-right" style={{ paddingBottom: 15 }}>
-          {batchActions}
-        </div>
+      <>
+        {batchActions}
         <div className="row">
           <div className="col-12">{resourcesOutput}</div>
         </div>
-        <div className="text-right" style={{ paddingBottom: 15 }}>
-          {batchActions}
-        </div>
-        {pageActions}
-        {addNewBtn}
-      </div>
+        {batchActions}
+      </>
     );
   }
 
   return (
-    <div>
-      <Suspense fallback={[]}>
+    <div className="container-fluid">
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
@@ -481,10 +441,19 @@ const Resources = () => {
           <h2>
             {heading} <small>({totalItems})</small>
           </h2>
+          {pageActions}
+          {content}
+          {pageActions}
         </div>
       </div>
-      {content}
+
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/resource/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
     </div>
   );
-};
+}
 export default Resources;

@@ -11,14 +11,16 @@ const getValue = (row = null, props = []) => {
   return row[props[0]];
 };
 
-const TableRow = (props) => {
+function TableRow(props) {
   const { row, columns, index, type, toggleSelected } = props;
   const rowOutput = [];
-  for (let i = 0; i < columns.length; i += 1) {
+  const { length } = columns;
+  for (let i = 0; i < length; i += 1) {
     const column = columns[i];
-    const prop = column.props[0];
-    const { link, align, modal } = column;
-    const propsCopy = [...column.props];
+    const { align, link, modal, props: cProps } = column;
+    const [prop] = cProps;
+    const propsCopy = [...cProps];
+    const { _id } = row;
     let value = '';
     switch (prop) {
       case 'checked':
@@ -67,9 +69,10 @@ const TableRow = (props) => {
         break;
       case 'thumbnail':
         if (type === 'people') {
-          let label = row.firstName;
-          if (row.lastName !== '') {
-            label += ` ${row.lastName}`;
+          const { firstName = '', lastName = '' } = row;
+          let label = firstName;
+          if (lastName !== '') {
+            label += ` ${lastName}`;
           }
           const thumbnailURL = getThumbnailURL(row);
           if (thumbnailURL !== null) {
@@ -120,31 +123,43 @@ const TableRow = (props) => {
       );
     }
     if (link && link !== null) {
-      if (link.element === 'self') {
-        const to = `${link.path}/${row._id}`;
-        value = (
-          <Link to={to} href={to}>
-            {value}
-          </Link>
-        );
-      } else if (link.type === 'array') {
-        value = row[link.element].map((item, itemKey) => {
-          const linkId = item.ref[link.key];
-          const to = `${link.path}/${linkId}`;
+      const { element = '', path, type: lType, key: lKey } = link;
+      if (element === 'self') {
+        const to = `${path}/${_id}`;
+        value = <Link to={to}>{value}</Link>;
+      } else if (lType === 'array') {
+        const existing = [];
+        const filtered = row[element].filter((item) => {
+          const { ref } = item;
+          const { _id: rId } = ref;
+          if (existing.indexOf(rId) === -1) {
+            existing.push(rId);
+            return true;
+          }
+          return false;
+        });
+        value = filtered.map((item, itemKey) => {
+          const { ref } = item;
+          const linkId = ref[lKey];
+          const {
+            label: rLabel = '',
+            organisationType: rOrganisationType = '',
+          } = ref;
+          const to = `${path}/${linkId}`;
           let comma = '';
-          if (itemKey + 1 < row[link.element].length) {
+          if (itemKey + 1 < filtered.length) {
             comma = <span className="cell-sep">,</span>;
           }
           const organisationType =
-            typeof item.ref.organisationType !== 'undefined' ? (
-              <small> [{item.ref.organisationType}]</small>
+            rOrganisationType !== '' ? (
+              <small> [{rOrganisationType}]</small>
             ) : (
               []
             );
           return (
-            <Link href={to} to={to} key={linkId}>
+            <Link to={to} key={linkId}>
               <span>
-                {item.ref.label}
+                {rLabel}
                 {organisationType}
               </span>
               {comma}
@@ -167,7 +182,7 @@ const TableRow = (props) => {
     );
   }
   return <tr>{rowOutput}</tr>;
-};
+}
 
 TableRow.defaultProps = {
   row: null,

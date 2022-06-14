@@ -2,7 +2,7 @@ import React from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 import PropTypes from 'prop-types';
 
-const LazyEditor = (props) => {
+function LazyEditor(props) {
   const { element, init, onEditorChange, plugins, toolbar, value } = props;
 
   return (
@@ -14,7 +14,7 @@ const LazyEditor = (props) => {
       toolbar={toolbar}
     />
   );
-};
+}
 LazyEditor.propTypes = {
   element: PropTypes.string.isRequired,
   init: PropTypes.object.isRequired,

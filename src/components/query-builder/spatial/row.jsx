@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-const Row = (props) => {
+function Row(props) {
   // props
   const { item, page, index, limit, toggleSelected } = props;
 
@@ -74,7 +74,7 @@ const Row = (props) => {
       </td>
     </tr>
   );
-};
+}
 
 Row.defaultProps = {
   item: {},

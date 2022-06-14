@@ -1,0 +1,89 @@
+@import "colors";
+.upload-file-details {
+  position: relative;
+  border: 2px solid $teal;
+  border-radius: 6px;
+  padding: 10px 22px 5px 10px;
+  background-color: #fff;
+  font-size: 13px;
+  max-width: 200px;
+  min-width: 100px;
+  margin-bottom: 10px;
+}
+.clear-uploaded-file {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  background-color: $teal;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+}
+.clear-uploaded-file:hover {
+  background-color: #57d9db;
+}
+.clear-uploaded-file:active {
+  background-color: #47abad;
+}
+.upload-file-details-text {
+  white-space: normal;
+}
+
+.file-preview {
+  position: absolute;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+.file-preview > img {
+  width: 100%;
+  max-height: 100%;
+}
+
+
+.dropzone {
+  border: 2px dashed $teal;
+  color: $teal;
+  font-size: 18px;
+  border-radius: 6px;
+  max-width: 200px;
+  min-width: 100px;
+  text-align: center;
+  background-color: #fff;
+  margin-bottom: 10px;
+  position: relative;
+  height: 250px;
+}
+.dropzone.over {
+  border: 4px dashed $teal;
+}
+.dropzone i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -25px;
+  margin-left: -25px;
+  z-index: 2;
+  font-size: 50px;
+  cursor: pointer;
+  color: $teal;
+}
+.dropzone-progress {
+  max-width: 200px;
+  min-width: 100px;
+}
+.dropzone-text {
+  padding: 15px;
+  display: block;
+}
+.resource-upload-btn {
+  max-width: 200px;
+  min-width: 100px;
+  width: 100%;
+  display: block;
+  margin-bottom: 10px;
+}

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { UncontrolledTooltip } from 'reactstrap';
 
-const Dropfile = (props) => {
+function Dropfile(props) {
   // props
   const { fileTypes, returnValues, text } = props;
   // state
@@ -178,7 +178,7 @@ const Dropfile = (props) => {
       </div>
     </div>
   );
-};
+}
 
 Dropfile.defaultProps = {
   text: null,

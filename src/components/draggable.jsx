@@ -47,90 +47,7 @@ export default class Wrapper extends Component {
     window.removeEventListener('dragend', this.mouseUp);
   }
 
-  startDrag = (e) => {
-    const { draggable } = this.props;
-    if (!draggable) {
-      return false;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'mousedown' && e.button === 0) {
-      const update = {};
-      update.dragging = true;
-      update.x = e.pageX;
-      update.y = e.pageY;
-      this.setState(update);
-    }
-    return false;
-  };
-
-  startResize = (e, direction = null) => {
-    const { resizable } = this.props;
-    if (!resizable) {
-      return false;
-    }
-    if (e.type === 'mousedown' && e.button === 0) {
-      const update = {};
-      update.resizing = true;
-      update.resizeDirection = direction;
-      update.x = e.pageX;
-      update.y = e.pageY;
-      this.setState(update);
-    }
-    return false;
-  };
-
-  startRotate = (e) => {
-    const { rotate } = this.props;
-    if (!rotate) {
-      return false;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'mousedown' && e.button === 0) {
-      const update = {};
-      update.rotating = true;
-      update.x = e.pageX;
-      update.y = e.pageY;
-      this.setState(update);
-    }
-    return false;
-  };
-
-  mouseUp = () => {
-    const { dragging, resizing, rotating } = this.state;
-    if (!dragging && !resizing && !rotating) {
-      return false;
-    }
-    this.onComplete();
-    if (dragging) {
-      const update = {};
-      update.dragging = false;
-      update.x = 0;
-      update.y = 0;
-      this.setState(update);
-      return false;
-    }
-    if (resizing) {
-      const update = {};
-      update.resizing = false;
-      update.x = 0;
-      update.y = 0;
-      this.setState(update);
-      return false;
-    }
-    if (rotating) {
-      const update = {};
-      update.rotating = false;
-      update.x = 0;
-      update.y = 0;
-      this.setState(update);
-      return false;
-    }
-    return false;
-  };
-
-  onComplete = () => {
+  onComplete() {
     const {
       width: stateWidth,
       height: stateHeight,
@@ -172,9 +89,92 @@ export default class Wrapper extends Component {
         onResizeStop(obj, index);
       }
     }
-  };
+  }
 
-  itemMove = (e) => {
+  startDrag(e) {
+    const { draggable } = this.props;
+    if (!draggable) {
+      return false;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'mousedown' && e.button === 0) {
+      const update = {};
+      update.dragging = true;
+      update.x = e.pageX;
+      update.y = e.pageY;
+      this.setState(update);
+    }
+    return false;
+  }
+
+  startResize(e, direction = null) {
+    const { resizable } = this.props;
+    if (!resizable) {
+      return false;
+    }
+    if (e.type === 'mousedown' && e.button === 0) {
+      const update = {};
+      update.resizing = true;
+      update.resizeDirection = direction;
+      update.x = e.pageX;
+      update.y = e.pageY;
+      this.setState(update);
+    }
+    return false;
+  }
+
+  startRotate(e) {
+    const { rotate } = this.props;
+    if (!rotate) {
+      return false;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'mousedown' && e.button === 0) {
+      const update = {};
+      update.rotating = true;
+      update.x = e.pageX;
+      update.y = e.pageY;
+      this.setState(update);
+    }
+    return false;
+  }
+
+  mouseUp() {
+    const { dragging, resizing, rotating } = this.state;
+    if (!dragging && !resizing && !rotating) {
+      return false;
+    }
+    this.onComplete();
+    if (dragging) {
+      const update = {};
+      update.dragging = false;
+      update.x = 0;
+      update.y = 0;
+      this.setState(update);
+      return false;
+    }
+    if (resizing) {
+      const update = {};
+      update.resizing = false;
+      update.x = 0;
+      update.y = 0;
+      this.setState(update);
+      return false;
+    }
+    if (rotating) {
+      const update = {};
+      update.rotating = false;
+      update.x = 0;
+      update.y = 0;
+      this.setState(update);
+      return false;
+    }
+    return false;
+  }
+
+  itemMove(e) {
     const {
       dragging,
       x,
@@ -273,9 +273,9 @@ export default class Wrapper extends Component {
     update.top = `${newTranslateY}px`;
     this.setState(update);
     return false;
-  };
+  }
 
-  itemResize = (e) => {
+  itemResize(e) {
     const { resizing, x, y, resizeDirection } = this.state;
     if (!resizing) {
       return false;
@@ -372,9 +372,9 @@ export default class Wrapper extends Component {
     }
     this.setState(update);
     return false;
-  };
+  }
 
-  itemRotate = (e) => {
+  itemRotate(e) {
     const { rotating } = this.state;
     if (!rotating) {
       return false;
@@ -390,9 +390,9 @@ export default class Wrapper extends Component {
     update.degree = degree;
     this.setState(update);
     return false;
-  };
+  }
 
-  mouseMove = (e) => {
+  mouseMove(e) {
     const { dragging, resizing, rotating } = this.state;
     if (!dragging && !resizing && !rotating) {
       return false;
@@ -407,19 +407,11 @@ export default class Wrapper extends Component {
       this.itemRotate(e);
     }
     return false;
-  };
+  }
 
   render() {
-    const {
-      left,
-      top,
-      degree,
-      width,
-      height,
-      dragging,
-      resizing,
-      rotating,
-    } = this.state;
+    const { left, top, degree, width, height, dragging, resizing, rotating } =
+      this.state;
     const {
       className: propsClassName,
       resizable,

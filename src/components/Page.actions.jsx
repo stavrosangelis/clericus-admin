@@ -6,15 +6,16 @@ import {
   DropdownItem,
   Input,
   InputGroup,
-  InputGroupAddon,
   Button,
   UncontrolledDropdown,
 } from 'reactstrap';
 import PropTypes from 'prop-types';
-import MainPagination from './pagination';
+import MainPagination from './Pagination';
 import AdvancedSearchFormRow from './advanced-search-row';
 
-const PageActions = (props) => {
+import '../assets/scss/page.actions.scss';
+
+function PageActions(props) {
   // props
   const {
     activeType,
@@ -44,7 +45,7 @@ const PageActions = (props) => {
     types,
     updateAdvancedSearchInputs,
     updateLimit,
-    updateOrdering,
+    updateSort,
     updatePage,
     totalPages,
   } = props;
@@ -133,7 +134,7 @@ const PageActions = (props) => {
     <MainPagination
       currentPage={page}
       totalPages={totalPages}
-      pagination_function={updatePage}
+      paginationFn={updatePage}
     />
   );
 
@@ -197,7 +198,7 @@ const PageActions = (props) => {
 
   const submitGotoPage = (e) => {
     e.preventDefault();
-    gotoPage();
+    gotoPage(e);
   };
 
   // limit filter
@@ -215,7 +216,7 @@ const PageActions = (props) => {
         <DropdownToggle caret size="sm" outline>
           Limit
         </DropdownToggle>
-        <DropdownMenu right>
+        <DropdownMenu end>
           <DropdownItem
             active={limitActive0}
             onClick={() => updateLimit(limit1)}
@@ -300,20 +301,18 @@ const PageActions = (props) => {
                       placeholder="Search..."
                       value={searchInput}
                     />
-                    <InputGroupAddon addonType="append">
-                      <Button
-                        size="sm"
-                        outline
-                        type="button"
-                        onClick={clearSearch}
-                        className="clear-search"
-                      >
-                        <i className="fa fa-times-circle" />
-                      </Button>
-                      <Button size="sm" type="submit">
-                        <i className="fa fa-search" />
-                      </Button>
-                    </InputGroupAddon>
+                    <Button
+                      size="sm"
+                      outline
+                      type="button"
+                      onClick={clearSearch}
+                      className="clear-search"
+                    >
+                      <i className="fa fa-times-circle" />
+                    </Button>
+                    <Button size="sm" type="submit">
+                      <i className="fa fa-search" />
+                    </Button>
                   </InputGroup>
                 </form>
                 <div
@@ -386,20 +385,18 @@ const PageActions = (props) => {
                     placeholder="Search classpiece..."
                     value={classpieceSearchInput}
                   />
-                  <InputGroupAddon addonType="append">
-                    <Button
-                      size="sm"
-                      outline
-                      type="button"
-                      onClick={classpieceClearSearch}
-                      className="clear-search"
-                    >
-                      <i className="fa fa-times-circle" />
-                    </Button>
-                    <Button size="sm" type="submit">
-                      <i className="fa fa-search" />
-                    </Button>
-                  </InputGroupAddon>
+                  <Button
+                    size="sm"
+                    outline
+                    type="button"
+                    onClick={classpieceClearSearch}
+                    className="clear-search"
+                  >
+                    <i className="fa fa-times-circle" />
+                  </Button>
+                  <Button size="sm" type="submit">
+                    <i className="fa fa-search" />
+                  </Button>
                 </InputGroup>
               </form>
               <div className="classpiece-results-container">
@@ -429,20 +426,18 @@ const PageActions = (props) => {
                     placeholder="Search..."
                     value={searchInput}
                   />
-                  <InputGroupAddon addonType="append">
-                    <Button
-                      size="sm"
-                      outline
-                      type="button"
-                      onClick={clearSearch}
-                      className="clear-search"
-                    >
-                      <i className="fa fa-times-circle" />
-                    </Button>
-                    <Button size="sm" type="submit">
-                      <i className="fa fa-search" />
-                    </Button>
-                  </InputGroupAddon>
+                  <Button
+                    size="sm"
+                    outline
+                    type="button"
+                    onClick={clearSearch}
+                    className="clear-search"
+                  >
+                    <i className="fa fa-times-circle" />
+                  </Button>
+                  <Button size="sm" type="submit">
+                    <i className="fa fa-search" />
+                  </Button>
                 </InputGroup>
               </form>
             </DropdownItem>
@@ -488,10 +483,10 @@ const PageActions = (props) => {
           <DropdownToggle outline caret size="sm">
             Sort
           </DropdownToggle>
-          <DropdownMenu right>
+          <DropdownMenu end>
             <DropdownItem
               active={labelActive}
-              onClick={() => updateOrdering('label')}
+              onClick={() => updateSort('label')}
               key="default"
             >
               <span className="first-cap">label</span>
@@ -499,21 +494,21 @@ const PageActions = (props) => {
             </DropdownItem>
             <DropdownItem
               active={statusActive}
-              onClick={() => updateOrdering('status')}
+              onClick={() => updateSort('status')}
             >
               <span className="first-cap">status</span>
               {statusIcon}
             </DropdownItem>
             <DropdownItem
               active={createdAtActive}
-              onClick={() => updateOrdering('createdAt')}
+              onClick={() => updateSort('createdAt')}
             >
               <span className="first-cap">createdAt</span>
               {createdAtIcon}
             </DropdownItem>
             <DropdownItem
               active={updatedAtActive}
-              onClick={() => updateOrdering('updatedAt')}
+              onClick={() => updateSort('updatedAt')}
             >
               <span className="first-cap">updatedAt</span>
               {updatedAtIcon}
@@ -532,7 +527,7 @@ const PageActions = (props) => {
         <DropdownToggle outline caret size="sm">
           Select type
         </DropdownToggle>
-        <DropdownMenu right>
+        <DropdownMenu end>
           <DropdownItem
             active={allActive}
             onClick={() => setActiveType('')}
@@ -598,7 +593,7 @@ const PageActions = (props) => {
           <DropdownToggle color="secondary" outline caret size="sm">
             Select status
           </DropdownToggle>
-          <DropdownMenu right>{statusDropdownFilter}</DropdownMenu>
+          <DropdownMenu end>{statusDropdownFilter}</DropdownMenu>
         </UncontrolledDropdown>
       </div>
     );
@@ -615,19 +610,15 @@ const PageActions = (props) => {
             value={gotoPageValue}
             placeholder="0"
           />
-          <InputGroupAddon addonType="append">
-            <div className="total-pages">/ {totalPages}</div>
-          </InputGroupAddon>
-          <InputGroupAddon addonType="append">
-            <Button
-              type="submit"
-              outline
-              color="secondary"
-              className="go-to-page-btn"
-            >
-              <i className="fa fa-angle-right" />
-            </Button>
-          </InputGroupAddon>
+          <div className="total-pages">/ {totalPages}</div>
+          <Button
+            type="submit"
+            outline
+            color="secondary"
+            className="go-to-page-btn"
+          >
+            <i className="fa fa-angle-right" />
+          </Button>
         </InputGroup>
       </form>
     </div>
@@ -636,7 +627,7 @@ const PageActions = (props) => {
   return (
     <div className="row">
       <div className="col-12">
-        <div className="page-actions dropdown-menu-right">
+        <div className="page-actions">
           {searchDropdown}
           {classpieces}
           {typesDropdownFilter}
@@ -644,14 +635,14 @@ const PageActions = (props) => {
           {limitFilter}
           {sortDropdown}
         </div>
-        <div className="page-actions pull-left">
-          {paginationHTML}
+        <div className="page-actions">
           {gotoPageOutput}
+          {paginationHTML}
         </div>
       </div>
     </div>
   );
-};
+}
 
 PageActions.defaultProps = {
   activeType: '',
@@ -677,7 +668,7 @@ PageActions.defaultProps = {
   totalPages: 0,
   types: [],
   updateAdvancedSearchInputs: () => {},
-  updateOrdering: () => {},
+  updateSort: () => {},
 };
 
 PageActions.propTypes = {
@@ -710,7 +701,7 @@ PageActions.propTypes = {
   types: PropTypes.array,
   updateAdvancedSearchInputs: PropTypes.func,
   updateLimit: PropTypes.func.isRequired,
-  updateOrdering: PropTypes.func,
+  updateSort: PropTypes.func,
   updatePage: PropTypes.func.isRequired,
 };
 

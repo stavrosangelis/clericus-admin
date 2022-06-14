@@ -1,8 +1,18 @@
 import axios from 'axios';
-import { getData } from '../helpers';
+import { getData, myHistory } from '../helpers';
 
 const GENERIC_UPDATE = 'GENERIC_UPDATE';
 const APIPath = process.env.REACT_APP_APIPATH;
+
+export function toggleNav() {
+  return (dispatch, getState) => {
+    const { navOpen } = getState();
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { navOpen: !navOpen },
+    });
+  };
+}
 
 export function loadSettings() {
   return (dispatch) => {
@@ -50,23 +60,20 @@ export function checkSession() {
       data: { token },
     })
       .then((response) => response.data)
-      .catch((error) => {
-        console.log(error);
-      });
-
+      .catch(() => ({
+        status: false,
+        error: 'Unauthorised',
+      }));
     let payload = {};
     if (!responseData.status) {
       await new Promise((resolve) => {
         resolve(localStorage.setItem('token', null));
       });
+      myHistory.replace(`/login/unauthorised`);
       payload = {
         sessionActive: false,
         sessionUser: null,
       };
-      if (responseData.error !== '') {
-        payload.loginError = true;
-        payload.loginErrorText = responseData.msg;
-      }
     } else {
       payload = {
         sessionActive: true,
@@ -93,7 +100,11 @@ export function login(email, password) {
     })
       .then((response) => response.data)
       .catch((error) => {
-        console.log(error);
+        const { data } = error.response;
+        return {
+          status: false,
+          error: data.errors,
+        };
       });
     let payload = {};
     if (responseData.status) {
@@ -111,8 +122,8 @@ export function login(email, password) {
         loginErrorText: '',
         sessionActive: true,
         sessionUser: responseData.data,
-        loginRedirect: true,
       };
+      myHistory.replace(`/`);
     } else {
       payload = {
         loginError: true,
@@ -137,15 +148,6 @@ export function resetSeedRedirect() {
   };
 }
 
-export function resetLoginRedirect() {
-  return (dispatch) => {
-    dispatch({
-      type: GENERIC_UPDATE,
-      payload: { loginRedirect: false },
-    });
-  };
-}
-
 export function logout() {
   return async (dispatch) => {
     await new Promise((resolve) => {
@@ -154,6 +156,7 @@ export function logout() {
     await new Promise((resolve) => {
       resolve(localStorage.setItem('user', null));
     });
+    myHistory.replace(`/`);
     const payload = {
       sessionActive: false,
       sessionUser: null,
@@ -191,277 +194,199 @@ export function getLanguageCodes() {
   };
 }
 
-export const loadRelationsEventsValues = (
-  searchId,
-  searchTemporal,
-  searchItem,
-  searchSpatial,
-  searchEventType
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsEventsLoading: true,
-    },
-  });
-  const temporal = searchTemporal.replace(/_/g, '.');
-  const params = {
-    _id: searchId,
-    label: searchItem,
-    temporal,
-    spatial: searchSpatial,
-  };
-  if (
-    typeof searchEventType.value !== 'undefined' &&
-    searchEventType.value !== ''
-  ) {
-    params.eventType = searchEventType.value;
-  }
-  const responseData = await getData(`events`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsEvents: responseData.data.data,
-      relationsEventsLoading: false,
+export const loadRelationsEventsValues =
+  (searchId, searchTemporal, searchItem, searchSpatial, searchEventType) =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsEventsLoading: true,
+      },
+    });
+    const temporal = searchTemporal.replace(/_/g, '.');
+    const params = {
+      _id: searchId,
+      label: searchItem,
+      temporal,
+      spatial: searchSpatial,
     };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-
-export const loadRelationsOrganisationsValues = (
-  searchId = '',
-  searchLabel = '',
-  searchType = ''
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsOrganisationsLoading: true,
-    },
-  });
-  const params = {
-    _id: searchId,
-    label: searchLabel,
-  };
-  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
-    params.organisationType = searchType.label;
-  }
-  const responseData = await getData(`organisations`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsOrganisations: responseData.data.data,
-      relationsOrganisationsLoading: false,
-    };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-
-export const loadRelationsPeopleValues = (
-  searchId = '',
-  searchLabel = '',
-  searchFirstName = '',
-  searchLastName = '',
-  searchType = ''
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsPeopleLoading: true,
-    },
-  });
-  const params = {
-    _id: searchId,
-    label: searchLabel,
-    firstName: searchFirstName,
-    lastName: searchLastName,
-  };
-  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
-    params.personType = searchType.label;
-  }
-  const responseData = await getData(`people`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsPeople: responseData.data.data,
-      relationsPeopleLoading: false,
-    };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-
-export const loadRelationsResourcesValues = (
-  searchId = '',
-  searchLabel = '',
-  searchType = ''
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsResourcesLoading: true,
-    },
-  });
-  const params = {
-    _id: searchId,
-    label: searchLabel,
-    limit: 24,
-  };
-  if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
-    params.systemType = searchType.value;
-  }
-  const responseData = await getData(`resources`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsResources: responseData.data.data,
-      relationsResourcesLoading: false,
-    };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-
-export const loadRelationsSpatialValues = (
-  searchId = '',
-  searchLabel = '',
-  searchCountry = '',
-  searchType = ''
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsSpatialLoading: true,
-    },
-  });
-  const params = {
-    _id: searchId,
-    label: searchLabel,
-    country: searchCountry,
-    locationType: searchType,
-  };
-  const responseData = await getData(`spatials`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsSpatial: responseData.data.data,
-      relationsSpatialLoading: false,
-    };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-
-export const loadRelationsTemporalValues = (
-  searchId = '',
-  searchLabel = '',
-  searchStartDate = '',
-  searchEndDate = ''
-) => async (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: {
-      relationsTemporalLoading: true,
-    },
-  });
-  const params = {
-    _id: searchId,
-    label: searchLabel,
-    startDate: searchStartDate,
-    endDate: searchEndDate,
-  };
-  const responseData = await getData(`temporals`, params);
-  let payload = {};
-  if (responseData.status) {
-    payload = {
-      relationsTemporal: responseData.data.data,
-      relationsTemporalLoading: false,
-    };
-  }
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload,
-  });
-};
-/*
-export function setPaginationParams(type, params) {
-  return (dispatch) => {
-    let payload = null;
-    if (type === 'resources') {
-      payload = {
-        resourcesPagination: {
-          limit: params.limit,
-          activeType: params.activeType,
-          page: params.page,
-          orderField: params.orderField,
-          orderDesc: params.orderDesc,
-          status: params.status,
-          searchInput: params.searchInput,
-        },
-      };
-    } else if (type === 'people') {
-      payload = {
-        peoplePagination: {
-          limit: params.limit,
-          peopleType: params.peopleType,
-          page: params.page,
-          orderField: params.orderField,
-          orderDesc: params.orderDesc,
-          status: params.status,
-          searchInput: params.searchInput,
-          advancedSearchInputs: params.advancedSearchInputs,
-          classpieceSearchInput: params.classpieceSearchInput,
-        },
-      };
-    } else if (type === 'queryBuilder') {
-      payload = {
-        queryBuilderPagination: {
-          limit: params.limit,
-          activeType: params.activeType,
-          page: params.page,
-          orderField: params.orderField,
-          orderDesc: params.orderDesc,
-          status: params.status,
-        },
-      };
-    } else {
-      const field = `${type}Pagination`;
-      payload = {
-        [field]: {
-          limit: params.limit,
-          page: params.page,
-          orderField: params.orderField,
-          orderDesc: params.orderDesc,
-          activeType: params.activeType,
-          status: params.status,
-          searchInput: params.searchInput,
-        },
-      };
+    if (
+      typeof searchEventType.value !== 'undefined' &&
+      searchEventType.value !== ''
+    ) {
+      params.eventType = searchEventType.value;
     }
-    if (payload === null) {
-      return false;
+    const responseData = await getData(`events`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsEvents: responseData.data.data,
+        relationsEventsLoading: false,
+      };
     }
     dispatch({
       type: GENERIC_UPDATE,
       payload,
     });
-
-    return false;
   };
-}
-*/
+
+export const loadRelationsOrganisationsValues =
+  (searchId = '', searchLabel = '', searchType = '') =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsOrganisationsLoading: true,
+      },
+    });
+    const params = {
+      _id: searchId,
+      label: searchLabel,
+    };
+    if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+      params.organisationType = searchType.label;
+    }
+    const responseData = await getData(`organisations`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsOrganisations: responseData.data.data,
+        relationsOrganisationsLoading: false,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+
+export const loadRelationsPeopleValues =
+  (
+    searchId = '',
+    searchLabel = '',
+    searchFirstName = '',
+    searchLastName = '',
+    searchType = ''
+  ) =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsPeopleLoading: true,
+      },
+    });
+    const params = {
+      _id: searchId,
+      label: searchLabel,
+      firstName: searchFirstName,
+      lastName: searchLastName,
+    };
+    if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+      params.personType = searchType.label;
+    }
+    const responseData = await getData(`people`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsPeople: responseData.data.data,
+        relationsPeopleLoading: false,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+
+export const loadRelationsResourcesValues =
+  (searchId = '', searchLabel = '', searchType = '') =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsResourcesLoading: true,
+      },
+    });
+    const params = {
+      _id: searchId,
+      label: searchLabel,
+      limit: 24,
+    };
+    if (typeof searchType.value !== 'undefined' && searchType.value !== '') {
+      params.systemType = searchType.value;
+    }
+    const responseData = await getData(`resources`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsResources: responseData.data.data,
+        relationsResourcesLoading: false,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+
+export const loadRelationsSpatialValues =
+  (searchId = '', searchLabel = '', searchCountry = '', searchType = '') =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsSpatialLoading: true,
+      },
+    });
+    const params = {
+      _id: searchId,
+      label: searchLabel,
+      country: searchCountry,
+      locationType: searchType,
+    };
+    const responseData = await getData(`spatials`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsSpatial: responseData.data.data,
+        relationsSpatialLoading: false,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+
+export const loadRelationsTemporalValues =
+  (searchId = '', searchLabel = '', searchStartDate = '', searchEndDate = '') =>
+  async (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: {
+        relationsTemporalLoading: true,
+      },
+    });
+    const params = {
+      _id: searchId,
+      label: searchLabel,
+      startDate: searchStartDate,
+      endDate: searchEndDate,
+    };
+    const responseData = await getData(`temporals`, params);
+    let payload = {};
+    if (responseData.status) {
+      payload = {
+        relationsTemporal: responseData.data.data,
+        relationsTemporalLoading: false,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+
 export function setPaginationParams(type, params) {
   return (dispatch, getState) => {
     let payload = null;
@@ -484,35 +409,27 @@ export function setPaginationParams(type, params) {
   };
 }
 
-export const setPaginationOrder = (type, orderField = '') => (
-  dispatch,
-  getState
-) => {
-  if (orderField === '') {
-    console.log('No order field');
-    return false;
-  }
-  const state = getState();
-  const stateKey = `${type}Pagination`;
-  const copyKey = state[stateKey];
-  let orderDir = 'asc';
-  if (copyKey.orderDir === orderDir && copyKey.orderDir === 'asc') {
-    orderDir = 'desc';
-  }
-  const orderDesc = orderDir !== 'asc';
-  copyKey.orderField = orderField;
-  copyKey.orderDir = orderDir;
-  copyKey.orderDesc = orderDesc;
-  const payload = {
-    [stateKey]: copyKey,
+export const setPaginationOrder =
+  (type, orderField = '') =>
+  (dispatch, getState) => {
+    if (orderField !== '') {
+      const state = getState();
+      const stateKey = `${type}Pagination`;
+      const copyKey = state[stateKey];
+      const orderDir = copyKey.orderDir === 'asc' ? 'desc' : 'asc';
+      const orderDesc = orderDir !== 'asc';
+      copyKey.orderField = orderField;
+      copyKey.orderDir = orderDir;
+      copyKey.orderDesc = orderDesc;
+      const payload = {
+        [stateKey]: copyKey,
+      };
+      dispatch({
+        type: 'GENERIC_UPDATE',
+        payload,
+      });
+    }
   };
-  dispatch({
-    type: 'GENERIC_UPDATE',
-    payload,
-  });
-
-  return false;
-};
 
 export function getSystemTypes() {
   return async (dispatch) => {
@@ -835,50 +752,50 @@ export const queryBuildMainClear = () => (dispatch) => {
   });
 };
 
-export const setQueryBuildResults = (values = []) => (dispatch) => {
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { queryBuildResults: values },
-  });
-};
+export const setQueryBuildResults =
+  (values = []) =>
+  (dispatch) => {
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { queryBuildResults: values },
+    });
+  };
 
-export const toggleQueryBuilderSubmit = (value = null) => (
-  dispatch,
-  getState
-) => {
-  const state = getState();
-  const queryBuilderSubmit = value !== null ? value : !state.queryBuilderSubmit;
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { queryBuilderSubmit },
-  });
-};
+export const toggleQueryBuilderSubmit =
+  (value = null) =>
+  (dispatch, getState) => {
+    const state = getState();
+    const queryBuilderSubmit =
+      value !== null ? value : !state.queryBuilderSubmit;
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { queryBuilderSubmit },
+    });
+  };
 
-export const toggleQueryBuilderSearching = (value = null) => (
-  dispatch,
-  getState
-) => {
-  const state = getState();
-  const queryBuilderSearching =
-    value !== null ? value : !state.queryBuilderSearching;
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { queryBuilderSearching },
-  });
-};
+export const toggleQueryBuilderSearching =
+  (value = null) =>
+  (dispatch, getState) => {
+    const state = getState();
+    const queryBuilderSearching =
+      value !== null ? value : !state.queryBuilderSearching;
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { queryBuilderSearching },
+    });
+  };
 
-export const toggleClearQueryBuildResults = (value = null) => (
-  dispatch,
-  getState
-) => {
-  const state = getState();
-  const clearQueryBuildResults =
-    value !== null ? value : !state.clearQueryBuildResults;
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { clearQueryBuildResults },
-  });
-};
+export const toggleClearQueryBuildResults =
+  (value = null) =>
+  (dispatch, getState) => {
+    const state = getState();
+    const clearQueryBuildResults =
+      value !== null ? value : !state.clearQueryBuildResults;
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { clearQueryBuildResults },
+    });
+  };
 
 export const queryBuildRelatedClear = (name) => (dispatch) => {
   dispatch({
@@ -897,28 +814,24 @@ export const queryBuildRelatedAdd = (name, values) => (dispatch, getState) => {
   });
 };
 
-export const queryBuildRelatedUpdate = (name, index, values) => (
-  dispatch,
-  getState
-) => {
-  const state = getState();
-  const queryBlocksCopy = [...state[name]];
-  queryBlocksCopy[index] = values;
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { [name]: queryBlocksCopy },
-  });
-};
+export const queryBuildRelatedUpdate =
+  (name, index, values) => (dispatch, getState) => {
+    const state = getState();
+    const queryBlocksCopy = [...state[name]];
+    queryBlocksCopy[index] = values;
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { [name]: queryBlocksCopy },
+    });
+  };
 
-export const queryBuildRelatedRemove = (name, index) => (
-  dispatch,
-  getState
-) => {
-  const state = getState();
-  const queryBlocksMainCopy = Object.assign([], state[name]);
-  queryBlocksMainCopy.splice(index, 1);
-  dispatch({
-    type: GENERIC_UPDATE,
-    payload: { [name]: queryBlocksMainCopy },
-  });
-};
+export const queryBuildRelatedRemove =
+  (name, index) => (dispatch, getState) => {
+    const state = getState();
+    const queryBlocksMainCopy = Object.assign([], state[name]);
+    queryBlocksMainCopy.splice(index, 1);
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload: { [name]: queryBlocksMainCopy },
+    });
+  };

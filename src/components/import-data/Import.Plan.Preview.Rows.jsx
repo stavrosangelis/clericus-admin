@@ -30,7 +30,7 @@ const ImportPlanPreviewRows = (props) => {
             targetId,
             srcType,
             relationLabel: label,
-            role = 0,
+            role = null,
             roleCustom = '',
           } = rValues;
           const newRelation = {
@@ -59,7 +59,7 @@ const ImportPlanPreviewRows = (props) => {
       temporals: rules.temporals.filter((e) => e.row === row.key) || [],
     };
     return (
-      <div key={row.key}>
+      <div key={row.key} className="import-plan-preview-row-container">
         <ImportPlanPreviewRow columns={columns} row={row} />
         <ImportPlanPreviewEntities
           rowKey={row.key}

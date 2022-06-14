@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Form,
   FormGroup,
@@ -14,183 +14,162 @@ import {
   Col,
   Alert,
 } from 'reactstrap';
+import { useNavigate, useParams } from 'react-router-dom';
 import crypto from 'crypto-js';
-import { Redirect } from 'react-router-dom';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
-import PropTypes from 'prop-types';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { login } from '../redux/actions';
 import logosrc from '../assets/img/cos-logo-bw.png';
 import '../assets/scss/login.scss';
 
-const mapStateToProps = (state) => ({
-  loginError: state.loginError,
-  loginErrorText: state.loginErrorText,
-  sessionActive: state.sessionActive,
-});
+function Login() {
+  // redux
+  const dispatch = useDispatch();
+  const { loginError, loginErrorText, sessionActive } = useSelector(
+    (state) => state
+  );
 
-function mapDispatchToProps(dispatch) {
-  return {
-    login: (email, password) => dispatch(login(email, password)),
-  };
-}
+  const { status = null } = useParams();
 
-class Login extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      email: '',
-      password: '',
-      loginError: false,
-      loginErrorText: '',
-    };
-    this.handleChange = this.handleChange.bind(this);
-    this.showError = this.showError.bind(this);
-    this.postLogin = this.postLogin.bind(this);
-  }
+  // state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState({
+    loginError,
+    loginErrorText,
+  });
+  const [emailInvalid, setEmailInValid] = useState(false);
 
-  componentDidUpdate(prevProps) {
-    const { loginError } = this.props;
-    if (prevProps.loginError !== loginError) {
-      this.showError();
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    const { name, value = '' } = e.target;
+    switch (name) {
+      case 'email':
+        setEmail(value);
+        break;
+      case 'password':
+        setPassword(value);
+        break;
+      default:
+        break;
     }
-  }
+  };
 
-  handleChange(e) {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    this.setState({
-      [name]: value,
-    });
-  }
-
-  showError() {
-    const { loginError, loginErrorText } = this.props;
-    this.setState({
-      loginError,
-      loginErrorText,
-    });
-  }
-
-  postLogin(e) {
+  const postLogin = (e) => {
     e.preventDefault();
-    const { email, password } = this.state;
     const emailRegEx = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
     if (email.search(emailRegEx) === -1) {
-      this.setState({
+      setError({
         loginError: true,
-        loginErrorText: 'Please provide a valid email address to continue',
+        loginErrorText: ['Please provide a valid email address to continue'],
       });
+      setEmailInValid(true);
       return false;
     }
     if (password.trim().length < 5) {
-      this.setState({
+      setError({
         loginError: true,
-        loginErrorText: 'Please provide your password to continue',
+        loginErrorText: ['Please provide your password to continue'],
       });
       return false;
     }
-    const cryptoPass = crypto.SHA1(password).toString();
-    const { login: loginFn } = this.props;
-    loginFn(email, cryptoPass);
-    return false;
-  }
-
-  render() {
-    const { loginError, loginErrorText, emailValid } = this.state;
-    const { sessionActive } = this.props;
-    const errorClass = loginError ? '' : 'hidden';
-    const errorContainer = (
-      <Alert style={{ margin: '20px 0' }} className={errorClass} color="danger">
-        <i className="fa fa-times" /> {loginErrorText}
-      </Alert>
-    );
-
-    let loggedInRedirect = [];
-    if (sessionActive) {
-      loggedInRedirect = <Redirect to="/" />;
+    if (emailInvalid) {
+      setEmailInValid(false);
     }
-    return (
-      <div className="wrapper">
-        {loggedInRedirect}
-        <div className="login-container">
-          <Container>
-            <Row>
-              <Col sm="12" md={{ size: 6, offset: 3 }}>
-                <Card className="login-box">
-                  <CardHeader>
-                    <div className="login-logo">
-                      <img
-                        src={logosrc}
-                        className="login-logo-img"
-                        alt="Clericus logo"
-                      />
-                      {/* <div className="simple-text icon">
-                      <div className="logo-container">
-                        <div className="triangle-left"></div>
-                        <div className="triangle-left-inner"></div>
-                        <div className="triangle-right"></div>
-                        <div className="triangle-right-inner"></div>
-                      </div>
-                    </div> */}
-                      <div className="simple-text logo-normal">Clericus</div>
-                    </div>
-                  </CardHeader>
+    const cryptoPass = crypto.SHA1(password).toString();
+    dispatch(login(email, cryptoPass));
+    return false;
+  };
 
-                  <Form onSubmit={(e) => this.postLogin(e)}>
-                    <CardBody>
-                      {errorContainer}
-                      <FormGroup>
-                        <Label for="email">Email</Label>
-                        <Input
-                          type="email"
-                          name="email"
-                          id="email"
-                          placeholder="Email..."
-                          onChange={(e) => this.handleChange(e)}
-                          invalid={emailValid}
-                        />
-                      </FormGroup>
-                      <FormGroup>
-                        <Label for="password">Password</Label>
-                        <Input
-                          type="password"
-                          name="password"
-                          id="password"
-                          placeholder="Password..."
-                          onChange={(e) => this.handleChange(e)}
-                        />
-                      </FormGroup>
-                    </CardBody>
-                    <CardFooter>
-                      <Button block onClick={(e) => this.postLogin(e)}>
-                        Submit
-                      </Button>
-                    </CardFooter>
-                  </Form>
-                </Card>
-              </Col>
-            </Row>
-          </Container>
-        </div>
+  useEffect(() => {
+    if (loginError) {
+      setError({
+        loginError,
+        loginErrorText,
+      });
+    }
+  }, [loginError, loginErrorText]);
+
+  useEffect(() => {
+    if (status !== null && status === 'unauthorised') {
+      setError({
+        loginError: true,
+        loginErrorText: ['Unauthorised access. Please login to continue'],
+      });
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (sessionActive) {
+      navigate('/');
+    }
+  }, [sessionActive, navigate]);
+
+  const errorClass = error.loginError ? '' : 'hidden';
+  const errorText = error.loginErrorText.map((t) => <span key={t}>{t}</span>);
+  const errorContainer = (
+    <Alert style={{ margin: '20px 0' }} className={errorClass} color="danger">
+      <i className="fa fa-times" /> {errorText}
+    </Alert>
+  );
+
+  return (
+    <div className="wrapper">
+      <div className="login-container">
+        <Container>
+          <Row>
+            <Col sm="12" md={{ size: 6, offset: 3 }}>
+              <Card className="login-box">
+                <CardHeader>
+                  <div className="login-logo">
+                    <img
+                      src={logosrc}
+                      className="login-logo-img"
+                      alt="Clericus logo"
+                    />
+                    <div className="simple-text logo-normal">Clericus</div>
+                  </div>
+                </CardHeader>
+
+                <Form onSubmit={(e) => postLogin(e)}>
+                  <CardBody>
+                    {errorContainer}
+                    <FormGroup>
+                      <Label for="email">Email</Label>
+                      <Input
+                        type="email"
+                        name="email"
+                        id="email"
+                        placeholder="Email..."
+                        onChange={(e) => handleChange(e)}
+                        invalid={emailInvalid}
+                      />
+                    </FormGroup>
+                    <FormGroup>
+                      <Label for="password">Password</Label>
+                      <Input
+                        type="password"
+                        name="password"
+                        id="password"
+                        placeholder="Password..."
+                        onChange={(e) => handleChange(e)}
+                      />
+                    </FormGroup>
+                  </CardBody>
+                  <CardFooter>
+                    <Button block onClick={(e) => postLogin(e)}>
+                      Submit
+                    </Button>
+                  </CardFooter>
+                </Form>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
       </div>
-    );
-  }
+    </div>
+  );
 }
 
-Login.defaultProps = {
-  loginError: false,
-  loginErrorText: [],
-  sessionActive: false,
-  login: () => {},
-};
-Login.propTypes = {
-  loginError: PropTypes.bool,
-  loginErrorText: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  sessionActive: PropTypes.bool,
-  login: PropTypes.func,
-};
-
-export default compose(connect(mapStateToProps, mapDispatchToProps))(Login);
+export default Login;

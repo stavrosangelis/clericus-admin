@@ -11,7 +11,7 @@ import {
   temporalProperties,
 } from './entity.properties';
 
-const EntityProperties = (props) => {
+function EntityProperties(props) {
   const { type, property, setProperty } = props;
 
   let properties = [];
@@ -76,7 +76,7 @@ const EntityProperties = (props) => {
       {options}
     </Input>
   );
-};
+}
 
 EntityProperties.defaultProps = {
   type: '',

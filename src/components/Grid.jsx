@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 
 import GridItem from './GridItem';
 
-const GridComponent = (props) => {
+function GridComponent(props) {
   const { columns, items, listIndex, type, toggleSelected } = props;
 
   const gridBody = items.map((item, i) => {
@@ -25,7 +25,7 @@ const GridComponent = (props) => {
       <div className="row">{gridBody}</div>
     </div>
   );
-};
+}
 
 GridComponent.defaultProps = {
   columns: [],

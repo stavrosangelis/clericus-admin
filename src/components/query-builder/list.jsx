@@ -27,7 +27,7 @@ const TemporalRow = lazy(() => import('./temporal/row'));
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const List = () => {
+function List() {
   // redux store
   const dispatch = useDispatch();
   const entityType = useSelector((state) => state.queryBuildType);
@@ -177,7 +177,7 @@ const List = () => {
     </Suspense>
   );
 
-  const updateOrdering = (value) => {
+  const updateSort = (value) => {
     const paginationParamsCopy = { ...paginationParams };
     const direction =
       paginationParamsCopy.orderField === value
@@ -197,7 +197,7 @@ const List = () => {
         <EventsColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -223,7 +223,7 @@ const List = () => {
         <OrganisationsColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -249,7 +249,7 @@ const List = () => {
         <PeopleColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -275,7 +275,7 @@ const List = () => {
         <ResourcesColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -301,7 +301,7 @@ const List = () => {
         <SpatialColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -327,7 +327,7 @@ const List = () => {
         <TemporalColumns
           allChecked={allChecked}
           toggleSelectedAll={toggleSelectedAll}
-          updateOrdering={updateOrdering}
+          updateSort={updateSort}
           orderField={paginationParams.orderField}
           orderDesc={paginationParams.orderDesc}
         />
@@ -394,6 +394,6 @@ const List = () => {
       <div className="col-12">{content}</div>
     </div>
   );
-};
+}
 
 export default List;

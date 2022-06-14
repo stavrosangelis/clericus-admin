@@ -10,11 +10,11 @@ import {
   Spinner,
 } from 'reactstrap';
 import axios from 'axios';
-import Breadcrumbs from '../components/breadcrumbs';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const Settings = () => {
+function Settings() {
   const [loading, setLoading] = useState(true);
   const defaultForm = {
     email: '',
@@ -145,7 +145,7 @@ const Settings = () => {
                   value={formData.email}
                 />
               </FormGroup>
-              <div className="text-right">
+              <div className="text-end">
                 {/* <Button type="button" className="pull-left" color="primary" outline size="sm" onClick={()=>testConfiguration()}>Test settings</Button> */}
                 <Button type="submit" outline size="sm">
                   {updateBtn}
@@ -172,5 +172,5 @@ const Settings = () => {
       {content}
     </div>
   );
-};
+}
 export default Settings;

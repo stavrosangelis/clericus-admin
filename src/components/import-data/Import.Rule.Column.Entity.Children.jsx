@@ -4,7 +4,7 @@ import Select from 'react-select';
 import { FormGroup, Input, Button } from 'reactstrap';
 import EntityPropertiesChildren from './Import.Rule.Entity.Properties.Children';
 
-const ColumnEntityChildren = (props) => {
+function ColumnEntityChildren(props) {
   const {
     columns,
     column,
@@ -232,7 +232,7 @@ const ColumnEntityChildren = (props) => {
       <div className="children-rows">{rows}</div>
     </div>
   );
-};
+}
 
 ColumnEntityChildren.defaultProps = {
   column: null,

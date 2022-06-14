@@ -8,55 +8,55 @@ import {
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { parseReferenceLabels, parseReferenceTypes } from '../../helpers';
-import AddItem from './add-item';
 
-const AddRelation = (props) => {
+import AddItem from './Add.item';
+
+function AddRelation(props) {
   const { item, reload, type } = props;
   // redux
-  const events = useSelector((state) => state.relationsEvents);
-  const eventsLoading = useSelector((state) => state.relationsEventsLoading);
+  const {
+    entitiesLoaded,
+    relationsEvents: events,
+    relationsEventsLoading: eventsLoading,
+    relationsOrganisations: organisations,
+    relationsOrganisationsLoading: organisationsLoading,
+    relationsPeople: people,
+    relationsPeopleLoading: peopleLoading,
+    relationsResources: resources,
+    relationsResourcesLoading: resourcesLoading,
+    relationsSpatial: spatial,
+    relationsSpatialLoading: spatialLoading,
+    relationsTemporal: temporal,
+    relationsTemporalLoading: temporalLoading,
+  } = useSelector((state) => state);
 
-  const organisations = useSelector((state) => state.relationsOrganisations);
-  const organisationsLoading = useSelector(
-    (state) => state.relationsOrganisationsLoading
-  );
-
-  const people = useSelector((state) => state.relationsPeople);
-  const peopleLoading = useSelector((state) => state.relationsPeopleLoading);
-
-  const resources = useSelector((state) => state.relationsResources);
-  const resourcesLoading = useSelector(
-    (state) => state.relationsResourcesLoading
-  );
-
-  const spatial = useSelector((state) => state.relationsSpatial);
-  const spatialLoading = useSelector((state) => state.relationsSpatialLoading);
-  const temporal = useSelector((state) => state.relationsTemporal);
-  const temporalLoading = useSelector(
-    (state) => state.relationsTemporalLoading
-  );
   const mainEntity = useSelector((state) => {
-    if (type === 'resource') {
-      return state.resourceEntity;
+    let entity = null;
+    switch (type) {
+      case 'event':
+        entity = state.eventEntity;
+        break;
+      case 'organisation':
+        entity = state.organisationEntity;
+        break;
+      case 'person':
+        entity = state.personEntity;
+        break;
+      case 'resource':
+        entity = state.resourceEntity;
+        break;
+      case 'spatial':
+        entity = state.spatialEntity;
+        break;
+      case 'temporal':
+        entity = state.temporalEntity;
+        break;
+      default:
+        entity = null;
+        break;
     }
-    if (type === 'person') {
-      return state.personEntity;
-    }
-    if (type === 'organisation') {
-      return state.organisationEntity;
-    }
-    if (type === 'event') {
-      return state.eventEntity;
-    }
-    if (type === 'temporal') {
-      return state.temporalEntity;
-    }
-    if (type === 'spatial') {
-      return state.spatialEntity;
-    }
-    return false;
+    return entity;
   });
-  const entitiesLoaded = useSelector((state) => state.entitiesLoaded);
 
   // state
   const [modalsVisible, setModalsVisible] = useState({
@@ -105,8 +105,17 @@ const AddRelation = (props) => {
   let resourceVisible = '';
   let temporalVisible = '';
   let spatialVisible = '';
+
+  const {
+    eventModal,
+    organisationModal,
+    personModal,
+    resourceModal,
+    temporalModal,
+    spatialModal,
+  } = modalsVisible;
   let eventModalHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <AddItem
         item={item}
         blockType="event"
@@ -117,13 +126,13 @@ const AddRelation = (props) => {
         reload={reload}
         toggleModal={toggleModal}
         modalType="eventModal"
-        visible={modalsVisible.eventModal}
+        visible={eventModal}
       />
     </Suspense>
   );
 
   let organisationModalHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <AddItem
         item={item}
         blockType="organisation"
@@ -134,13 +143,13 @@ const AddRelation = (props) => {
         reload={reload}
         toggleModal={toggleModal}
         modalType="organisationModal"
-        visible={modalsVisible.organisationModal}
+        visible={organisationModal}
       />
     </Suspense>
   );
 
   let personModalHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <AddItem
         item={item}
         blockType="person"
@@ -151,13 +160,13 @@ const AddRelation = (props) => {
         reload={reload}
         toggleModal={toggleModal}
         modalType="personModal"
-        visible={modalsVisible.personModal}
+        visible={personModal}
       />
     </Suspense>
   );
 
   let resourceModalHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <AddItem
         item={item}
         blockType="resource"
@@ -168,30 +177,13 @@ const AddRelation = (props) => {
         reload={reload}
         toggleModal={toggleModal}
         modalType="resourceModal"
-        visible={modalsVisible.resourceModal}
-      />
-    </Suspense>
-  );
-
-  let temporalModalHTML = (
-    <Suspense fallback={[]}>
-      <AddItem
-        item={item}
-        blockType="temporal"
-        loading={temporalLoading}
-        modalItems={temporal}
-        type={type}
-        refTypes={referencesTypes}
-        reload={reload}
-        toggleModal={toggleModal}
-        modalType="temporalModal"
-        visible={modalsVisible.temporalModal}
+        visible={resourceModal}
       />
     </Suspense>
   );
 
   let spatialModalHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <AddItem
         item={item}
         blockType="spatial"
@@ -202,7 +194,24 @@ const AddRelation = (props) => {
         reload={reload}
         toggleModal={toggleModal}
         modalType="spatialModal"
-        visible={modalsVisible.spatialModal}
+        visible={spatialModal}
+      />
+    </Suspense>
+  );
+
+  let temporalModalHTML = (
+    <Suspense fallback={null}>
+      <AddItem
+        item={item}
+        blockType="temporal"
+        loading={temporalLoading}
+        modalItems={temporal}
+        type={type}
+        refTypes={referencesTypes}
+        reload={reload}
+        toggleModal={toggleModal}
+        modalType="temporalModal"
+        visible={temporalModal}
       />
     </Suspense>
   );
@@ -233,7 +242,7 @@ const AddRelation = (props) => {
   }
 
   return (
-    <div>
+    <div className="add-references-container">
       <UncontrolledButtonDropdown className="add-reference-group">
         <DropdownToggle className="add-reference-btn" outline color="secondary">
           <i className="fa fa-plus" />
@@ -288,7 +297,7 @@ const AddRelation = (props) => {
       {spatialModalHTML}
     </div>
   );
-};
+}
 
 AddRelation.defaultProps = {
   type: '',

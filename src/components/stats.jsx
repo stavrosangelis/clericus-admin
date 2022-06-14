@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const Stats = (props) => {
+function Stats(props) {
   const { children } = props;
   const stats = [];
   for (let i = 0; i < children.length; i += 1) {
@@ -12,7 +12,7 @@ const Stats = (props) => {
     }
   }
   return <div className="stats">{stats}</div>;
-};
+}
 
 Stats.defaultProps = {
   children: [],

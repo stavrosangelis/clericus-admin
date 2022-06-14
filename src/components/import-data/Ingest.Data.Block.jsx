@@ -15,8 +15,9 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { putData } from '../../helpers';
 
-const IngestDataBlock = (props) => {
+function IngestDataBlock(props) {
   const { _id, ingestionStatus, reload } = props;
+  const [ingesting, setIngesting] = useState(false);
 
   const [ingestModalVisible, setIngestModalVisible] = useState(false);
   const [open, setOpen] = useState(true);
@@ -30,11 +31,17 @@ const IngestDataBlock = (props) => {
   };
 
   const ingestData = async () => {
+    if (ingesting) {
+      return false;
+    }
+    setIngesting(true);
     await putData(`import-plan-ingest`, { _id });
     toggleIngestModal();
     setTimeout(() => {
       reload();
+      setIngesting(false);
     }, 1000);
+    return true;
   };
   const ingestBtnVisible = Number(ingestionStatus.status) === 0 ? '' : 'hidden';
   const ingestModal = (
@@ -61,7 +68,15 @@ const IngestDataBlock = (props) => {
         >
           Cancel
         </Button>
-        <Button size="sm" color="success" onClick={() => ingestData()}>
+        <Button
+          size="sm"
+          color="success"
+          onClick={() => ingestData()}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            return false;
+          }}
+        >
           Continue <i className="fa fa-right-arrow" />
         </Button>
       </ModalFooter>
@@ -147,7 +162,7 @@ const IngestDataBlock = (props) => {
       {ingestModal}
     </div>
   );
-};
+}
 
 IngestDataBlock.propTypes = {
   _id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,

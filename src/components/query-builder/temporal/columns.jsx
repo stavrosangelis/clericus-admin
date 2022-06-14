@@ -1,14 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const Columns = (props) => {
-  const {
-    allChecked,
-    toggleSelectedAll,
-    updateOrdering,
-    orderField,
-    orderDesc,
-  } = props;
+function Columns(props) {
+  const { allChecked, toggleSelectedAll, updateSort, orderField, orderDesc } =
+    props;
 
   let labelOrderIcon = [];
   let startDateOrderIcon = [];
@@ -66,38 +61,29 @@ const Columns = (props) => {
         </div>
       </th>
       <th style={{ width: '40px' }}>#</th>
-      <th className="ordering-label" onClick={() => updateOrdering('label')}>
+      <th className="ordering-label" onClick={() => updateSort('label')}>
         Label {labelOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('startDate')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('startDate')}>
         Start date {startDateOrderIcon}
       </th>
-      <th className="ordering-label" onClick={() => updateOrdering('endDate')}>
+      <th className="ordering-label" onClick={() => updateSort('endDate')}>
         End date {endDateOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('createdAt')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('createdAt')}>
         Created {createdOrderIcon}
       </th>
-      <th
-        className="ordering-label"
-        onClick={() => updateOrdering('updatedAt')}
-      >
+      <th className="ordering-label" onClick={() => updateSort('updatedAt')}>
         Updated {updatedOrderIcon}
       </th>
       <th style={{ width: '30px' }} aria-label="edit" />
     </tr>
   );
-};
+}
 Columns.defaultProps = {
   allChecked: false,
   toggleSelectedAll: () => {},
-  updateOrdering: () => {},
+  updateSort: () => {},
   orderField: '',
   orderDesc: false,
 };
@@ -105,7 +91,7 @@ Columns.defaultProps = {
 Columns.propTypes = {
   allChecked: PropTypes.bool,
   toggleSelectedAll: PropTypes.func,
-  updateOrdering: PropTypes.func,
+  updateSort: PropTypes.func,
   orderField: PropTypes.string,
   orderDesc: PropTypes.bool,
 };

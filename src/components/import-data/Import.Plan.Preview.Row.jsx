@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
-const ImportPlanPreviewRow = (props) => {
+function ImportPlanPreviewRow(props) {
   const { columns, row } = props;
 
   const [positions, setPositions] = useState([]);
@@ -91,7 +91,9 @@ const ImportPlanPreviewRow = (props) => {
               style={{ minWidth: `${width}px`, maxWidth: `${width}px` }}
             >
               <div className="th-content-container">
-                <div className="th-content">{c}</div>
+                <div className="th-content">
+                  {i} {c}
+                </div>
                 <div
                   className="col-resize"
                   onDragStart={(e) => {
@@ -128,7 +130,7 @@ const ImportPlanPreviewRow = (props) => {
       </table>
     </div>
   );
-};
+}
 
 ImportPlanPreviewRow.propTypes = {
   columns: PropTypes.array.isRequired,

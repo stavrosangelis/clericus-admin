@@ -2,6 +2,7 @@ import React from 'react';
 import { Spinner } from 'reactstrap';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { createBrowserHistory } from 'history';
 
 const domain = process.env.REACT_APP_DOMAIN;
 const APIPath = process.env.REACT_APP_APIPATH;
@@ -47,6 +48,44 @@ export const getThumbnailURL = (item) => {
     }
   }
   return thumbnailPath;
+};
+
+export const getThumbnailsURL = (item = null) => {
+  if (
+    item === null ||
+    typeof item.resources === 'undefined' ||
+    item.resources.length === 0
+  ) {
+    return [];
+  }
+  const { resources } = item;
+  const thumbnailsResources = resources.filter(
+    (i) => i.term.label === 'hasRepresentationObject'
+  );
+  const thumbPaths =
+    thumbnailsResources.map((t) => {
+      let thumbnailPath = null;
+      const { ref = null } = t;
+      if (ref !== null) {
+        const { paths = [] } = ref;
+        const { length = 0 } = paths;
+        if (length > 0) {
+          let thumbnailPaths = paths;
+          if (typeof thumbnailPaths[0] === 'string') {
+            thumbnailPaths = paths.map((p) => JSON.parse(p));
+            if (typeof thumbnailPaths[0] === 'string') {
+              thumbnailPaths = thumbnailPaths.map((p) => JSON.parse(p));
+            }
+          }
+          const thumbnailPathFilter = thumbnailPaths.filter(
+            (i) => i.pathType === 'thumbnail'
+          );
+          thumbnailPath = `${domain}/${thumbnailPathFilter[0].path}`;
+        }
+      }
+      return thumbnailPath;
+    }) || [];
+  return thumbPaths;
 };
 
 export const getPersonThumbnailURL = (person) => {
@@ -344,7 +383,11 @@ export const renderLoader = () => (
   </div>
 );
 
-export const getData = async (urlParam = '', params = null) => {
+export const getData = async (
+  urlParam = '',
+  params = null,
+  controller = null
+) => {
   if (urlParam === '') {
     return [];
   }
@@ -354,6 +397,9 @@ export const getData = async (urlParam = '', params = null) => {
     url,
     crossDomain: true,
   };
+  if (controller !== null) {
+    parameters.signal = controller.signal;
+  }
   if (params !== null) {
     parameters.params = params;
   }
@@ -588,3 +634,5 @@ export const returnLetter = (idx) => {
   }
   return output;
 };
+
+export const myHistory = createBrowserHistory({ window });

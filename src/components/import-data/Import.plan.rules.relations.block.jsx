@@ -18,7 +18,7 @@ import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { getData, putData, deleteData } from '../../helpers';
 
-const ImportPlanRulesRelations = (props) => {
+function ImportPlanRulesRelations(props) {
   // props
   const { columns, _id, items, reloadFn, rules } = props;
 
@@ -132,7 +132,7 @@ const ImportPlanRulesRelations = (props) => {
           type: item.srcType,
         };
         const newSelectedTargetNode = {
-          value: item.srcId,
+          value: item.targetId,
           label: newSelectedTargetNodeFind.label,
           type: item.targetType,
         };
@@ -350,7 +350,7 @@ const ImportPlanRulesRelations = (props) => {
 
   const addNewTopBtn =
     items.length > 2 ? (
-      <div className="text-right">
+      <div className="text-end">
         <Button color="info" size="xs" onClick={() => toggleModal()}>
           Add new <i className="fa fa-plus" />
         </Button>
@@ -384,7 +384,7 @@ const ImportPlanRulesRelations = (props) => {
             <ol className="links-list" id="links-list" ref={listRef}>
               {itemsOutput}
             </ol>
-            <div className="text-right">
+            <div className="text-end">
               <Button color="info" size="xs" onClick={() => toggleModal()}>
                 Add new <i className="fa fa-plus" />
               </Button>
@@ -462,7 +462,7 @@ const ImportPlanRulesRelations = (props) => {
       </Modal>
     </div>
   );
-};
+}
 
 ImportPlanRulesRelations.propTypes = {
   columns: PropTypes.array.isRequired,

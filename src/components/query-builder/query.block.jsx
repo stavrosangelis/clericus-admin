@@ -19,7 +19,7 @@ import { outputDate, queryDate } from '../../helpers';
 
 const APIPath = process.env.REACT_APP_APIPATH;
 
-const QueryBlock = () => {
+function QueryBlock() {
   // redux store
   const dispatch = useDispatch();
   const open = useSelector((rstate) => rstate.queryBlockOpen);
@@ -997,6 +997,6 @@ const QueryBlock = () => {
       />
     </div>
   );
-};
+}
 
 export default QueryBlock;

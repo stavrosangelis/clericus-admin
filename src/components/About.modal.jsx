@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, ModalHeader, ModalBody } from 'reactstrap';
 import PropTypes from 'prop-types';
 
-const AboutModal = (props) => {
+function AboutModal(props) {
   const { visible, toggle } = props;
   return (
     <Modal isOpen={visible} toggle={toggle} size="lg">
@@ -36,7 +36,7 @@ const AboutModal = (props) => {
       </ModalBody>
     </Modal>
   );
-};
+}
 
 AboutModal.defaultProps = {
   visible: false,

@@ -1,10 +1,9 @@
 import { defaultState } from './default-state';
 
-const GENERIC_UPDATE = 'GENERIC_UPDATE';
 const initialState = defaultState;
-
+// eslint-disable-next-line
 function rootReducer(state = initialState, action) {
-  if (action.type === GENERIC_UPDATE) {
+  if (action.type === 'GENERIC_UPDATE') {
     return { ...state, ...action.payload };
   }
   return state;

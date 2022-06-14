@@ -9,7 +9,7 @@ import ColumnEntities from './Import.Rule.Column.Entities';
   }
 */
 
-const Rule = (props) => {
+function Rule(props) {
   // props
   const { columns, ruleValues, updateValues } = props;
   // state
@@ -85,7 +85,7 @@ const Rule = (props) => {
       </div>
     </div>
   );
-};
+}
 
 Rule.defaultProps = {
   columns: [],

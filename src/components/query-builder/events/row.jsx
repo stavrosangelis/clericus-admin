@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 
-const Row = (props) => {
+function Row(props) {
   // props
   const { item, page, index, limit, toggleSelected } = props;
 
@@ -138,7 +138,7 @@ const Row = (props) => {
       </td>
     </tr>
   );
-};
+}
 
 Row.defaultProps = {
   item: {},

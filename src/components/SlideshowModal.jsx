@@ -13,7 +13,7 @@ import {
 } from 'reactstrap';
 import PropTypes from 'prop-types';
 import { getData, putData, deleteData } from '../helpers';
-import ArticleImageBrowser from './article-image-browser';
+import ArticleImageBrowser from './Article.image.browser';
 
 const defaultState = {
   _id: null,
@@ -25,7 +25,7 @@ const defaultState = {
   image: '',
 };
 
-const SlideshowModal = (props) => {
+function SlideshowModal(props) {
   // props
   const { _id, visible, toggle, reload } = props;
 
@@ -222,7 +222,7 @@ const SlideshowModal = (props) => {
         <ModalHeader toggle={() => toggle(null)}>{modalTitle}</ModalHeader>
         <ModalBody>
           <Form onSubmit={formSubmit}>
-            <div className="text-right">
+            <div className="text-end">
               <ButtonGroup>
                 <Button
                   size="sm"
@@ -295,7 +295,12 @@ const SlideshowModal = (props) => {
           </Form>
           <FormGroup>
             <Label>Image</Label>
-            <Button type="button" onClick={() => toggleImage()} size="sm">
+            <Button
+              type="button"
+              onClick={() => toggleImage()}
+              size="xs"
+              style={{ marginLeft: '5px' }}
+            >
               Select image
             </Button>
             <div className="img-preview-container">{imagePreview}</div>
@@ -321,7 +326,7 @@ const SlideshowModal = (props) => {
       {deleteModal}
     </div>
   );
-};
+}
 SlideshowModal.defaultProps = {
   _id: null,
 };

@@ -4,7 +4,7 @@ import { FormGroup, Input, Button } from 'reactstrap';
 import { useSelector } from 'react-redux';
 import EntityProperties from './Import.Rule.Entity.Properties';
 
-const ColumnEntity = (props) => {
+function ColumnEntity(props) {
   const { type, columns, column, index, update, remove, properties } = props;
   const [columnValue, setColumnValue] = useState('');
   const [columnType, setColumnType] = useState('');
@@ -188,7 +188,7 @@ const ColumnEntity = (props) => {
       <div className="col-2">{removeBlockElem}</div>
     </div>
   );
-};
+}
 
 ColumnEntity.defaultProps = {
   type: '',
