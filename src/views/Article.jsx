@@ -88,6 +88,7 @@ export default function Article() {
           method: 'get',
           url,
           crossDomain: true,
+          signal: controller.signal,
         })
           .then((response) => response.data.data)
           .catch((error) => {

@@ -766,6 +766,8 @@ header {
   display: block;
   position: relative;
   overflow: hidden;
+  text-align: center;
+  background-color: #fff;
 }
 .thumbnail-person-edit {
   position: absolute;
@@ -1365,28 +1367,43 @@ textarea.form-control {
   background-color: #ccc;
 }
 .ref-item {
-  display: block;
+  display: flex;
   position: relative;
   padding: 2px 20px 2px 5px;
+  flex-wrap: nowrap;
 }
 .ref-item:hover {
   background-color: #f9f9f9;
 }
-.delete-ref {
-  width: 20px;
+.ref-label {
+  flex: 1;
+  font-size: 14px;
+}
+.ref-btn {
+  width: 24px;
   height: 20px;
-  text-align: center;
   line-height: 20px;
-  position: absolute;
-  right: 0;
-  top: 2px;
+  text-align: center;
+  color: $lighter-blue;
+  font-size: 18px;
+}
+.ref-btn:hover {
+  color: $light-blue;
+}
+.ref-btn:active {
+  color: $dark-blue;
+}
+.ref-btn > i {
   cursor: pointer;
 }
+.delete-ref {
+  color: $danger;
+}
 .delete-ref:hover {
-  color: #d11f1f;
+  color: $danger-hover;
 }
 .delete-ref:active {
-  color: #b51717;
+  color: $danger-active;
 }
 .table > thead > tr > th, .table > tfoot > tr > th {
   text-transform: none;
@@ -1460,16 +1477,6 @@ textarea.form-control {
   border-bottom-color: #9b8cf2;
   position: relative;
   top: -8px;*/
-}
-.graph-legend .icon.diamond:after{
-  /*content: '';
-  position: absolute;
-  left: -8px;
-  top: 8px;
-  width: 0;
-  height: 0;
-  border: 8px solid transparent;
-  border-top-color: #9b8cf2;*/
 }
 .graph-legend .icon.wye {
   background-color: #5dc910;
@@ -2559,7 +2566,7 @@ textarea.form-control {
 .filter-block-options > div {
   padding: 5px 10px;
   border-bottom: 1px solid #ddd;
-  cursorL: default;
+  cursor: default;
   user-select: none;
 }
 .filter-block-options > div:last-child {

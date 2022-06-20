@@ -15,18 +15,15 @@ import {
   ModalBody,
   ModalFooter,
 } from 'reactstrap';
-import { Link } from 'react-router-dom';
-import PropTypes from 'prop-types';
+import { Link, useParams } from 'react-router-dom';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
-const APIPath = process.env.REACT_APP_APIPATH;
+const { REACT_APP_APIPATH: APIPath } = process.env;
 
-function ParseClassPiece(props) {
-  // props
-  const { match, location } = props;
-  const fileName = match.params?.fileName || '';
+export default function ParseClassPiece() {
+  const { fileName } = useParams();
   const [loading, setLoading] = useState(true);
-  console.log(location);
+
   // state
   const defaultState = {
     loading: true,
@@ -154,7 +151,7 @@ function ParseClassPiece(props) {
       setLoading(false);
       loadFile();
     }
-  }, [loading, props, loadFile, loadFaces]);
+  }, [loading, loadFile, loadFaces]);
 
   useEffect(() => {
     if (state.redirect) {
@@ -417,19 +414,3 @@ function ParseClassPiece(props) {
     </div>
   );
 }
-
-ParseClassPiece.defaultProps = {
-  location: {},
-  match: {},
-};
-
-ParseClassPiece.propTypes = {
-  location: PropTypes.object,
-  match: PropTypes.shape({
-    params: PropTypes.shape({
-      fileName: PropTypes.string,
-    }),
-  }),
-};
-
-export default ParseClassPiece;

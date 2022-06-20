@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getData, myHistory } from '../helpers';
 
 const GENERIC_UPDATE = 'GENERIC_UPDATE';
-const APIPath = process.env.REACT_APP_APIPATH;
+const { REACT_APP_APIPATH: APIPath, REACT_APP_BASENAME } = process.env;
 
 export function toggleNav() {
   return (dispatch, getState) => {
@@ -47,6 +47,44 @@ export function loadSettings() {
   };
 }
 
+export function checkFirstSession() {
+  return async (dispatch) => {
+    const token = await new Promise((resolve) => {
+      const newToken = localStorage.getItem('token') || null;
+      resolve(newToken);
+    });
+    const responseData = await axios({
+      method: 'post',
+      url: `${APIPath}admin-session`,
+      crossDomain: true,
+      data: { token },
+    })
+      .then((response) => response.data)
+      .catch(() => ({
+        status: false,
+        error: 'Unauthorised',
+      }));
+    let payload = {};
+    if (!responseData.status) {
+      await new Promise((resolve) => {
+        resolve(localStorage.setItem('token', null));
+      });
+      payload = {
+        sessionActive: false,
+        sessionUser: null,
+      };
+    } else {
+      payload = {
+        sessionActive: true,
+      };
+    }
+    dispatch({
+      type: GENERIC_UPDATE,
+      payload,
+    });
+  };
+}
+
 export function checkSession() {
   return async (dispatch) => {
     const token = await new Promise((resolve) => {
@@ -69,7 +107,7 @@ export function checkSession() {
       await new Promise((resolve) => {
         resolve(localStorage.setItem('token', null));
       });
-      myHistory.replace(`/login/unauthorised`);
+      myHistory.replace(`${REACT_APP_BASENAME}/login/unauthorised`);
       payload = {
         sessionActive: false,
         sessionUser: null,
@@ -119,15 +157,19 @@ export function login(email, password) {
       axios.defaults.headers.common.Authorization = `Bearer ${responseData.data.token}`;
       payload = {
         loginError: false,
-        loginErrorText: '',
+        loginErrorText: [],
         sessionActive: true,
         sessionUser: responseData.data,
       };
-      myHistory.replace(`/`);
+      const path =
+        REACT_APP_BASENAME !== '' && REACT_APP_BASENAME !== '/'
+          ? `${REACT_APP_BASENAME}/`
+          : '';
+      myHistory.replace(path);
     } else {
       payload = {
         loginError: true,
-        loginErrorText: responseData.error,
+        loginErrorText: responseData.errors,
         sessionActive: false,
         sessionUser: null,
       };
@@ -156,7 +198,11 @@ export function logout() {
     await new Promise((resolve) => {
       resolve(localStorage.setItem('user', null));
     });
-    myHistory.replace(`/`);
+    const path =
+      REACT_APP_BASENAME !== '' && REACT_APP_BASENAME !== '/'
+        ? `${REACT_APP_BASENAME}/`
+        : '';
+    myHistory.replace(path);
     const payload = {
       sessionActive: false,
       sessionUser: null,

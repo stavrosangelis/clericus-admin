@@ -34,6 +34,7 @@ export default function ViewPerson(props) {
   const [item, setItem] = useState({
     description: '',
     firstName: '',
+    gender: '',
     honorificPrefix: [],
     lastName: '',
     middleName: '',
@@ -59,7 +60,9 @@ export default function ViewPerson(props) {
         alternateAppelations = [],
         descriptionVal = '',
         firstName = '',
+        gender = '',
         honorificPrefix = '',
+        nameSuffix = '',
         lastName = '',
         middleName = '',
         personType = 'Clergy',
@@ -71,7 +74,9 @@ export default function ViewPerson(props) {
         alternateAppelations,
         description,
         firstName,
+        gender,
         honorificPrefix,
+        nameSuffix,
         lastName,
         middleName,
         personType,
@@ -121,7 +126,9 @@ export default function ViewPerson(props) {
       const itemData = { ...person };
       itemData.description = item.description;
       itemData.firstName = item.firstName;
+      itemData.gender = item.gender;
       itemData.honorificPrefix = item.honorificPrefix;
+      itemData.nameSuffix = item.nameSuffix;
       itemData.lastName = item.lastName;
       itemData.middleName = item.middleName;
       itemData.personType = item.personType;
@@ -238,6 +245,22 @@ export default function ViewPerson(props) {
     setItem(copy);
   };
 
+  const addNS = () => {
+    const copy = { ...item };
+    const { nameSuffix = [] } = copy;
+    nameSuffix.push('');
+    copy.nameSuffix = nameSuffix;
+    setItem(copy);
+  };
+
+  const removeNS = (i) => {
+    const copy = { ...item };
+    const { nameSuffix = [] } = copy;
+    nameSuffix.splice(i, 1);
+    copy.nameSuffix = nameSuffix;
+    setItem(copy);
+  };
+
   const detailsOpenActive = detailsOpen ? ' active' : '';
 
   const { text: errorText, visible: errorVisible } = updateError;
@@ -250,7 +273,9 @@ export default function ViewPerson(props) {
     alternateAppelations = [],
     description = '',
     firstName = '',
+    gender = '',
     honorificPrefix = [],
+    nameSuffix = [],
     lastName = '',
     middleName = '',
     personType = 'Clergy',
@@ -348,6 +373,46 @@ export default function ViewPerson(props) {
         })
       : null;
 
+  const nameSuffixInputs =
+    typeof nameSuffix !== 'string'
+      ? nameSuffix.map((h, i) => {
+          const key = `a${i}`;
+          const nsItem =
+            i === 0 ? (
+              <Input
+                style={{ marginBottom: '5px' }}
+                key={key}
+                type="text"
+                name="nameSuffix"
+                placeholder="Person suffix..."
+                value={nameSuffix[i]}
+                onChange={(e) => handleMultipleChange(e, i)}
+              />
+            ) : (
+              <InputGroup key={key} style={{ marginBottom: '5px' }}>
+                <Input
+                  type="text"
+                  name="nameSuffix"
+                  placeholder="Person suffix..."
+                  value={nameSuffix[i]}
+                  onChange={(e) => handleMultipleChange(e, i)}
+                />
+                <Button
+                  type="button"
+                  color="info"
+                  outline
+                  onClick={() => removeNS(i)}
+                >
+                  <b>
+                    <i className="fa fa-minus" />
+                  </b>
+                </Button>
+              </InputGroup>
+            );
+          return nsItem;
+        })
+      : null;
+
   return (
     <Card>
       <CardBody>
@@ -433,6 +498,21 @@ export default function ViewPerson(props) {
                 onChange={handleChange}
               />
             </FormGroup>
+            <FormGroup>
+              <Label>Suffix</Label>
+              {nameSuffixInputs}
+              <div className="text-end">
+                <Button
+                  type="button"
+                  color="info"
+                  outline
+                  size="xs"
+                  onClick={() => addNS()}
+                >
+                  Add new <i className="fa fa-plus" />
+                </Button>
+              </div>
+            </FormGroup>
             {alternateAppellationsBlock}
             <FormGroup>
               <Label>Description</Label>
@@ -443,6 +523,20 @@ export default function ViewPerson(props) {
                 value={description}
                 onChange={handleChange}
               />
+            </FormGroup>
+            <FormGroup>
+              <Label>Gender</Label>
+              <Input
+                type="select"
+                name="gender"
+                onChange={handleChange}
+                value={gender}
+              >
+                <option value="">--</option>
+                <option value="male">male</option>
+                <option value="female">female</option>
+                <option value="other">other</option>
+              </Input>
             </FormGroup>
             <FormGroup>
               <Label>Type</Label>

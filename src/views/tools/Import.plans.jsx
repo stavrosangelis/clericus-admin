@@ -81,7 +81,7 @@ function ImportPlans() {
     {
       props: ['label'],
       label: 'Label',
-      link: { element: 'self', path: 'import-plan' },
+      link: { element: 'self', path: '/import-plan' },
       order: true,
       orderLabel: 'label',
     },
@@ -102,7 +102,7 @@ function ImportPlans() {
     {
       props: ['details'],
       label: 'Details',
-      link: { element: 'self', path: 'import-plan' },
+      link: { element: 'self', path: '/import-plan' },
       order: false,
       align: 'center',
     },

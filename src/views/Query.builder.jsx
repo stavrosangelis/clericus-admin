@@ -9,23 +9,23 @@ const QueryBlock = lazy(() =>
 );
 const List = lazy(() => import('../components/query-builder/list'));
 
+const heading = 'Query Builder';
+const breadcrumbsItems = [
+  { label: heading, icon: 'pe-7s-help1', active: true, path: '' },
+];
 function QueryBuilder() {
   const dispatch = useDispatch();
-  const heading = 'Query Builder';
-  const breadcrumbsItems = [
-    { label: heading, icon: 'pe-7s-help1', active: true, path: '' },
-  ];
   const queryBlockOpen = useSelector((state) => state.queryBlockOpen);
   const collapseOpen = queryBlockOpen ? ' open' : '';
 
   return (
-    <div>
-      <Suspense fallback={[]}>
+    <>
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
         <div className="col-12">
-          <h2>
+          <h2 style={{ position: 'relative', display: 'block' }}>
             {heading}
             <div className={`query-builder-collapse${collapseOpen}`}>
               <Badge
@@ -40,14 +40,14 @@ function QueryBuilder() {
         </div>
       </div>
 
-      <Suspense fallback={[]}>
+      <Suspense fallback={null}>
         <QueryBlock />
       </Suspense>
 
-      <Suspense fallback={[]}>
+      <Suspense fallback={null}>
         <List />
       </Suspense>
-    </div>
+    </>
   );
 }
 

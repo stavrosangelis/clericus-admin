@@ -29,6 +29,7 @@ import Footer from './components/Footer';
 import Sidebar from './components/Sidebar';
 
 import {
+  checkFirstSession,
   checkSession,
   getLanguageCodes,
   getEventTypes,
@@ -68,17 +69,20 @@ function App() {
     };
     openSidebar();
     dispatch(loadSettings());
-    dispatch(checkSession());
+    dispatch(checkFirstSession());
     /* eslint-disable-next-line */
   }, []);
 
   // set a timer to check if the user has an active session
   useEffect(() => {
-    const interval = setInterval(() => {
-      dispatch(checkSession());
-    }, 60000);
+    let interval = null;
+    if (sessionActive) {
+      interval = setInterval(() => {
+        dispatch(checkSession());
+      }, 60000);
+    }
     return () => clearInterval(interval);
-  }, [dispatch]);
+  }, [dispatch, sessionActive]);
 
   // if user has a session load app data
 
@@ -146,7 +150,7 @@ function App() {
   let appHTML = null;
   if (seedingAllowed) {
     appHTML = (
-      <Routes>
+      <Routes basename={REACT_APP_BASENAME}>
         <Route path="/" element={<Seed />} />
       </Routes>
     );
@@ -162,7 +166,7 @@ function App() {
         <div className="main-panel" id="main-panel">
           <Header />
           <div className="content">
-            <Routes>{routes}</Routes>
+            <Routes basename={REACT_APP_BASENAME}>{routes}</Routes>
           </div>
           <Footer />
         </div>
@@ -170,7 +174,7 @@ function App() {
     );
   } else {
     appHTML = (
-      <Routes>
+      <Routes basename={REACT_APP_BASENAME}>
         <Route path="*" element={<Login />} />
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />

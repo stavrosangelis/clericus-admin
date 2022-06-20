@@ -1,17 +1,14 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Button, Card, CardBody, Collapse, Input, Spinner } from 'reactstrap';
-import PropTypes from 'prop-types';
-import { getData } from '../../helpers';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
 import ImportPlanPreviewRows from '../../components/import-data/Import.Plan.Preview.Rows';
 import '../../assets/scss/import.plan.preview.scss';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
+const { REACT_APP_APIPATH: APIPath } = process.env;
 
-function ImportPlanPreviewResults(props) {
-  // props
-  const { match } = props;
-  const { _id } = match.params;
-
+export default function ImportPlanPreviewResults() {
   // state
   const [loading, setLoading] = useState(true);
   const [item, setItem] = useState(null);
@@ -19,7 +16,8 @@ function ImportPlanPreviewResults(props) {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState([2]);
 
-  const mounted = useRef(false);
+  const { _id } = useParams();
+  const prevId = useRef(null);
 
   const toggleCollapse = () => {
     setCollapseOpen(!collapseOpen);
@@ -51,15 +49,34 @@ function ImportPlanPreviewResults(props) {
   };
 
   useEffect(() => {
-    mounted.current = true;
+    let unmounted = false;
+    const controller = new AbortController();
     const load = async () => {
-      setLoading(false);
-      const responseData = await getData(`import-plan-preview-results`, {
-        _id,
-        rows: selectedRows,
-      });
-      if (mounted.current) {
-        const { data } = responseData;
+      prevId.current = _id;
+      const loadData = async () => {
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}import-plan-preview-results`,
+          crossDomain: true,
+          params: {
+            _id,
+            rows: selectedRows,
+          },
+          signal: controller.signal,
+        })
+          .then((response) => {
+            const { data: rData = null } = response;
+            return rData;
+          })
+          .catch((error) => {
+            console.log(error);
+            return { data: null };
+          });
+        return responseData;
+      };
+      const { data = null } = await loadData();
+      if (!unmounted) {
+        setLoading(false);
         setItem(data);
         setLabel(data.label);
       }
@@ -69,9 +86,18 @@ function ImportPlanPreviewResults(props) {
       load();
     }
     return () => {
-      mounted.current = false;
+      unmounted = true;
+      controller.abort();
     };
   }, [loading, _id, selectedRows]);
+
+  useEffect(() => {
+    if (!loading && prevId.current !== _id) {
+      prevId.current = _id;
+      setLoading(true);
+      setItem(null);
+    }
+  }, [_id, loading]);
 
   const breadcrumbsItems = [
     {
@@ -96,12 +122,18 @@ function ImportPlanPreviewResults(props) {
 
   let rows = [];
   if (item !== null) {
+    const {
+      columns: iColumns = [],
+      rows: iRows = [],
+      parsedRules: iParsedRules = null,
+      relations: iRelations = [],
+    } = item;
     rows = (
       <ImportPlanPreviewRows
-        columns={item.columns}
-        rows={item.rows}
-        rules={item.parsedRules}
-        relations={item.relations}
+        columns={iColumns}
+        rows={iRows}
+        rules={iParsedRules}
+        relations={iRelations}
         selectedRows={selectedRows}
       />
     );
@@ -194,10 +226,3 @@ function ImportPlanPreviewResults(props) {
     </div>
   );
 }
-ImportPlanPreviewResults.defaultProps = {
-  match: null,
-};
-ImportPlanPreviewResults.propTypes = {
-  match: PropTypes.object,
-};
-export default ImportPlanPreviewResults;

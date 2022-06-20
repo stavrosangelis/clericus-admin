@@ -59,8 +59,10 @@ const ImportPlanPreviewRows = (props) => {
       temporals: rules.temporals.filter((e) => e.row === row.key) || [],
     };
     return (
-      <div key={row.key} className="import-plan-preview-row-container">
-        <ImportPlanPreviewRow columns={columns} row={row} />
+      <div key={row.key}>
+        <div className="import-plan-preview-row-container">
+          <ImportPlanPreviewRow columns={columns} row={row} />
+        </div>
         <ImportPlanPreviewEntities
           rowKey={row.key}
           rules={rowRules}

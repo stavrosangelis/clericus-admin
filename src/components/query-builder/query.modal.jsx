@@ -229,10 +229,7 @@ function QueryModalMain(props) {
           <br />
           {blocks}
         </ModalBody>
-        <ModalFooter className="modal-footer">
-          <Button color="info" outline onClick={(e) => submit(e)}>
-            Ok
-          </Button>
+        <ModalFooter className="flex justify-content-between">
           <Button
             color="secondary"
             outline
@@ -240,6 +237,9 @@ function QueryModalMain(props) {
             className="pull-left"
           >
             Cancel
+          </Button>
+          <Button color="info" outline onClick={(e) => submit(e)}>
+            Ok
           </Button>
         </ModalFooter>
       </Modal>
@@ -255,14 +255,7 @@ function QueryModalMain(props) {
             The existing query will be cleared! Continue?
           </div>
         </ModalBody>
-        <ModalFooter className="modal-footer">
-          <Button
-            color="info"
-            outline
-            onClick={() => updateEntityTypeConfirm()}
-          >
-            Ok
-          </Button>
+        <ModalFooter className="flex justify-content-between">
           <Button
             color="secondary"
             outline
@@ -270,6 +263,13 @@ function QueryModalMain(props) {
             className="pull-left"
           >
             Cancel
+          </Button>
+          <Button
+            color="info"
+            outline
+            onClick={() => updateEntityTypeConfirm()}
+          >
+            Ok
           </Button>
         </ModalFooter>
       </Modal>

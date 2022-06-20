@@ -91,6 +91,10 @@
 .import-plan-preview-selected-row-remove {
   display: inline-block;
 }
+.import-plan-preview-entities-wrapper {
+  position: relative;
+  display: block;
+}
 .import-plan-preview-entities-container {
   transform-origin: top center;
   transition: transform 0.2s;
@@ -123,6 +127,6 @@ path {
   pointer-events: auto;
 }
 .preview-data-zoom-container {
-  top: 150px;
+  top: 0;
   box-shadow: 0 0 6px rgba(0,0,0,0.4);
 }

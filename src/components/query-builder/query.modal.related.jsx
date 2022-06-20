@@ -247,10 +247,7 @@ function QueryModalRelated(props) {
           <br />
           {blocks}
         </ModalBody>
-        <ModalFooter className="modal-footer">
-          <Button color="info" outline onClick={(e) => submit(e)}>
-            Ok
-          </Button>
+        <ModalFooter className="flex justify-content-between">
           <Button
             color="secondary"
             outline
@@ -258,6 +255,9 @@ function QueryModalRelated(props) {
             className="pull-left"
           >
             Cancel
+          </Button>
+          <Button color="info" outline onClick={(e) => submit(e)}>
+            Ok
           </Button>
         </ModalFooter>
       </Modal>

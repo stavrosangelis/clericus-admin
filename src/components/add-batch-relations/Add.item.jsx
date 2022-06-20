@@ -64,22 +64,22 @@ function AddItem(props) {
   let heading;
   switch (itemsType) {
     case 'events':
-      heading = 'Event';
+      heading = 'an Event';
       break;
     case 'organisations':
-      heading = 'Organisation';
+      heading = 'an Organisation';
       break;
     case 'people':
-      heading = 'Person';
+      heading = 'a Person';
       break;
     case 'resources':
-      heading = 'Resource';
+      heading = 'a Resource';
       break;
     case 'temporal':
-      heading = 'Temporal';
+      heading = 'a Temporal';
       break;
     case 'spatial':
-      heading = 'Spatial';
+      heading = 'a Spatial';
       break;
     default:
       heading = '';

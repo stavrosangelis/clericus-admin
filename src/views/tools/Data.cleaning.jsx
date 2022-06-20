@@ -6,7 +6,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import PropTypes from 'prop-types';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -19,24 +20,22 @@ import {
 } from 'reactstrap';
 import Rule from '../../components/import-data/Data.cleaning.rule';
 import OutputResults from '../../components/import-data/Output.Results';
-import DeleteModal from '../../components/Delete.modal';
 import { getData, putData, returnLetter } from '../../helpers';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
+const DeleteModal = lazy(() => import('../../components/Delete.modal'));
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
 const defaultRuleValues = {
   type: '',
   columns: [],
   entityType: '',
 };
 
-function DataCleaning(props) {
-  // props
-  const { match } = props;
-  const { importPlanId, _id } = match.params;
-
+export default function DataCleaning() {
   // state
-  const [loading, setLoading] = useState(true);
+  const [loadingImportData, setLoadingImportData] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [importData, setImportData] = useState(null);
   const [item, setItem] = useState(null);
@@ -58,53 +57,105 @@ function DataCleaning(props) {
   const [errorText, setErrorText] = useState([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [redirect, setRedirect] = useState(false);
 
-  const mounted = useRef(false);
+  const { _id, importPlanId } = useParams();
+  const prevId = useRef(null);
 
-  const loadImportData = useCallback(async () => {
-    // import data
-    const responseData = await getData(`import-plan`, { _id: importPlanId });
-    const { data = null } = responseData;
-    return data;
-  }, [importPlanId]);
+  const navTo = useNavigate();
 
   useEffect(() => {
-    mounted.current = true;
-
+    let unmounted = false;
+    const controller = new AbortController();
     const load = async () => {
-      const itemResponseData = await getData(`data-cleaning-instance`, { _id });
-      const { data: itemData } = itemResponseData;
-      if (mounted.current) {
-        setLoading(false);
-        const newImportData = await loadImportData();
-        setImportData(newImportData);
-        setItem(itemData);
-        if (itemData.rule !== null) {
-          setRuleValues(itemData.rule);
-          const completed = itemData.completed || false;
-          if (completed) {
-            setRunning(false);
-            setOutputData(JSON.parse(itemData.outputData));
-            setExecBtn(
-              <span>
-                Completed successfully <i className="fa fa-check" />
-              </span>
-            );
-            setTimeout(() => {
-              setExecBtn(
-                <span>
-                  Execute <i className="fa fa-chevron-right" />
-                </span>
-              );
-            }, 2000);
-          }
+      const responseData = await axios({
+        method: 'get',
+        url: `${APIPath}import-plan`,
+        crossDomain: true,
+        params: { _id: importPlanId },
+        signal: controller.signal,
+      })
+        .then((response) => {
+          const { data: rData = null } = response;
+          return rData;
+        })
+        .catch((error) => {
+          console.log(error);
+          return { data: null };
+        });
+      if (!unmounted) {
+        setLoadingImportData(false);
+        const { data = null } = responseData;
+        if (data !== null) {
+          setImportData(data);
         }
-        setLabel(itemData.label);
+        setLoading(true);
       }
     };
+    if (loadingImportData) {
+      load();
+    }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [loadingImportData, _id, importPlanId]);
 
+  useEffect(() => {
+    let unmounted = false;
+    let timeout = null;
     let interval = null;
+    const controller = new AbortController();
+    const load = async () => {
+      prevId.current = _id;
+      const responseData = await axios({
+        method: 'get',
+        url: `${APIPath}data-cleaning-instance`,
+        crossDomain: true,
+        params: { _id },
+        signal: controller.signal,
+      })
+        .then((response) => {
+          const { data: rData = null } = response;
+          return rData;
+        })
+        .catch((error) => {
+          console.log(error);
+          return { data: null };
+        });
+      if (!unmounted) {
+        setLoading(false);
+        const { data = null } = responseData;
+        if (data !== null) {
+          setItem(data);
+          const {
+            completed = false,
+            rule = null,
+            label: iLabel = '',
+            outputData: iOutputData = '',
+          } = data;
+          if (rule !== null) {
+            setRuleValues(rule);
+            if (completed) {
+              setRunning(false);
+              setOutputData(JSON.parse(iOutputData));
+              setExecBtn(
+                <span>
+                  Completed successfully <i className="fa fa-check" />
+                </span>
+              );
+              timeout = setTimeout(() => {
+                setExecBtn(
+                  <span>
+                    Execute <i className="fa fa-chevron-right" />
+                  </span>
+                );
+              }, 2000);
+            }
+          }
+          setLabel(iLabel);
+        }
+      }
+    };
     if (loading) {
       load();
     }
@@ -114,16 +165,25 @@ function DataCleaning(props) {
         load();
       }, 10000);
     }
-    if (interval !== null) {
-      return () => {
-        mounted.current = false;
-        clearInterval(interval);
-      };
-    }
     return () => {
-      mounted.current = false;
+      unmounted = true;
+      controller.abort();
+      if (timeout !== null) {
+        clearTimeout(timeout);
+      }
+      if (interval !== null) {
+        clearInterval(interval);
+      }
     };
-  }, [_id, loading, loadImportData, running]);
+  }, [loading, _id, running]);
+
+  useEffect(() => {
+    if (!loading && prevId.current !== _id) {
+      prevId.current = _id;
+      setLoading(true);
+      setItem(null);
+    }
+  }, [_id, loading]);
 
   useEffect(() => {
     if (outputData.length > 0) {
@@ -132,16 +192,10 @@ function DataCleaning(props) {
   }, [outputData]);
 
   useEffect(() => {
-    if (redirect) {
-      setRedirect(false);
-    }
-  }, [redirect]);
-
-  useEffect(() => {
     if (item !== null && item._id === null) {
-      setRedirect(true);
+      navTo(`/import-plan/${importPlanId}`);
     }
-  }, [item]);
+  }, [importPlanId, item, navTo]);
 
   const updateLabel = (e) => {
     const { target } = e;
@@ -416,12 +470,6 @@ function DataCleaning(props) {
     []
   );
 
-  const redirectElem = null; /* redirect ?  (
-    <Redirect to={`/import-plan/${importPlanId}`} />
-  ) : (
-    []
-  ); */
-
   const { type: returnType } = ruleValues || null;
 
   let executeButton = [];
@@ -445,9 +493,8 @@ function DataCleaning(props) {
   }
 
   return (
-    <div>
-      {redirectElem}
-      <Suspense fallback={[]}>
+    <>
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
@@ -511,25 +558,17 @@ function DataCleaning(props) {
           <OutputResults outputData={outputData} type={returnType} />
         </div>
       </div>
-
-      <DeleteModal
-        _id={_id}
-        label={label}
-        path="data-cleaning-instance"
-        params={{ _id }}
-        visible={deleteModalVisible}
-        toggle={toggleDeleteModal}
-        update={reload}
-      />
-    </div>
+      <Suspense fallback={null}>
+        <DeleteModal
+          _id={_id}
+          label={label}
+          path="data-cleaning-instance"
+          params={{ _id }}
+          visible={deleteModalVisible}
+          toggle={toggleDeleteModal}
+          update={reload}
+        />
+      </Suspense>
+    </>
   );
 }
-
-DataCleaning.defaultProps = {
-  match: null,
-};
-DataCleaning.propTypes = {
-  match: PropTypes.object,
-};
-
-export default DataCleaning;

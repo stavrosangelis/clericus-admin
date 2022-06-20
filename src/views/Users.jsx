@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
-import { Card, CardBody, Spinner } from 'reactstrap';
+import axios from 'axios';
+import { Card, CardBody } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getData, renderLoader } from '../helpers';
+import { renderLoader } from '../helpers';
 import { setPaginationParams } from '../redux/actions';
 
 const Breadcrumbs = lazy(() => import('../components/Breadcrumbs'));
 const PageActions = lazy(() => import('../components/Page.actions'));
 const List = lazy(() => import('../components/List'));
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
 const heading = 'Users';
 const breadcrumbsItems = [
   { label: heading, icon: 'fa fa-user', active: true, path: '' },
@@ -25,21 +27,21 @@ const columns = [
   {
     props: ['label'],
     label: 'User',
-    link: { element: 'self', path: 'user' },
+    link: { element: 'self', path: '/user' },
     order: true,
     orderLabel: 'firstName',
   },
   {
     props: ['email'],
     label: 'Email',
-    link: { element: 'self', path: 'user' },
+    link: { element: 'self', path: '/user' },
     order: true,
     orderLabel: 'email',
   },
   {
     props: ['edit'],
     label: 'Edit',
-    link: { element: 'self', path: 'user' },
+    link: { element: 'self', path: '/user' },
     order: false,
     align: 'center',
   },
@@ -49,37 +51,22 @@ function Users() {
   // redux
   const dispatch = useDispatch();
 
-  const limit = useSelector((state) => state.usersPagination.limit);
-  const page = useSelector((state) => state.usersPagination.page);
-  const orderField = useSelector((state) => state.usersPagination.orderField);
-  const orderDesc = useSelector((state) => state.usersPagination.orderDesc);
-  const searchInput = useSelector((state) => state.usersPagination.searchInput);
+  const { usersPagination } = useSelector((state) => state);
+
+  const {
+    limit,
+    page,
+    orderField,
+    orderDesc,
+    searchInput,
+    totalItems,
+    totalPages,
+  } = usersPagination;
 
   // state
   const [loading, setLoading] = useState(true);
-  const [tableLoading, setTableLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [allChecked, setAllChecked] = useState(false);
-  const [gotoPageVal, setGotoPage] = useState(page);
-
-  const [prevLimit, setPrevLimit] = useState(25);
-  const [prevPage, setPrevPage] = useState(1);
-  const [prevOrderField, setPrevOrderField] = useState('label');
-  const [prevOrderDesc, setPrevOrderDesc] = useState(false);
-  const [reLoading, setReLoading] = useState(false);
-  const [prevReLoading, setPrevReLoading] = useState(false);
-
-  const prepareItems = useCallback((itemsParam) => {
-    const newItems = [];
-    for (let i = 0; i < itemsParam.length; i += 1) {
-      const item = itemsParam[i];
-      item.checked = false;
-      newItems.push(item);
-    }
-    return newItems;
-  }, []);
+  const [gotoPage, setGotoPage] = useState(page);
 
   const updateStorePagination = useCallback(
     ({
@@ -88,181 +75,176 @@ function Users() {
       orderFieldParam = null,
       orderDescParam = null,
       searchInputParam = null,
+      totalItemsParam = null,
+      totalPagesParam = null,
     }) => {
-      const limitCopy = limitParam === null ? limit : limitParam;
-      const pageCopy = pageParam === null ? page : pageParam;
-      const orderFieldCopy =
-        orderFieldParam === null ? orderField : orderFieldParam;
-      const orderDescCopy =
-        orderDescParam === null ? orderDesc : orderDescParam;
-      const searchInputCopy =
-        searchInputParam === null ? searchInput : searchInputParam;
-      const payload = {
-        limit: limitCopy,
-        page: pageCopy,
-        orderField: orderFieldCopy,
-        orderDesc: orderDescCopy,
-        searchInput: searchInputCopy,
-      };
+      const payload = {};
+      if (limitParam !== null) {
+        payload.limit = limitParam;
+      }
+      if (orderDescParam !== null) {
+        payload.orderDesc = orderDescParam;
+      }
+      if (orderFieldParam !== null) {
+        payload.orderField = orderFieldParam;
+      }
+      if (pageParam !== null) {
+        payload.page = Number(pageParam);
+      }
+      if (searchInputParam !== null) {
+        payload.searchInput = searchInputParam;
+      }
+      if (totalItemsParam !== null) {
+        payload.totalItems = totalItemsParam;
+      }
+      if (totalPagesParam !== null) {
+        payload.totalPages = totalPagesParam;
+      }
       dispatch(setPaginationParams('users', payload));
     },
-    [dispatch, limit, orderDesc, orderField, page, searchInput]
+    [dispatch]
   );
 
-  const load = useCallback(async () => {
-    setLoading(false);
-    setReLoading(false);
-    setPrevReLoading(false);
-    setTableLoading(true);
-    const params = {
-      page,
-      limit,
-      orderField,
-      orderDesc,
-    };
-    if (searchInput !== '') {
-      params.label = searchInput;
+  const reload = (e = null) => {
+    if (e !== null) {
+      e.preventDefault();
     }
-    const responseData = await getData(`users`, params);
-    const { data: newData } = responseData;
-    let currentPage = newData.currentPage > 0 ? newData.currentPage : 1;
-    if (currentPage > newData.totalPages && newData.totalPages > 0) {
-      currentPage = newData.totalPages;
-    }
-    const newItems = await prepareItems(newData.data);
-    setItems(newItems);
-    setTableLoading(false);
-    updateStorePagination({ pageParam: currentPage });
-    setTotalPages(newData.totalPages);
-    setTotalItems(newData.totalItems);
-  }, [
-    limit,
-    page,
-    searchInput,
-    prepareItems,
-    orderDesc,
-    orderField,
-    updateStorePagination,
-  ]);
+    setLoading(true);
+  };
 
-  const handleChange = (e) => {
-    const { target } = e;
-    const value = target.type === 'checkbox' ? target.checked : target.value;
-    const { name } = target;
-    updateStorePagination({
-      [`${name}Param`]: value,
-    });
+  const updatePage = useCallback(
+    (value) => {
+      if (value > 0 && value !== page) {
+        updateStorePagination({ pageParam: value });
+        reload();
+      }
+    },
+    [page, updateStorePagination]
+  );
+
+  const gotoPageFn = (e) => {
+    e.preventDefault();
+    if (gotoPage > 0 && gotoPage !== page) {
+      updateStorePagination({ pageParam: gotoPage });
+      reload();
+    }
   };
 
   const updateLimit = (value) => {
     updateStorePagination({ limitParam: value });
+    reload();
   };
 
-  const updatePage = (value) => {
-    if (value > 0 && value !== page) {
-      updateStorePagination({ pageParam: value });
-      setGotoPage(value);
-    }
-  };
-
-  const gotoPage = () => {
-    if (Number(gotoPageVal) > 0 && gotoPageVal !== page) {
-      updateStorePagination({ pageParam: gotoPageVal });
+  const handleChange = (e) => {
+    const { name, value = '' } = e.target;
+    switch (name) {
+      case 'gotoPage':
+        setGotoPage(value);
+        break;
+      case 'searchInput':
+        updateStorePagination({ searchInputParam: value });
+        break;
+      default:
+        break;
     }
   };
 
   const clearSearch = () => {
     updateStorePagination({ searchInputParam: '' });
-    setLoading(true);
-  };
-
-  const toggleSelected = (i) => {
-    const index = i - (Number(page) - 1) * limit;
-    const copy = [...items];
-    copy[index].checked = !copy[index].checked;
-    setItems(copy);
-  };
-
-  const toggleSelectedAll = () => {
-    const copy = [...items];
-    const newAllChecked = !allChecked;
-    const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
-      const item = copy[i];
-      item.checked = newAllChecked;
-      newItems.push(item);
-    }
-    setAllChecked(newAllChecked);
-  };
-
-  const clearSelectedAll = useCallback(() => {
-    const copy = [...items];
-    const newItems = [];
-    for (let i = 0; i < copy.length; i += 1) {
-      const item = copy[i];
-      item.checked = false;
-      newItems.push(item);
-    }
-    setAllChecked(false);
-  }, [items]);
-
-  const reload = () => {
-    setReLoading(true);
+    reload();
   };
 
   useEffect(() => {
-    if (prevLimit !== limit) {
-      setPrevLimit(limit);
+    if (orderField !== '') {
+      reload();
     }
-    if (prevPage !== page) {
-      setPrevPage(page);
-    }
-    if (prevOrderField !== orderField) {
-      setPrevOrderField(orderField);
-    }
-    if (prevOrderDesc !== orderDesc) {
-      setPrevOrderDesc(orderDesc);
-    }
-    if (reLoading && !prevReLoading) {
-      setPrevReLoading(reLoading);
-    }
-    if (
-      loading ||
-      prevLimit !== limit ||
-      prevPage !== page ||
-      prevOrderField !== orderField ||
-      prevOrderDesc !== orderDesc ||
-      (reLoading && !prevReLoading)
-    ) {
-      clearSelectedAll();
+  }, [orderDesc, orderField]);
+
+  useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    if (loading) {
+      const load = async () => {
+        const loadData = async () => {
+          const params = {
+            page,
+            limit,
+            orderField,
+            orderDesc,
+          };
+          if (searchInput !== '') {
+            params.label = searchInput;
+          }
+          const responseData = await axios({
+            method: 'get',
+            url: `${APIPath}users`,
+            crossDomain: true,
+            params,
+            signal: controller.signal,
+          })
+            .then((response) => {
+              const { data: rData = null } = response;
+              return rData;
+            })
+            .catch((error) => {
+              console.log(error);
+              return { data: null };
+            });
+          return responseData;
+        };
+        const responseData = await loadData();
+        if (!unmounted) {
+          setLoading(false);
+          setItems([]);
+          const { data } = responseData;
+          const {
+            currentPage = 0,
+            data: newData = [],
+            totalItems: totalItemsResp,
+            totalPages: totalPagesResp,
+          } = data;
+          const cPage = currentPage > 0 ? currentPage : 1;
+          if (cPage !== 1 && cPage > totalPagesResp && totalPagesResp > 0) {
+            updatePage(totalPagesResp);
+          } else {
+            updateStorePagination({
+              totalItemsParam: totalItemsResp,
+              totalPagesParam: totalPagesResp,
+            });
+            setItems(newData);
+          }
+        }
+      };
       load();
     }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
   }, [
+    limit,
     loading,
-    clearSelectedAll,
-    load,
     orderField,
     orderDesc,
-    prevLimit,
-    prevPage,
-    prevOrderField,
-    prevOrderDesc,
-    prevReLoading,
-    reLoading,
-    limit,
     page,
+    searchInput,
+    totalPages,
+    updatePage,
+    updateStorePagination,
   ]);
 
   const pageActions = (
-    <Suspense fallback={renderLoader()}>
+    <Suspense fallback={null}>
       <PageActions
         clearSearch={clearSearch}
         current_page={page}
         defaultLimit={25}
-        gotoPage={gotoPage}
-        gotoPageValue={gotoPageVal}
+        gotoPage={gotoPageFn}
+        gotoPageValue={gotoPage}
         handleChange={handleChange}
         limit={limit}
+        orderDesc={orderDesc}
+        orderField={orderField}
         page={page}
         pageType="users"
         reload={reload}
@@ -275,69 +257,11 @@ function Users() {
     </Suspense>
   );
 
-  let content = (
-    <div>
-      {pageActions}
-      <div className="row">
-        <div className="col-12">
-          <div style={{ padding: '40pt', textAlign: 'center' }}>
-            <Spinner type="grow" color="info" /> <i>loading...</i>
-          </div>
-        </div>
-      </div>
-      {pageActions}
-    </div>
-  );
-
-  if (!loading) {
-    const listIndex = (Number(page) - 1) * limit;
-    const addNewBtn = (
-      <Link
-        className="btn btn-outline-secondary add-new-item-btn"
-        to="/user/new"
-        href="/user/new"
-      >
-        <i className="fa fa-plus" />
-      </Link>
-    );
-
-    const table = tableLoading ? (
-      <div style={{ padding: '40pt', textAlign: 'center' }}>
-        <Spinner type="grow" color="info" /> <i>loading...</i>
-      </div>
-    ) : (
-      <Suspense fallback={renderLoader()}>
-        <List
-          columns={columns}
-          items={items}
-          listIndex={listIndex}
-          type="users"
-          allChecked={allChecked}
-          toggleSelectedAll={toggleSelectedAll}
-          toggleSelected={toggleSelected}
-        />
-      </Suspense>
-    );
-
-    content = (
-      <div className="users-container">
-        {pageActions}
-        <div className="row">
-          <div className="col-12">
-            <Card>
-              <CardBody className="users-card">{table}</CardBody>
-            </Card>
-          </div>
-        </div>
-        {pageActions}
-        {addNewBtn}
-      </div>
-    );
-  }
+  const listIndex = (Number(page) - 1) * limit;
 
   return (
-    <div>
-      <Suspense fallback={[]}>
+    <div className="container-fluid">
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
@@ -345,9 +269,29 @@ function Users() {
           <h2>
             {heading} <small>({totalItems})</small>
           </h2>
+          {pageActions}
+          <Card>
+            <CardBody className="people-card">
+              <Suspense fallback={renderLoader()}>
+                <List
+                  columns={columns}
+                  items={items}
+                  listIndex={listIndex}
+                  loading={loading}
+                  type="users"
+                />
+              </Suspense>
+            </CardBody>
+          </Card>
+          {pageActions}
         </div>
       </div>
-      {content}
+      <Link
+        className="btn btn-outline-secondary add-new-item-btn"
+        to="/user/new"
+      >
+        <i className="fa fa-plus" />
+      </Link>
     </div>
   );
 }

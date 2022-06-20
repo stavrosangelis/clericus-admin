@@ -1,5 +1,6 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { lazy, Suspense, useEffect, useState, useRef } from 'react';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -10,23 +11,21 @@ import {
   Label,
 } from 'reactstrap';
 import Rule from '../../components/import-data/Import.plan.rule';
-import DeleteModal from '../../components/Delete.modal';
-import { getData, putData, returnLetter } from '../../helpers';
+import { putData, returnLetter } from '../../helpers';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
+const DeleteModal = lazy(() => import('../../components/Delete.modal'));
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
 const defaultRuleValues = {
   columns: [],
   entityType: '',
 };
 
-function ImportPlanRule(props) {
-  // props
-  const { match } = props;
-  const { importPlanId, _id } = match.params;
-
+function ImportPlanRule() {
   // state
-  const [loading, setLoading] = useState(true);
+  const [loadingImportData, setLoadingImportData] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [importData, setImportData] = useState(null);
   const [item, setItem] = useState(null);
   const [label, setLabel] = useState('');
@@ -40,53 +39,114 @@ function ImportPlanRule(props) {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorText, setErrorText] = useState([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [redirect, setRedirect] = useState(false);
 
-  const loadImportData = useCallback(async () => {
-    // import data
-    const responseData = await getData(`import-plan`, { _id: importPlanId });
-    const { data } = responseData;
-    setImportData(data);
-  }, [importPlanId]);
+  const { _id, importPlanId } = useParams();
+  const prevId = useRef(null);
 
-  const load = useCallback(async () => {
-    if (loading) {
-      loadImportData();
-    }
-    setLoading(false);
-    // item data
-    const itemResponseData = await getData(`import-plan-rule`, { _id });
-    const { data: itemData } = itemResponseData;
-    setItem(itemData);
-    if (itemData.rule !== null) {
-      setRuleValues(itemData.rule);
-    } else {
-      const resetRuleValues = {
-        columns: [],
-        entityType: '',
-      };
-      setRuleValues(resetRuleValues);
-    }
-    setLabel(itemData.label);
-  }, [_id, loadImportData, loading]);
+  const navTo = useNavigate();
 
   useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    const load = async () => {
+      const responseData = await axios({
+        method: 'get',
+        url: `${APIPath}import-plan`,
+        crossDomain: true,
+        params: { _id: importPlanId },
+        signal: controller.signal,
+      })
+        .then((response) => {
+          const { data: rData = null } = response;
+          return rData;
+        })
+        .catch((error) => {
+          console.log(error);
+          return { data: null };
+        });
+      if (!unmounted) {
+        setLoadingImportData(false);
+        const { data = null } = responseData;
+        if (data !== null) {
+          setImportData(data);
+        }
+        setLoading(true);
+      }
+    };
+    if (loadingImportData) {
+      load();
+    }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [loadingImportData, _id, importPlanId]);
+
+  useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    const load = async () => {
+      prevId.current = _id;
+      if (_id === 'new') {
+        setLoading(false);
+      } else {
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}import-plan-rule`,
+          crossDomain: true,
+          params: { _id },
+          signal: controller.signal,
+        })
+          .then((response) => {
+            const { data: rData = null } = response;
+            return rData;
+          })
+          .catch((error) => {
+            console.log(error);
+            return { data: null };
+          });
+        if (!unmounted) {
+          setLoading(false);
+          const { data = null } = responseData;
+          console.log(data);
+          if (data !== null) {
+            setItem(data);
+            if (data.rule !== null) {
+              setRuleValues(data.rule);
+            } else {
+              const resetRuleValues = {
+                columns: [],
+                entityType: '',
+              };
+              setRuleValues(resetRuleValues);
+            }
+            setLabel(data.label);
+          }
+        }
+      }
+    };
     if (loading) {
       load();
     }
-  }, [loading, load]);
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [loading, _id]);
 
   useEffect(() => {
-    if (redirect) {
-      setRedirect(false);
+    if (!loading && prevId.current !== _id) {
+      prevId.current = _id;
+      setLoading(true);
+      setItem(null);
     }
-  }, [redirect]);
+  }, [_id, loading]);
 
   useEffect(() => {
     if (item !== null && item._id === null) {
-      setRedirect(true);
+      navTo(`/import-plan/${importPlanId}`);
     }
-  }, [item]);
+  }, [importPlanId, item, navTo]);
 
   const updateLabel = (e) => {
     const { target } = e;
@@ -240,16 +300,9 @@ function ImportPlanRule(props) {
     <div className={`error-container${errorContainerClass}`}>{errorText}</div>
   );
 
-  const redirectElem = null; /* redirect ? (
-    <Redirect to={`/import-plan/${importPlanId}`} />
-  ) : (
-    []
-  ); */
-
   return (
-    <div>
-      {redirectElem}
-      <Suspense fallback={[]}>
+    <>
+      <Suspense fallback={null}>
         <Breadcrumbs items={breadcrumbsItems} />
       </Suspense>
       <div className="row">
@@ -310,25 +363,19 @@ function ImportPlanRule(props) {
           </Card>
         </div>
       </div>
-
-      <DeleteModal
-        _id={_id}
-        label={label}
-        path="import-plan-rule"
-        params={{ _id }}
-        visible={deleteModalVisible}
-        toggle={toggleDeleteModal}
-        update={reload}
-      />
-    </div>
+      <Suspense fallback={null}>
+        <DeleteModal
+          _id={_id}
+          label={label}
+          path="import-plan-rule"
+          params={{ _id }}
+          visible={deleteModalVisible}
+          toggle={toggleDeleteModal}
+          update={reload}
+        />
+      </Suspense>
+    </>
   );
 }
-
-ImportPlanRule.defaultProps = {
-  match: null,
-};
-ImportPlanRule.propTypes = {
-  match: PropTypes.object,
-};
 
 export default ImportPlanRule;

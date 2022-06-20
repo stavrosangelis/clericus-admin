@@ -6,7 +6,7 @@ import { Card, CardTitle, CardBody, Button, Collapse, Label } from 'reactstrap';
 import LazyList from './lazylist';
 import { getResourceThumbnailURL } from '../helpers';
 
-const APIPath = process.env.REACT_APP_APIPATH;
+const { REACT_APP_APIPATH: APIPath } = process.env;
 
 function RelatedEntitiesBlock(props) {
   const { item, itemType, reload } = props;
@@ -44,52 +44,72 @@ function RelatedEntitiesBlock(props) {
   };
 
   const toggleCollapse = (name) => {
-    let value = true;
-    if (state[name]) {
-      value = false;
-    }
+    const value = !state[name];
     const newState = { ...state };
     newState[name] = value;
     setState(newState);
   };
 
-  let eventsBlock = [];
-  let organisationsBlock = [];
-  let peopleBlock = [];
-  let resourcesBlock = [];
-  let spatialBlock = [];
-  let temporalBlock = [];
+  let eventsBlock = null;
+  let organisationsBlock = null;
+  let peopleBlock = null;
+  let resourcesBlock = null;
+  let spatialBlock = null;
+  let temporalBlock = null;
 
   if (item?.events?.length > 0) {
     const renderEvent = (reference) => {
-      const { label } = reference.ref;
-      const { _id } = reference.ref;
-      const url = `/event/${_id}`;
-      const termRole = reference.term.role || null;
-      const roleLabel = reference.term.roleLabel || '';
-      const role =
-        termRole !== null
-          ? [' ', <Label key="label">as {roleLabel}</Label>]
-          : [];
-      const row = (
-        <div key={_id} className="ref-item">
-          <Link to={url} href={url}>
-            <i>{reference.term.label}</i> <b>{label}</b>
-            {role}
-          </Link>
-          <div
-            className="delete-ref"
-            onClick={() => deleteRef(_id, reference.term.label, 'Event')}
-            onKeyDown={() => false}
-            role="button"
-            tabIndex={0}
-            aria-label="delete ref"
-          >
-            <i className="fa fa-times" />
+      const { ref = null, term = null } = reference;
+      if (ref !== null) {
+        const { _id = '', label = '' } = reference.ref;
+        const url = `/event/${_id}`;
+        const {
+          role: termRole = null,
+          roleLabel = '',
+          label: tLabel = '',
+        } = term;
+        const role =
+          termRole !== null
+            ? [' ', <Label key="label">as {roleLabel}</Label>]
+            : null;
+        const row = (
+          <div key={_id} className="ref-item">
+            <div className="ref-label">
+              <i>{tLabel}</i> <b>{label}</b>
+              {role}
+            </div>
+            <div
+              className="ref-btn"
+              title="Edit reference"
+              aria-label="Edit reference"
+            >
+              <i className="fa fa-pencil-square" />
+            </div>
+            <div
+              className="ref-btn"
+              title="Go to referenced entity"
+              aria-label="Go to referenced entity"
+            >
+              <Link to={url} target="_blank">
+                <i className="fa fa-external-link-square" />
+              </Link>
+            </div>
+            <div
+              className="ref-btn delete-ref"
+              onClick={() => deleteRef(_id, tLabel, 'Event')}
+              onKeyDown={() => false}
+              role="button"
+              tabIndex={0}
+              aria-label="Delete reference"
+              title="Delete reference"
+            >
+              <i className="fa fa-times-circle" />
+            </div>
           </div>
-        </div>
-      );
-      return row;
+        );
+        return row;
+      }
+      return null;
     };
     let eventsOpenActive = ' active';
     if (!state.eventsOpen) {

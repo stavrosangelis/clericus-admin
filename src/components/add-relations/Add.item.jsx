@@ -63,24 +63,24 @@ function AddItem(props) {
   const [clearSearchBool, setClearSearchBool] = useState(false);
 
   let heading = '';
-  switch (type) {
+  switch (blockType) {
     case 'event':
-      heading = 'Event';
+      heading = 'an Event';
       break;
     case 'organisation':
-      heading = 'Organisation';
+      heading = 'an Organisation';
       break;
     case 'person':
-      heading = 'Person';
+      heading = 'a Person';
       break;
     case 'resource':
-      heading = 'Resource';
+      heading = 'a Resource';
       break;
     case 'temporal':
-      heading = 'Temporal';
+      heading = 'a Temporal';
       break;
     case 'spatial':
-      heading = 'Spatial';
+      heading = 'a Spatial';
       break;
     default:
       break;

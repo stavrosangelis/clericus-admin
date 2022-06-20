@@ -130,13 +130,14 @@ function PageActions(props) {
     propsClearAdvancedSearch();
   };
 
-  const paginationHTML = (
-    <MainPagination
-      currentPage={page}
-      totalPages={totalPages}
-      paginationFn={updatePage}
-    />
-  );
+  const paginationHTML =
+    totalPages > 1 ? (
+      <MainPagination
+        currentPage={page}
+        totalPages={totalPages}
+        paginationFn={updatePage}
+      />
+    ) : null;
 
   const parsePropTypes = (typesParam, sep = '', parentI = null) => {
     const typesDropdownItems = typesParam.map((item, i) => {
@@ -245,11 +246,11 @@ function PageActions(props) {
       </UncontrolledDropdown>
     </div>
   );
-  let searchDropdown = [];
-  let classpieces = [];
-  let sortDropdown = [];
-  let typesDropdownFilter = [];
-  let statusDropdown = [];
+  let searchDropdown = null;
+  let classpieces = null;
+  let sortDropdown = null;
+  let typesDropdownFilter = null;
+  let statusDropdown = null;
 
   if (pageType === 'people') {
     const availableElements = [];
@@ -599,31 +600,39 @@ function PageActions(props) {
     );
   }
 
-  const gotoPageOutput = (
-    <div className="go-to-page">
-      <form onSubmit={(e) => submitGotoPage(e)}>
-        <InputGroup size="sm">
-          <Input
-            name="gotoPage"
-            type="text"
-            onChange={handleChange}
-            value={gotoPageValue}
-            placeholder="0"
-          />
-          <div className="total-pages">/ {totalPages}</div>
-          <Button
-            type="submit"
-            outline
-            color="secondary"
-            className="go-to-page-btn"
-          >
-            <i className="fa fa-angle-right" />
-          </Button>
-        </InputGroup>
-      </form>
-    </div>
-  );
+  const gotoPageOutput =
+    totalPages > 1 ? (
+      <div className="go-to-page">
+        <form onSubmit={(e) => submitGotoPage(e)}>
+          <InputGroup size="sm">
+            <Input
+              name="gotoPage"
+              type="text"
+              onChange={handleChange}
+              value={gotoPageValue}
+              placeholder="0"
+            />
+            <div className="total-pages">/ {totalPages}</div>
+            <Button
+              type="submit"
+              outline
+              color="secondary"
+              className="go-to-page-btn"
+            >
+              <i className="fa fa-angle-right" />
+            </Button>
+          </InputGroup>
+        </form>
+      </div>
+    ) : null;
 
+  const paginationBlock =
+    totalPages > 1 ? (
+      <div className="page-actions">
+        {gotoPageOutput}
+        {paginationHTML}
+      </div>
+    ) : null;
   return (
     <div className="row">
       <div className="col-12">
@@ -635,10 +644,7 @@ function PageActions(props) {
           {limitFilter}
           {sortDropdown}
         </div>
-        <div className="page-actions">
-          {gotoPageOutput}
-          {paginationHTML}
-        </div>
+        {paginationBlock}
       </div>
     </div>
   );

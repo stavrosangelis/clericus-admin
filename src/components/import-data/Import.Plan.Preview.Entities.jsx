@@ -915,16 +915,21 @@ function ImportPlanPreviewEntities(props) {
   };
 
   return (
-    <div style={{ height: containerHeight }}>
+    <div
+      style={{ height: containerHeight }}
+      className="import-plan-preview-entities-wrapper"
+    >
       {zoomPanel}
-      <div
-        ref={entitiesContainer}
-        className="import-plan-preview-entities-container"
-        id={`import-plan-preview-entities-container-${rowKey}`}
-        style={containerStyle}
-      >
-        {relationsOutput}
-        {blocks}
+      <div className="import-plan-preview-row-container">
+        <div
+          ref={entitiesContainer}
+          className="import-plan-preview-entities-container"
+          id={`import-plan-preview-entities-container-${rowKey}`}
+          style={containerStyle}
+        >
+          {relationsOutput}
+          {blocks}
+        </div>
       </div>
     </div>
   );

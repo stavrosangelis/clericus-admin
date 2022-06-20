@@ -17,7 +17,7 @@ import {
   Input,
   InputGroup,
 } from 'reactstrap';
-import PropTypes from 'prop-types';
+import { useParams } from 'react-router-dom';
 
 import Breadcrumbs from '../../components/Breadcrumbs';
 
@@ -28,12 +28,10 @@ import ParseClassPieceToolbox from './Right.sidebar.toolbox';
 import ContextualMenu from '../../components/parse-class-piece-contextual-menu';
 import { stringDimensionToInteger, capitalizeOnlyFirst } from '../../helpers';
 
-const APIPath = process.env.REACT_APP_APIPATH;
+const { REACT_APP_APIPATH: APIPath } = process.env;
 
-function ParseClassPieceThumbnails(props) {
-  // props
-  const { match } = props;
-  const fileName = match.params?.fileName || '';
+export default function ParseClassPieceThumbnails() {
+  const { fileName } = useParams();
 
   // state
   const [loadingTaxonomies, setLoadingTaxonomies] = useState(true);
@@ -1845,17 +1843,3 @@ function ParseClassPieceThumbnails(props) {
     </div>
   );
 }
-
-ParseClassPieceThumbnails.defaultProps = {
-  match: {},
-};
-
-ParseClassPieceThumbnails.propTypes = {
-  match: PropTypes.shape({
-    params: PropTypes.shape({
-      fileName: PropTypes.string,
-    }),
-  }),
-};
-
-export default ParseClassPieceThumbnails;

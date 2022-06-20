@@ -1,4 +1,4 @@
-import React, { Component, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import {
   Label,
   Card,
@@ -12,22 +12,34 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
-const APIPath = process.env.REACT_APP_APIPATH;
+const { REACT_APP_APIPATH: APIPath } = process.env;
+const heading = 'Parse Class Pieces';
+const breadcrumbsItems = [
+  { label: heading, icon: 'pe-7s-tools', active: true, path: '' },
+];
 
-export default class ParseClassPieces extends Component {
-  static fileOutput(i, file) {
-    const parseUrl = `/parse-class-piece/${file.name}`;
+export default function ParseClassPieces() {
+  const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState([]);
+  const [updateThumbnailsText, setUpdateThumbnailsText] = useState(
+    <span>Import files</span>
+  );
+  const [importing, setImporting] = useState(false);
+
+  const fileOutput = (file) => {
+    const { name = '', thumbnail = '' } = file;
+    const parseUrl = `/parse-class-piece/${name}`;
     const newFileOutput = (
-      <div key={i} className="col-12 col-sm-6 col-md-3">
+      <div key={thumbnail} className="col-12 col-sm-6 col-md-3">
         <Card style={{ marginBottom: '15px' }}>
           <Link to={parseUrl} href={parseUrl}>
-            <CardImg src={file.thumbnail} alt={file.name} />
+            <CardImg src={thumbnail} alt={name} />
           </Link>
           <CardBody>
             <CardText className="text-center">
               <Label>
                 <Link to={parseUrl} href={parseUrl}>
-                  {file.name}
+                  {name}
                 </Link>
               </Label>
             </CardText>
@@ -36,105 +48,89 @@ export default class ParseClassPieces extends Component {
       </div>
     );
     return newFileOutput;
-  }
+  };
 
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      files: [],
-      updateThumbnailsText: <span>Import files</span>,
-      updateThumbnailsText1: <span>Import</span>,
-      importStatus: false,
-    };
-    this.loadFiles = this.loadFiles.bind(this);
-    this.updateThumbnails = this.updateThumbnails.bind(this);
-  }
-
-  componentDidMount() {
-    this.loadFiles();
-  }
-
-  async loadFiles() {
-    const data = await axios({
-      method: 'get',
-      url: `${APIPath}list-class-pieces`,
-      crossDomain: true,
-    })
-      .then((response) => response.data.data)
-      .catch((error) => {
-        console.log(error);
-      });
-
-    const filesOutput = data.map((file, i) =>
-      this.constructor.fileOutput(i, file)
-    );
-    this.setState({
-      files: filesOutput,
-    });
-  }
-
-  async updateThumbnails() {
-    const { importStatus } = this.state;
-    if (importStatus) {
-      return false;
+  useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    if (loading) {
+      const load = async () => {
+        const loadFiles = async () => {
+          const data = await axios({
+            method: 'get',
+            url: `${APIPath}list-class-pieces`,
+            crossDomain: true,
+            signal: controller.signal,
+          })
+            .then((response) => response.data.data)
+            .catch((error) => {
+              console.log(error);
+            });
+          return data;
+        };
+        const data = await loadFiles();
+        if (!unmounted) {
+          setLoading(false);
+          const filesOutput = data.map((f) => fileOutput(f));
+          setFiles(filesOutput);
+        }
+      };
+      load();
     }
-    this.setState({
-      updateThumbnailsText: (
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [loading]);
+
+  const reload = () => {
+    setLoading(true);
+  };
+
+  const updateThumbnails = async () => {
+    if (!importing) {
+      setImporting(true);
+      setUpdateThumbnailsText(
         <span>
           <i>Importing...</i> <Spinner color="secondary" size="sm" />
         </span>
-      ),
-      importStatus: true,
-    });
+      );
 
-    const updateThumbs = await axios({
-      method: 'get',
-      url: `${APIPath}create-thumbnails`,
-      crossDomain: true,
-    })
-      .then((response) => response)
-      .catch((error) => {
-        console.log(error);
-      });
-    if (updateThumbs.data.status) {
-      this.loadFiles();
-      this.setState({
-        updateThumbnailsText: (
+      const update = await axios({
+        method: 'get',
+        url: `${APIPath}create-thumbnails`,
+        crossDomain: true,
+      })
+        .then((response) => response)
+        .catch((error) => {
+          console.log(error);
+        });
+      setImporting(false);
+      if (update.data.status) {
+        setUpdateThumbnailsText(
           <span>
             Import complete <i className="fa fa-check" />
           </span>
-        ),
-        importStatus: false,
-      });
-      const context = this;
-      setTimeout(() => {
-        context.setState({
-          updateThumbnailsText: <span>Import files</span>,
-        });
-      }, 2000);
-    } else {
-      this.setState({
-        updateThumbnailsText: (
+        );
+        reload();
+        setTimeout(() => {
+          setUpdateThumbnailsText(<span>Import files</span>);
+        }, 2000);
+      } else {
+        setUpdateThumbnailsText(
           <span>
             Import error <i className="fa fa-times" />
           </span>
-        ),
-        importStatus: false,
-      });
-      const context = this;
-      setTimeout(() => {
-        context.setState({
-          updateThumbnailsText: <span>Import files</span>,
-        });
-      }, 2000);
+        );
+        setTimeout(() => {
+          setUpdateThumbnailsText(<span>Import files</span>);
+        }, 2000);
+      }
     }
-    return false;
-  }
+  };
 
-  render() {
-    const { updateThumbnailsText1, files, updateThumbnailsText } = this.state;
-    let importFilesBtn = (
+  const importFilesBtn =
+    files.length === 0 ? (
       <div className="col-12">
         <div className="text-center">
           <div style={{ fontSize: '15pt' }}>Import files to begin</div>
@@ -143,52 +139,45 @@ export default class ParseClassPieces extends Component {
               outline
               color="secondary"
               size="lg"
-              onClick={() => this.updateThumbnails(1)}
+              onClick={() => updateThumbnails()}
             >
-              {updateThumbnailsText1}
+              Import
             </Button>
           </div>
         </div>
       </div>
-    );
-    if (files.length > 0) {
-      importFilesBtn = [];
-    }
-    const heading = 'Parse Class Pieces';
-    const breadcrumbsItems = [
-      { label: heading, icon: 'pe-7s-tools', active: true, path: '' },
-    ];
-    return (
-      <div>
-        <Suspense fallback={[]}>
-          <Breadcrumbs items={breadcrumbsItems} />
-        </Suspense>
-        <div className="row">
-          <div className="col-12">
-            <h2>{heading}</h2>
-          </div>
-        </div>
-        <div className="box-tools text-end">
-          <div className="row">
-            <div className="col-xs-12 col-sm-8" />
-            <div className="col-xs-12 col-sm-4">
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => this.updateThumbnails()}
-              >
-                {updateThumbnailsText}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="classpieces-container">
-          <div className="row">
-            {files}
-            {importFilesBtn}
-          </div>
+    ) : null;
+
+  const importFilesToolBtn =
+    files.length > 0 ? (
+      <div className="box-tools flex justify-content-end">
+        <button
+          type="button"
+          className="btn btn-light"
+          onClick={() => updateThumbnails()}
+        >
+          {updateThumbnailsText}
+        </button>
+      </div>
+    ) : null;
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <Breadcrumbs items={breadcrumbsItems} />
+      </Suspense>
+      <div className="row">
+        <div className="col-12">
+          <h2>{heading}</h2>
         </div>
       </div>
-    );
-  }
+      {importFilesToolBtn}
+      <div className="classpieces-container">
+        <div className="row">
+          {files}
+          {importFilesBtn}
+        </div>
+      </div>
+    </>
+  );
 }

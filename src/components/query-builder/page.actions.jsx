@@ -62,11 +62,11 @@ function PageActions() {
   };
 
   const paginationHTML = (
-    <Suspense fallback={[]}>
+    <Suspense fallback={null}>
       <MainPagination
         currentPage={paginationParams.page}
         totalPages={totalPages}
-        pagination_function={updatePage}
+        paginationFn={updatePage}
       />
     </Suspense>
   );
@@ -82,7 +82,7 @@ function PageActions() {
         <DropdownToggle caret size="sm" outline>
           Limit
         </DropdownToggle>
-        <DropdownMenu right>
+        <DropdownMenu end>
           <DropdownItem
             active={limitActive0}
             onClick={() => updateStorePagination({ limit: 25 })}

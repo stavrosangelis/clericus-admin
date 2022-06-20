@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
+import { returnLetter } from '../../helpers';
 
 function ImportPlanPreviewRow(props) {
   const { columns, row } = props;
@@ -85,6 +86,7 @@ function ImportPlanPreviewRow(props) {
       ? columns.map((c, i) => {
           const key = `th-${i}`;
           const { width } = positions[i];
+          const letter = returnLetter(i).toUpperCase();
           return (
             <th
               key={key}
@@ -92,7 +94,7 @@ function ImportPlanPreviewRow(props) {
             >
               <div className="th-content-container">
                 <div className="th-content">
-                  {i} {c}
+                  {i + 1} [{letter}] {c}
                 </div>
                 <div
                   className="col-resize"
@@ -119,15 +121,18 @@ function ImportPlanPreviewRow(props) {
           return <td key={key}>{c}</td>;
         })
       : [];
+
   return (
-    <div className="table-responsive import-plan-preview-table-container">
+    <div className="import-plan-preview-table-container">
       <b>Row</b>:{row.key}
-      <table className="table table-bordered import-plan-preview-table">
-        <thead>{headerRow}</thead>
-        <tbody>
-          <tr>{rowBodyCells}</tr>
-        </tbody>
-      </table>
+      <div className="table-responsive">
+        <table className="table table-bordered import-plan-preview-table">
+          <thead>{headerRow}</thead>
+          <tbody>
+            <tr>{rowBodyCells}</tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

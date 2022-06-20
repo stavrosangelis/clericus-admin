@@ -6,8 +6,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import axios from 'axios';
 import { Tooltip } from 'reactstrap';
-import PropTypes from 'prop-types';
+import { useParams } from 'react-router-dom';
 import { getData } from '../../helpers';
 import Fileblock from '../../components/import-data/File.block';
 import Columns from '../../components/import-data/Columns';
@@ -19,6 +20,8 @@ import IngestDataBlock from '../../components/import-data/Ingest.Data.Block';
 import '../../assets/scss/import.scss';
 
 const Breadcrumbs = lazy(() => import('../../components/Breadcrumbs'));
+
+const { REACT_APP_APIPATH: APIPath } = process.env;
 
 function scrollToElem(containerParam = null, elementParam = null) {
   const container = containerParam;
@@ -40,11 +43,7 @@ function scrollToElem(containerParam = null, elementParam = null) {
   }
 }
 
-function Import(props) {
-  // props
-  const { match } = props;
-  const { _id } = match.params;
-
+export default function Import() {
   // state
   const [loading, setLoading] = useState(true);
   // const [stateError, setError] = useState({ visible: false, text: [] });
@@ -73,7 +72,6 @@ function Import(props) {
   });
 
   // refs
-  const mounted = useRef(false);
   const containerRef = useRef(null);
   const fileBlockRef = useRef(null);
   const columnsBlockRef = useRef(null);
@@ -86,6 +84,9 @@ function Import(props) {
   const importPlanBlockButtonRef = useRef(null);
   const ingestBlockButtonRef = useRef(null);
 
+  const { _id } = useParams();
+  const prevId = useRef(null);
+
   const toggleTooltips = (value) => {
     const copy = {
       fileBlock: false,
@@ -96,21 +97,6 @@ function Import(props) {
     copy[value] = !tooltips[value];
     setTooltips(copy);
   };
-
-  const loadImportRules = useCallback(async () => {
-    const responseData = await getData(`import-plan-rules`, {
-      importPlanId: _id,
-      limit: 500,
-    });
-    const { data } = responseData.data;
-    return data;
-  }, [_id]);
-
-  const load = useCallback(async () => {
-    const responseData = await getData(`import-plan`, { _id });
-    const { data } = responseData;
-    return data;
-  }, [_id]);
 
   const loadImportStatus = useCallback(async () => {
     const { data } = await getData(`import-plan-status`, { _id });
@@ -127,10 +113,29 @@ function Import(props) {
   };
 
   useEffect(() => {
-    mounted.current = true;
+    let unmounted = false;
+    const controller = new AbortController();
     const updateRules = async () => {
+      const loadImportRules = async () => {
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}import-plan-rules`,
+          crossDomain: true,
+          params: {
+            importPlanId: _id,
+            limit: 500,
+          },
+          signal: controller.signal,
+        })
+          .then((response) => response.data.data)
+          .catch((error) => {
+            console.log(error);
+          });
+        const { data = [] } = responseData;
+        return data;
+      };
       const rules = await loadImportRules();
-      if (mounted.current) {
+      if (!unmounted) {
         setImportRulesLoading(false);
         setImportRulesData(rules);
       }
@@ -139,43 +144,67 @@ function Import(props) {
       updateRules();
     }
     return () => {
-      mounted.current = false;
+      unmounted = true;
+      controller.abort();
     };
-  }, [importRulesLoading, loadImportRules]);
+  }, [importRulesLoading, _id]);
 
   useEffect(() => {
-    mounted.current = true;
+    let unmounted = false;
+    const controller = new AbortController();
     const updateData = async () => {
+      prevId.current = _id;
+      const load = async () => {
+        const responseData = await axios({
+          method: 'get',
+          url: `${APIPath}import-plan`,
+          crossDomain: true,
+          params: { _id },
+          signal: controller.signal,
+        })
+          .then((response) => response.data)
+          .catch((error) => {
+            console.log(error);
+          });
+        const { data = null } = responseData;
+        return data;
+      };
       const data = await load();
-      const rules = await loadImportRules();
-      if (mounted.current) {
+      if (!unmounted) {
         setLoading(false);
         setItem(data);
         setLabel(data.label);
         const relations = data.relations || [];
         const parsedRelations = relations.map((r) => JSON.parse(r));
         setImportRulesRelations(parsedRelations);
-
-        setImportRulesData(rules);
       }
     };
     if (loading) {
       updateData();
     }
     return () => {
-      mounted.current = false;
+      unmounted = true;
+      controller.abort();
     };
-  }, [loading, load, loadImportRules]);
+  }, [loading, _id]);
 
   useEffect(() => {
-    mounted.current = true;
+    if (!loading && prevId.current !== _id) {
+      prevId.current = _id;
+      setLoading(true);
+      setItem(null);
+    }
+  }, [_id, loading]);
+
+  useEffect(() => {
+    let unmounted = false;
     let interval = null;
     const status = item?.ingestionStatus || 0;
 
     if (status === 1 && interval === null && !completeInterval) {
       interval = setInterval(async () => {
         const data = await loadImportStatus();
-        if (mounted.current) {
+        if (!unmounted) {
           setIngestionStatus(data);
           if (data.status !== 1) {
             setCompleteInterval(true);
@@ -191,11 +220,11 @@ function Import(props) {
         status: Number(item?.ingestionStatus),
       });
     }
-    if (interval !== null) {
-      return () => clearInterval(interval);
-    }
     return () => {
-      mounted.current = false;
+      unmounted = true;
+      if (interval !== null) {
+        clearInterval(interval);
+      }
     };
   }, [item, loadImportStatus, completeInterval]);
 
@@ -547,14 +576,3 @@ function Import(props) {
     </div>
   );
 }
-Import.defaultProps = {
-  match: null,
-};
-Import.propTypes = {
-  match: PropTypes.shape({
-    params: PropTypes.shape({
-      _id: PropTypes.string,
-    }),
-  }),
-};
-export default Import;

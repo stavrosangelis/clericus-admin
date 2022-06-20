@@ -13,7 +13,8 @@ function Row(props) {
   const findEventTypeByIdRec = (_id, types) => {
     let eventType = types.find((t) => t._id === _id) || null;
     if (eventType === null) {
-      for (let c = 0; c < types.length; c += 1) {
+      const { length } = types;
+      for (let c = 0; c < length; c += 1) {
         const { children } = types[c];
         eventType = findEventTypeByIdRec(_id, children);
         if (eventType !== null) {
@@ -35,46 +36,46 @@ function Row(props) {
   const count = index + 1 + countPage * limit;
   const eventType = findEventTypeById(item.eventType);
   const temporal = [];
-  for (let t = 0; t < item.temporal.length; t += 1) {
-    const temp = item.temporal[t];
+  const { temporal: iTemporal } = item;
+  const { length: itLength } = iTemporal;
+  for (let t = 0; t < itLength; t += 1) {
+    const temp = iTemporal[t];
+    const { _id, ref } = temp;
+    const { _id: rId, label: rLabel } = ref;
     const newItem = [];
     if (t > 0) {
       newItem.push(<span key={t}>, </span>);
     }
     temporal.push(
-      <Link
-        key={temp._id}
-        href={`/temporal/${temp._id}`}
-        to={`/temporal/${temp.ref._id}`}
-      >
-        {temp.ref.label}
+      <Link key={_id} href={`/temporal/${_id}`} to={`/temporal/${rId}`}>
+        {rLabel}
       </Link>
     );
   }
   let temporalOut = temporal;
-  if (temporal.length > 1) {
+  if (itLength > 1) {
     temporalOut = `[${temporal}]`;
   }
   const spatial = [];
-  for (let s = 0; s < item.spatial.length; s += 1) {
-    const spat = item.spatial[s];
+  const { spatial: iSpatial } = item;
+  const { length: isLength } = iSpatial;
+  for (let s = 0; s < isLength; s += 1) {
+    const spat = iSpatial[s];
+    const { _id, ref } = spat;
+    const { _id: rId, label: rLabel } = ref;
     const newItem = [];
     if (s > 0) {
       newItem.push(<span key={s}>, </span>);
     }
     newItem.push(
-      <Link
-        key={spat._is}
-        href={`/spatial/${spat._id}`}
-        to={`/spatial/${spat.ref._id}`}
-      >
-        {spat.ref.label}
+      <Link key={_id} href={`/spatial/${_id}`} to={`/spatial/${rId}`}>
+        {rLabel}
       </Link>
     );
     spatial.push(newItem);
   }
   let spatialOut = spatial;
-  if (spatial.length > 1) {
+  if (isLength > 1) {
     spatialOut = `[${spatial}]`;
   }
   const createdAt = (
@@ -92,6 +93,7 @@ function Row(props) {
     </div>
   );
 
+  const { _id: iId, label: iLabel, checked: iChecked } = item;
   return (
     <tr key={index}>
       <td>
@@ -99,7 +101,7 @@ function Row(props) {
           <input
             type="checkbox"
             value={index}
-            checked={item.checked}
+            checked={iChecked}
             onChange={() => false}
           />
           <span
@@ -114,12 +116,12 @@ function Row(props) {
       </td>
       <td>{count}</td>
       <td>
-        <Link href={`/event/${item._id}`} to={`/event/${item._id}`}>
-          {item.label}
+        <Link href={`/event/${iId}`} to={`/event/${iId}`}>
+          {iLabel}
         </Link>
       </td>
       <td>
-        <Link href={`/event/${item._id}`} to={`/event/${item._id}`}>
+        <Link href={`/event/${iId}`} to={`/event/${iId}`}>
           {eventType}
         </Link>
       </td>
@@ -128,11 +130,7 @@ function Row(props) {
       <td>{createdAt}</td>
       <td>{updatedAt}</td>
       <td>
-        <Link
-          href={`/event/${item._id}`}
-          to={`/event/${item._id}`}
-          className="edit-item"
-        >
+        <Link href={`/event/${iId}`} to={`/event/${iId}`} className="edit-item">
           <i className="fa fa-pencil" />
         </Link>
       </td>

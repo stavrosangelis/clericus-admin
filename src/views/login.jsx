@@ -22,6 +22,7 @@ import { login } from '../redux/actions';
 import logosrc from '../assets/img/cos-logo-bw.png';
 import '../assets/scss/login.scss';
 
+const { REACT_APP_BASENAME } = process.env;
 function Login() {
   // redux
   const dispatch = useDispatch();
@@ -102,7 +103,7 @@ function Login() {
 
   useEffect(() => {
     if (sessionActive) {
-      navigate('/');
+      navigate(REACT_APP_BASENAME);
     }
   }, [sessionActive, navigate]);
 
