@@ -19,6 +19,9 @@ export default function Person() {
   const [loading, setLoading] = useState(false);
   const [item, setItem] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [relatedEntityOpen, setRelatedEntityOpen] = useState(false);
+  const [relatedEntityRel, setRelatedEntityRel] = useState(null);
+  const [relatedEntityRelType, setRelatedEntityRelType] = useState(null);
 
   const { _id } = useParams();
   const prevId = useRef(null);
@@ -86,6 +89,12 @@ export default function Person() {
     setDeleteModalOpen(!deleteModalOpen);
   };
 
+  const relatedEntitiesToggle = (rel = null, type = null) => {
+    setRelatedEntityOpen(!relatedEntityOpen);
+    setRelatedEntityRel(rel);
+    setRelatedEntityRelType(type);
+  };
+
   const referencesLabels = [];
   const referencesTypes = [];
 
@@ -148,13 +157,22 @@ export default function Person() {
           referencesLabels={referencesLabels}
           referencesTypes={referencesTypes}
           type="person"
+          toggleOpen={relatedEntitiesToggle}
+          open={relatedEntityOpen}
+          rel={relatedEntityRel}
+          relType={relatedEntityRelType}
         />
       </Suspense>
     );
 
     relatedEntitiesBlock = (
-      <Suspense fallback={renderLoader()}>
-        <RelatedEntitiesBlock item={item} itemType="Person" reload={reload} />
+      <Suspense fallback={null}>
+        <RelatedEntitiesBlock
+          item={item}
+          itemType="Person"
+          reload={reload}
+          toggleRel={relatedEntitiesToggle}
+        />
       </Suspense>
     );
   } else {

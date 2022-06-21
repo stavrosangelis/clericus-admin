@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { useDispatch, useSelector } from 'react-redux';
 import { loadRelationsOrganisationsValues } from '../../redux/actions';
 
 function OrganisationsForm(props) {
-  const { submit, clear } = props;
+  const { submit, clear, item, toggleItem } = props;
 
   const dispatch = useDispatch();
   const itemTypes = useSelector((state) => state.organisationTypes);
@@ -94,8 +94,28 @@ function OrganisationsForm(props) {
   const itemTypesItems = typesList(itemTypes);
   itemTypesItems.unshift(initEventTypeValue);
 
+  let labelBlock = null;
+  if (item !== null) {
+    const { ref } = item;
+    const { _id, label } = ref;
+    labelBlock = (
+      <div>
+        <i>Selected organisation:</i>{' '}
+        <Button
+          type="button"
+          color="info"
+          size="sm"
+          onClick={() => toggleItem(_id)}
+        >
+          {label}
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <>
+      {labelBlock}
       <FormGroup>
         <Label>Search for Organisation</Label>
       </FormGroup>
@@ -155,12 +175,17 @@ function OrganisationsForm(props) {
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }
-
+OrganisationsForm.defaultProps = {
+  item: null,
+  toggleItem: () => {},
+};
 OrganisationsForm.propTypes = {
+  item: PropTypes.object,
   submit: PropTypes.bool.isRequired,
   clear: PropTypes.bool.isRequired,
+  toggleItem: PropTypes.func,
 };
 export default OrganisationsForm;

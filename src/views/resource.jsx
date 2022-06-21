@@ -21,6 +21,9 @@ export default function Resource() {
   const [loading, setLoading] = useState(false);
   const [item, setItem] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [relatedEntityOpen, setRelatedEntityOpen] = useState(false);
+  const [relatedEntityRel, setRelatedEntityRel] = useState(null);
+  const [relatedEntityRelType, setRelatedEntityRelType] = useState(null);
 
   const { _id } = useParams();
   const prevId = useRef(null);
@@ -88,6 +91,12 @@ export default function Resource() {
     setDeleteModalOpen(!deleteModalOpen);
   };
 
+  const relatedEntitiesToggle = (rel = null, type = null) => {
+    setRelatedEntityOpen(!relatedEntityOpen);
+    setRelatedEntityRel(rel);
+    setRelatedEntityRelType(type);
+  };
+
   const referencesLabels = [];
   const referencesTypes = [];
 
@@ -151,6 +160,10 @@ export default function Resource() {
           referencesLabels={referencesLabels}
           referencesTypes={referencesTypes}
           type="resource"
+          toggleOpen={relatedEntitiesToggle}
+          open={relatedEntityOpen}
+          rel={relatedEntityRel}
+          relType={relatedEntityRelType}
         />
       </Suspense>
     );
@@ -159,13 +172,18 @@ export default function Resource() {
 
     metadataBlock =
       metadata !== null && Object.entries(metadata).length > 0 ? (
-        <Suspense fallback={renderLoader()}>
+        <Suspense fallback={null}>
           <MetadataBlock metadata={metadata} />
         </Suspense>
       ) : null;
     relatedEntitiesBlock = (
-      <Suspense fallback={renderLoader()}>
-        <RelatedEntitiesBlock item={item} itemType="Resource" reload={reload} />
+      <Suspense fallback={null}>
+        <RelatedEntitiesBlock
+          item={item}
+          itemType="Resource"
+          reload={reload}
+          toggleRel={relatedEntitiesToggle}
+        />
       </Suspense>
     );
   } else {

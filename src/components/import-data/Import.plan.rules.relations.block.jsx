@@ -41,7 +41,6 @@ function ImportPlanRulesRelations(props) {
   );
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorText, setErrorText] = useState([]);
-  const [redirect, setRedirect] = useState(false);
   const [selectedSourceNode, setSelectedSourceNode] = useState(null);
   const [selectedTargetNode, setSelectedTargetNode] = useState(null);
   const [selectedRelation, setSelectedRelation] = useState(null);
@@ -180,12 +179,6 @@ function ImportPlanRulesRelations(props) {
     }
   };
 
-  useEffect(() => {
-    if (redirect) {
-      setRedirect(false);
-    }
-  }, [redirect]);
-
   const formSubmit = async (e) => {
     e.preventDefault();
     if (saving) {
@@ -217,7 +210,6 @@ function ImportPlanRulesRelations(props) {
       );
       setSaving(false);
       reloadFn();
-      setRedirect(true);
       toggleModal();
     } else {
       const newErrorText = [];

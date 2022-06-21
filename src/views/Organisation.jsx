@@ -19,6 +19,9 @@ export default function Organisation() {
   const [loading, setLoading] = useState(false);
   const [item, setItem] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [relatedEntityOpen, setRelatedEntityOpen] = useState(false);
+  const [relatedEntityRel, setRelatedEntityRel] = useState(null);
+  const [relatedEntityRelType, setRelatedEntityRelType] = useState(null);
 
   const { _id } = useParams();
   const prevId = useRef(null);
@@ -86,6 +89,12 @@ export default function Organisation() {
     setDeleteModalOpen(!deleteModalOpen);
   };
 
+  const relatedEntitiesToggle = (rel = null, type = null) => {
+    setRelatedEntityOpen(!relatedEntityOpen);
+    setRelatedEntityRel(rel);
+    setRelatedEntityRelType(type);
+  };
+
   const referencesLabels = [];
   const referencesTypes = [];
 
@@ -148,6 +157,10 @@ export default function Organisation() {
           referencesLabels={referencesLabels}
           referencesTypes={referencesTypes}
           type="organisation"
+          toggleOpen={relatedEntitiesToggle}
+          open={relatedEntityOpen}
+          rel={relatedEntityRel}
+          relType={relatedEntityRelType}
         />
       </Suspense>
     );
@@ -158,6 +171,7 @@ export default function Organisation() {
           item={item}
           itemType="Organisation"
           reload={reload}
+          toggleRel={relatedEntitiesToggle}
         />
       </Suspense>
     );

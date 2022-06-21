@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 import PropTypes from 'prop-types';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
@@ -8,7 +8,7 @@ import { outputDate } from '../../helpers';
 import { loadRelationsEventsValues } from '../../redux/actions';
 
 function EventsForm(props) {
-  const { submit, clear } = props;
+  const { submit, clear, item, toggleItem } = props;
 
   const dispatch = useDispatch();
   const eventTypes = useSelector((state) => state.eventTypes);
@@ -131,8 +131,27 @@ function EventsForm(props) {
   const eventTypesItems = eventTypesList(eventTypes);
   eventTypesItems.unshift(initEventTypeValue);
 
+  let labelBlock = null;
+  if (item !== null) {
+    const { ref } = item;
+    const { _id, label } = ref;
+    labelBlock = (
+      <div>
+        <i>Selected event:</i>{' '}
+        <Button
+          type="button"
+          color="info"
+          size="sm"
+          onClick={() => toggleItem(_id)}
+        >
+          {label}
+        </Button>
+      </div>
+    );
+  }
   return (
-    <div>
+    <>
+      {labelBlock}
       <FormGroup>
         <Label>Search for Event</Label>
       </FormGroup>
@@ -241,12 +260,18 @@ function EventsForm(props) {
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
+EventsForm.defaultProps = {
+  item: null,
+  toggleItem: () => {},
+};
 EventsForm.propTypes = {
+  item: PropTypes.object,
   submit: PropTypes.bool.isRequired,
   clear: PropTypes.bool.isRequired,
+  toggleItem: PropTypes.func,
 };
 export default EventsForm;

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { useDispatch, useSelector } from 'react-redux';
 import { loadRelationsResourcesValues } from '../../redux/actions';
 
 function ResourcesForm(props) {
-  const { submit, clear } = props;
+  const { submit, clear, item, toggleItem } = props;
 
   const dispatch = useDispatch();
   const resourcesTypes = useSelector((state) => state.resourcesTypes);
@@ -74,7 +74,8 @@ function ResourcesForm(props) {
 
   const resourcesTypesList = (types = [], sep = '') => {
     const options = [];
-    for (let i = 0; i < types.length; i += 1) {
+    const { length } = types;
+    for (let i = 0; i < length; i += 1) {
       const resourceType = types[i];
       const sepLabel = sep !== '' ? `${sep} ` : '';
       const option = {
@@ -97,11 +98,31 @@ function ResourcesForm(props) {
     return options;
   };
 
+  let labelBlock = null;
+  if (item !== null) {
+    const { ref } = item;
+    const { _id, label } = ref;
+    labelBlock = (
+      <div>
+        <i>Selected event:</i>{' '}
+        <Button
+          type="button"
+          color="info"
+          size="sm"
+          onClick={() => toggleItem(_id)}
+        >
+          {label}
+        </Button>
+      </div>
+    );
+  }
+
   const resourceTypesItems = resourcesTypesList(resourcesTypes);
   resourceTypesItems.unshift(initTypeValue);
 
   return (
-    <div>
+    <>
+      {labelBlock}
       <FormGroup>
         <Label>Search for Resource</Label>
       </FormGroup>
@@ -161,12 +182,17 @@ function ResourcesForm(props) {
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }
-
+ResourcesForm.defaultProps = {
+  item: null,
+  toggleItem: () => {},
+};
 ResourcesForm.propTypes = {
+  item: PropTypes.object,
   submit: PropTypes.bool.isRequired,
   clear: PropTypes.bool.isRequired,
+  toggleItem: PropTypes.func,
 };
 export default ResourcesForm;

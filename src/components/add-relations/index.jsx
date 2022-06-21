@@ -1,18 +1,21 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import {
   UncontrolledButtonDropdown,
   DropdownMenu,
   DropdownItem,
   DropdownToggle,
 } from 'reactstrap';
+import axios from 'axios';
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { parseReferenceLabels, parseReferenceTypes } from '../../helpers';
 
 import AddItem from './Add.item';
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
+
 function AddRelation(props) {
-  const { item, reload, type } = props;
+  const { item, reload, type, open, rel, relType, toggleOpen } = props;
   // redux
   const {
     entitiesLoaded,
@@ -71,18 +74,27 @@ function AddRelation(props) {
   const [referencesTypes, setReferencesTypes] = useState(null);
   const [referencesLoaded, setReferencesLoaded] = useState(false);
 
-  const toggleModal = (modal) => {
-    const newModalsVisible = {
-      eventModal: false,
-      organisationModal: false,
-      personModal: false,
-      resourceModal: false,
-      temporalModal: false,
-      spatialModal: false,
-    };
-    newModalsVisible[modal] = !modalsVisible[modal];
-    setModalsVisible(newModalsVisible);
-  };
+  const [loadingTaxonomies, setLoadingTaxonomies] = useState(true);
+  const [taxonomies, setTaxonomies] = useState([]);
+
+  const toggleModal = useCallback(
+    (modal) => {
+      const newModalsVisible = {
+        eventModal: false,
+        organisationModal: false,
+        personModal: false,
+        resourceModal: false,
+        temporalModal: false,
+        spatialModal: false,
+      };
+      newModalsVisible[modal] = !modalsVisible[modal];
+      setModalsVisible(newModalsVisible);
+      if (!modalsVisible[modal] === false) {
+        toggleOpen();
+      }
+    },
+    [modalsVisible, toggleOpen]
+  );
 
   const loadReferenceLabelsNTypes = () => {
     const { properties } = mainEntity;
@@ -92,6 +104,53 @@ function AddRelation(props) {
     setReferencesTypes(newReferencesTypes);
     setReferencesLoaded(true);
   };
+
+  useEffect(() => {
+    let unmounted = false;
+    const controller = new AbortController();
+    const loadTaxonomies = async () => {
+      const responseData = await axios({
+        method: 'get',
+        url: `${APIPath}taxonomies`,
+        crossDomain: true,
+        params: {
+          page: 1,
+          limit: 100,
+        },
+        signal: controller.signal,
+      })
+        .then((response) => {
+          const { data: rData = null } = response;
+          return rData;
+        })
+        .catch((error) => {
+          console.log(error);
+          return { data: null };
+        });
+      if (!unmounted) {
+        setLoadingTaxonomies(false);
+        const { data = null } = responseData;
+        if (data !== null) {
+          setTaxonomies(data.data);
+        }
+      }
+    };
+    if (loadingTaxonomies) {
+      loadTaxonomies();
+    }
+    return () => {
+      unmounted = true;
+      controller.abort();
+    };
+  }, [loadingTaxonomies]);
+
+  useEffect(() => {
+    if (open) {
+      toggleOpen(rel, relType);
+      const modalType = `${relType}Modal`;
+      toggleModal(modalType);
+    }
+  }, [open, toggleModal, toggleOpen, rel, relType]);
 
   useEffect(() => {
     if (!referencesLoaded && entitiesLoaded) {
@@ -127,6 +186,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="eventModal"
         visible={eventModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -144,6 +205,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="organisationModal"
         visible={organisationModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -161,6 +224,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="personModal"
         visible={personModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -178,6 +243,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="resourceModal"
         visible={resourceModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -195,6 +262,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="spatialModal"
         visible={spatialModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -212,6 +281,8 @@ function AddRelation(props) {
         toggleModal={toggleModal}
         modalType="temporalModal"
         visible={temporalModal}
+        rel={rel}
+        taxonomies={taxonomies}
       />
     </Suspense>
   );
@@ -303,12 +374,20 @@ AddRelation.defaultProps = {
   type: '',
   item: null,
   reload: () => {},
+  open: false,
+  rel: null,
+  relType: '',
+  toggleOpen: () => {},
 };
 
 AddRelation.propTypes = {
   type: PropTypes.string,
   item: PropTypes.object,
   reload: PropTypes.func,
+  open: PropTypes.bool,
+  rel: PropTypes.object,
+  relType: PropTypes.string,
+  toggleOpen: PropTypes.func,
 };
 
 export default AddRelation;

@@ -1,4 +1,10 @@
-import React, { useEffect, useReducer, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import {
   Button,
   Modal,
@@ -10,10 +16,12 @@ import {
   Alert,
   Spinner,
 } from 'reactstrap';
+import axios from 'axios';
 import Select from 'react-select';
 import PropTypes from 'prop-types';
 import {
   eventLabelDetails,
+  getData,
   putData,
   refTypesList,
   getResourceThumbnailURL,
@@ -29,6 +37,8 @@ import ResourcesForm from './Resources.form';
 import SpatialForm from './Spatial.form';
 import TemporalForm from './Temporal.form';
 
+const { REACT_APP_APIPATH: APIPath } = process.env;
+
 function AddItem(props) {
   // props
   const {
@@ -40,14 +50,15 @@ function AddItem(props) {
     toggleModal: toggleModalFn,
     type,
     refTypes,
+    rel,
     reload,
     visible,
     modalItems,
+    taxonomies,
   } = props;
-
   // state
   const defaultState = {
-    refType: null,
+    refType: { value: '', label: '' },
     selectedItem: null,
     addingReference: false,
     addingReferenceErrorVisible: false,
@@ -61,6 +72,57 @@ function AddItem(props) {
   const [itemDetailsVisible, setItemDetailsVisible] = useState(false);
   const [searchBool, setSearchBool] = useState(false);
   const [clearSearchBool, setClearSearchBool] = useState(false);
+  const [roleTaxonomy, setRoleTaxonomy] = useState(null);
+  const [taxonomyTermsOptions, setTaxonomyTermsOptions] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
+
+  const termsList = useCallback((terms, sepParam = '') => {
+    const options = [];
+    const { length } = terms;
+    for (let i = 0; i < length; i += 1) {
+      const term = terms[i];
+      const { children = [], _id: termId, label } = term;
+      let sep = sepParam;
+      const option = {
+        value: termId,
+        label: `${sep} ${label}`,
+        termLabel: label,
+      };
+      options.push(option);
+      if (children.length > 0) {
+        sep += '-';
+        const childrenOptions = termsList(children, sep);
+        options.push(...childrenOptions);
+      }
+    }
+    return options;
+  }, []);
+
+  const loadTaxonomyTerms = useCallback(
+    async (taxonomyId) => {
+      const responseData = await getData(`taxonomy`, {
+        _id: taxonomyId,
+      });
+      const { data } = responseData;
+      const options = termsList(data.taxonomyterms);
+      setTaxonomyTermsOptions(options);
+    },
+    [termsList]
+  );
+
+  const handleRoleChange = (option, elem) => {
+    switch (elem) {
+      case 'taxonomy':
+        setRoleTaxonomy(option);
+        loadTaxonomyTerms(option.value);
+        break;
+      case 'role':
+        setSelectedRole(option);
+        break;
+      default:
+        break;
+    }
+  };
 
   let heading = '';
   switch (blockType) {
@@ -86,12 +148,39 @@ function AddItem(props) {
       break;
   }
   const modalRef = useRef(null);
+  const prevRel = useRef(null);
   let height = 0;
 
   if (modalRef.current !== null) {
     const modalContent = modalRef.current.childNodes[0].childNodes[0];
     height = modalContent.getBoundingClientRect().height;
   }
+
+  const rtItems = useCallback(() => {
+    let refTypesListItems = [];
+    if (blockType === 'event' && typeof refTypes.event !== 'undefined') {
+      refTypesListItems = refTypesList(refTypes.event);
+    }
+    if (
+      blockType === 'organisation' &&
+      typeof refTypes.organisation !== 'undefined'
+    ) {
+      refTypesListItems = refTypesList(refTypes.organisation);
+    }
+    if (blockType === 'person' && typeof refTypes.person !== 'undefined') {
+      refTypesListItems = refTypesList(refTypes.person);
+    }
+    if (blockType === 'resource' && typeof refTypes.resource !== 'undefined') {
+      refTypesListItems = refTypesList(refTypes.resource);
+    }
+    if (blockType === 'spatial' && typeof refTypes.spatial !== 'undefined') {
+      refTypesListItems = refTypesList(refTypes.spatial);
+    }
+    if (blockType === 'temporal' && typeof refTypes.temporal !== 'undefined') {
+      refTypesListItems = refTypesList(refTypes.temporal);
+    }
+    return refTypesListItems;
+  }, [blockType, refTypes]);
 
   const selectItem = (_id) => {
     setState({
@@ -133,6 +222,19 @@ function AddItem(props) {
   };
 
   useEffect(() => {
+    if (rel !== null && rel !== prevRel.current) {
+      prevRel.current = rel;
+      const { term = null } = rel;
+      if (term !== null) {
+        const refType = rtItems().find((i) => i.value === term.label) || null;
+        if (refType !== null) {
+          setState({ refType });
+        }
+      }
+    }
+  }, [rel, rtItems]);
+
+  useEffect(() => {
     if (searchBool) {
       setSearchBool(false);
     }
@@ -145,7 +247,9 @@ function AddItem(props) {
   }, [clearSearchBool]);
 
   const addReferences = async () => {
-    const { refType: sReftype = null, selectedItem: sSelectedItem } = state;
+    const { refType: refTypeParam, selectedItem } = state;
+    const sSelectedItem = selectedItem !== null ? selectedItem : rel.ref._id;
+    const sReftype = refTypeParam.value !== '' ? refTypeParam : null;
     if (sReftype === null) {
       const response = {
         data: {
@@ -169,8 +273,35 @@ function AddItem(props) {
       ],
       taxonomyTermLabel: sReftype.value,
     };
+    if (
+      selectedRole !== null &&
+      typeof selectedRole.value !== 'undefined' &&
+      selectedRole.value !== ''
+    ) {
+      newReference.items[0].role = selectedRole.value;
+    }
     const data = await putData(`reference`, newReference);
     return data;
+  };
+
+  const deleteRef = async (ref, refTerm, model) => {
+    const reference = {
+      items: [
+        { _id: item._id, type },
+        { _id: ref, type: model },
+      ],
+      taxonomyTermLabel: refTerm,
+    };
+    await axios({
+      method: 'delete',
+      url: `${APIPath}reference`,
+      crossDomain: true,
+      data: reference,
+    })
+      .then((response) => response)
+      .catch((error) => {
+        console.log(error);
+      });
   };
 
   const submitReferences = async () => {
@@ -181,7 +312,7 @@ function AddItem(props) {
     if (sAddingReference) {
       return false;
     }
-    if (sSelectedItem === null) {
+    if (sSelectedItem === null && typeof rel.ref === 'undefined') {
       setState({
         addingReference: false,
         addingReferenceErrorVisible: true,
@@ -204,7 +335,15 @@ function AddItem(props) {
         </span>
       ),
     });
-
+    // if we are updating an existing relation we have to remove it first
+    if (rel !== null) {
+      const { ref: rRef = null, term = null } = rel;
+      if (rRef !== null) {
+        const { _id: rId = '' } = rRef;
+        const { label: tLabel = '' } = term;
+        await deleteRef(rId, tLabel, blockType);
+      }
+    }
     const references = await addReferences();
 
     const { data: referencesData, status = false } = references;
@@ -240,6 +379,7 @@ function AddItem(props) {
       <Spinner color="secondary" />
     </div>
   );
+
   if (!loading) {
     let relations = [];
     if (blockType === 'event') {
@@ -263,13 +403,11 @@ function AddItem(props) {
     const relationsIds = relations.map((r) => r.ref._id);
     if (blockType !== 'resource') {
       newList = modalItems.map((i) => {
-        const itemId = i._id;
+        const { _id: itemId = '', label: iLabel = '' } = i;
         const active = state.selectedItem === itemId ? ' active' : '';
         const existing = relationsIds.indexOf(itemId) > -1 ? ' exists' : '';
-        let labelDetails = '';
-        if (type === 'event') {
-          labelDetails = eventLabelDetails(item);
-        }
+        const labelDetails =
+          blockType === 'event' ? eventLabelDetails(item) : '';
         const labelDetailsText =
           labelDetails !== '' ? (
             <span>
@@ -290,7 +428,7 @@ function AddItem(props) {
             aria-label="select event"
           >
             <div className="event-list-item-details">
-              {i.label}
+              {iLabel}
               {labelDetailsText}
             </div>
             <Button
@@ -307,7 +445,7 @@ function AddItem(props) {
       });
     } else {
       newList = modalItems.map((i) => {
-        const itemId = i._id;
+        const { _id: itemId = '', label: iLabel = '' } = i;
         const active = state.selectedItem === itemId ? ' active' : '';
         const existing = relationsIds.indexOf(itemId) > -1 ? ' exists' : '';
         const thumbnail =
@@ -316,7 +454,7 @@ function AddItem(props) {
               <img
                 className="img-responsive img-thumbnail"
                 src={getResourceThumbnailURL(i)}
-                alt={i.label}
+                alt={iLabel}
               />
             </div>
           ) : (
@@ -334,7 +472,7 @@ function AddItem(props) {
           >
             <div className="resource-container">
               {thumbnail}
-              <div className="label">{i.label}</div>
+              <div className="label">{iLabel}</div>
             </div>
             <div className="text-center">
               <Button
@@ -355,54 +493,73 @@ function AddItem(props) {
   const addingReferenceErrorVisibleClass = state.addingReferenceErrorVisible
     ? ''
     : 'hidden';
-  let refTypesListItems = [];
-  if (blockType === 'event' && typeof refTypes.event !== 'undefined') {
-    refTypesListItems = refTypesList(refTypes.event);
-  }
-  if (
-    blockType === 'organisation' &&
-    typeof refTypes.organisation !== 'undefined'
-  ) {
-    refTypesListItems = refTypesList(refTypes.organisation);
-  }
-  if (blockType === 'person' && typeof refTypes.person !== 'undefined') {
-    refTypesListItems = refTypesList(refTypes.person);
-  }
-  if (blockType === 'resource' && typeof refTypes.resource !== 'undefined') {
-    refTypesListItems = refTypesList(refTypes.resource);
-  }
-  if (blockType === 'spatial' && typeof refTypes.spatial !== 'undefined') {
-    refTypesListItems = refTypesList(refTypes.spatial);
-  }
-  if (blockType === 'temporal' && typeof refTypes.temporal !== 'undefined') {
-    refTypesListItems = refTypesList(refTypes.temporal);
-  }
+  const refTypesListItems = rtItems();
   const errorContainer = (
     <Alert className={addingReferenceErrorVisibleClass} color="danger">
       {state.addingReferenceErrorText}
     </Alert>
   );
 
-  let searchForm = [];
+  let searchForm = null;
   if (blockType === 'event') {
-    searchForm = <EventsForm submit={searchBool} clear={clearSearchBool} />;
+    searchForm = (
+      <EventsForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
+    );
   }
   if (blockType === 'organisation') {
     searchForm = (
-      <OrganisationsForm submit={searchBool} clear={clearSearchBool} />
+      <OrganisationsForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
     );
   }
   if (blockType === 'person') {
-    searchForm = <PeopleForm submit={searchBool} clear={clearSearchBool} />;
+    searchForm = (
+      <PeopleForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
+    );
   }
   if (blockType === 'resource') {
-    searchForm = <ResourcesForm submit={searchBool} clear={clearSearchBool} />;
+    searchForm = (
+      <ResourcesForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
+    );
   }
   if (blockType === 'spatial') {
-    searchForm = <SpatialForm submit={searchBool} clear={clearSearchBool} />;
+    searchForm = (
+      <SpatialForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
+    );
   }
   if (blockType === 'temporal') {
-    searchForm = <TemporalForm submit={searchBool} clear={clearSearchBool} />;
+    searchForm = (
+      <TemporalForm
+        submit={searchBool}
+        clear={clearSearchBool}
+        item={rel}
+        toggleItem={itemDetailsToggle}
+      />
+    );
   }
 
   const eventListClass =
@@ -414,6 +571,10 @@ function AddItem(props) {
       ? `"${item.label}"`
       : 'selected item';
 
+  const taxonomyOptions = taxonomies.map((t) => ({
+    value: t._id,
+    label: t.label,
+  }));
   return (
     <Modal
       isOpen={visible}
@@ -438,6 +599,20 @@ function AddItem(props) {
             />
           </FormGroup>
 
+          <FormGroup>
+            <Label>Role</Label>
+            <Select
+              value={roleTaxonomy}
+              onChange={(v) => handleRoleChange(v, 'taxonomy')}
+              options={taxonomyOptions}
+            />
+            <Select
+              isClearable
+              value={selectedRole}
+              onChange={(o) => handleRoleChange(o, 'role')}
+              options={taxonomyTermsOptions}
+            />
+          </FormGroup>
           {searchForm}
 
           <div
@@ -448,7 +623,7 @@ function AddItem(props) {
               color="secondary"
               type="button"
               onClick={() => clearSearch()}
-              size="sm"
+              size="xs"
             >
               <i className="fa fa-times" /> Clear Search
             </Button>
@@ -456,7 +631,7 @@ function AddItem(props) {
               color="info"
               type="button"
               onClick={() => submitSearch()}
-              size="sm"
+              size="xs"
             >
               <i className="fa fa-search" /> Search
             </Button>
@@ -499,7 +674,9 @@ AddItem.defaultProps = {
   toggleModal: () => {},
   type: '',
   refTypes: null,
+  rel: null,
   visible: false,
+  taxonomies: [],
 };
 
 AddItem.propTypes = {
@@ -512,8 +689,10 @@ AddItem.propTypes = {
   toggleModal: PropTypes.func,
   type: PropTypes.string,
   refTypes: PropTypes.object,
+  rel: PropTypes.object,
   reload: PropTypes.func.isRequired,
   visible: PropTypes.bool,
+  taxonomies: PropTypes.array,
 };
 
 export default AddItem;

@@ -917,15 +917,26 @@ header {
   transform: rotate(-90deg);
 }
 .related-resource {
+  min-height: 62px;
   max-width: 110px;
   display: inline-block;
-  margin: 5px 10px;
+  margin: 5px 12px;
   position: relative;
   vertical-align: top;
 }
 .related-resource > a > i {
   display: block;
   width: calc(100% - 20px);
+}
+.related-resource-btns {
+  position: absolute;
+  top: -1px;
+  right: -20px;
+  z-index: 9;
+  border-top: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #fff;
 }
 .people-card, .items-card {
   padding: 15px 0 !important;

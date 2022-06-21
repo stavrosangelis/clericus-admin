@@ -528,12 +528,13 @@ export const eventLabelDetails = (item) => {
 };
 
 export const eventBlock = (item) => {
-  const { _id, label } = item.ref;
+  const { _id: iId, ref } = item;
+  const { _id, label } = ref;
   const labelDetails = eventLabelDetails(item);
   const url = `event/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           {label}
           {labelDetails}
@@ -544,12 +545,13 @@ export const eventBlock = (item) => {
 };
 
 export const organisationBlock = (item) => {
-  const { _id, label } = item.ref;
-  const termLabel = outputRelationTypes(item.term.label);
+  const { _id: iId, ref, term } = item;
+  const { _id, label } = ref;
+  const termLabel = outputRelationTypes(term.label);
   const url = `organisation/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           <i>{termLabel}</i> {label}
         </span>
@@ -559,13 +561,14 @@ export const organisationBlock = (item) => {
 };
 
 export const peopleBlock = (item) => {
-  const { _id } = item.ref;
-  const label = personLabel(item.ref);
-  const termLabel = outputRelationTypes(item.term.label);
+  const { _id: iId, ref, term } = item;
+  const { _id } = ref;
+  const label = personLabel(ref);
+  const termLabel = outputRelationTypes(term.label);
   const url = `person/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           <i>{termLabel}</i> {label}
         </span>
@@ -575,12 +578,13 @@ export const peopleBlock = (item) => {
 };
 
 export const resourcesBlock = (item) => {
-  const { _id, label } = item.ref;
-  const termLabel = outputRelationTypes(item.term.label);
+  const { _id: iId, ref, term } = item;
+  const { _id, label } = ref;
+  const termLabel = outputRelationTypes(term.label);
   const url = `resource/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           <i>{termLabel}</i> {label}
         </span>
@@ -590,12 +594,13 @@ export const resourcesBlock = (item) => {
 };
 
 export const spatialBlock = (item) => {
-  const { _id, label } = item.ref;
-  const termLabel = outputRelationTypes(item.term.label);
+  const { _id: iId, ref, term } = item;
+  const { _id, label } = ref;
+  const termLabel = outputRelationTypes(term.label);
   const url = `spatial/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           <i>{termLabel}</i> {label}
         </span>
@@ -605,12 +610,13 @@ export const spatialBlock = (item) => {
 };
 
 export const temporalBlock = (item) => {
-  const { _id, label } = item.ref;
-  const termLabel = outputRelationTypes(item.term.label);
+  const { _id: iId, ref, term } = item;
+  const { _id, label } = ref;
+  const termLabel = outputRelationTypes(term.label);
   const url = `temporal/${_id}`;
   return (
-    <li key={_id}>
-      <Link href={url} to={url} target="_blank">
+    <li key={iId}>
+      <Link to={url} target="_blank">
         <span className="tag-bg tag-item">
           <i>{termLabel}</i> {label}
         </span>

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FormGroup, Input, Label } from 'reactstrap';
+import { Button, FormGroup, Input, Label } from 'reactstrap';
 import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { loadRelationsSpatialValues } from '../../redux/actions';
 
 function SpatialForm(props) {
-  const { submit, clear } = props;
+  const { submit, clear, item, toggleItem } = props;
 
   const dispatch = useDispatch();
 
@@ -88,8 +88,28 @@ function SpatialForm(props) {
     }
   }, [clear, clearSearch]);
 
+  let labelBlock = null;
+  if (item !== null) {
+    const { ref } = item;
+    const { _id, label } = ref;
+    labelBlock = (
+      <div>
+        <i>Selected event:</i>{' '}
+        <Button
+          type="button"
+          color="info"
+          size="sm"
+          onClick={() => toggleItem(_id)}
+        >
+          {label}
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <>
+      {labelBlock}
       <FormGroup>
         <Label>Search for Spatial</Label>
       </FormGroup>
@@ -186,12 +206,17 @@ function SpatialForm(props) {
           </FormGroup>
         </div>
       </div>
-    </div>
+    </>
   );
 }
-
+SpatialForm.defaultProps = {
+  item: null,
+  toggleItem: () => {},
+};
 SpatialForm.propTypes = {
+  item: PropTypes.object,
   submit: PropTypes.bool.isRequired,
   clear: PropTypes.bool.isRequired,
+  toggleItem: PropTypes.func,
 };
 export default SpatialForm;

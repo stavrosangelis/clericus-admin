@@ -20,6 +20,9 @@ export default function Spatial() {
   const [loading, setLoading] = useState(false);
   const [item, setItem] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [relatedEntityOpen, setRelatedEntityOpen] = useState(false);
+  const [relatedEntityRel, setRelatedEntityRel] = useState(null);
+  const [relatedEntityRelType, setRelatedEntityRelType] = useState(null);
 
   const { _id } = useParams();
   const prevId = useRef(null);
@@ -102,6 +105,12 @@ export default function Spatial() {
     setItem(copy);
   };
 
+  const relatedEntitiesToggle = (rel = null, type = null) => {
+    setRelatedEntityOpen(!relatedEntityOpen);
+    setRelatedEntityRel(rel);
+    setRelatedEntityRelType(type);
+  };
+
   const referencesLabels = [];
   const referencesTypes = [];
 
@@ -164,13 +173,22 @@ export default function Spatial() {
           referencesLabels={referencesLabels}
           referencesTypes={referencesTypes}
           type="spatial"
+          toggleOpen={relatedEntitiesToggle}
+          open={relatedEntityOpen}
+          rel={relatedEntityRel}
+          relType={relatedEntityRelType}
         />
       </Suspense>
     );
 
     relatedEntitiesBlock = (
       <Suspense fallback={renderLoader()}>
-        <RelatedEntitiesBlock item={item} itemType="Spatial" reload={reload} />
+        <RelatedEntitiesBlock
+          item={item}
+          itemType="Spatial"
+          reload={reload}
+          toggleRel={relatedEntitiesToggle}
+        />
       </Suspense>
     );
   } else {
