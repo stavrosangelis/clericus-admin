@@ -19,7 +19,7 @@ const { REACT_APP_APIPATH: APIPath } = process.env;
 
 export default function ViewSpatial(props) {
   // props
-  const { delete: deleteFn, item: spatial } = props;
+  const { _id: propsId = 'new', delete: deleteFn, item: spatial } = props;
 
   const navigate = useNavigate();
 
@@ -126,8 +126,7 @@ export default function ViewSpatial(props) {
         .catch((error) => {
           console.log(error);
         });
-      const { data: rData = null } = responseData;
-      const { errors = [], msg = '', status = false } = rData;
+      const { errors = [], msg = '', status = false } = responseData;
       if (status) {
         setUpdating(false);
         setUpdateBtnText(
@@ -141,7 +140,7 @@ export default function ViewSpatial(props) {
           visible: false,
         });
         if (spatial === null) {
-          navigate(`/spatial/${rData.data._id}`);
+          navigate(`/spatial/${responseData.data._id}`);
         }
       } else {
         const errorArr = [];
@@ -182,7 +181,7 @@ export default function ViewSpatial(props) {
   };
 
   const formSubmit = (e) => {
-    e.prspatialDefault();
+    e.preventDefault();
     update();
   };
 
@@ -207,23 +206,19 @@ export default function ViewSpatial(props) {
     note = '',
   } = item;
 
-  const deleteBtn = (
-    <Button
-      color="danger"
-      onClick={() => deleteFn()}
-      outline
-      type="button"
-      size="sm"
-      className="pull-left"
-    >
-      <i className="fa fa-trash-o" /> Delete
-    </Button>
-  );
-  const updateBtn = (
-    <Button color="primary" outline type="submit" size="sm">
-      {updateBtnText}
-    </Button>
-  );
+  const deleteBtn =
+    propsId !== '' && propsId !== 'new' ? (
+      <Button
+        color="danger"
+        onClick={() => deleteFn()}
+        outline
+        type="button"
+        size="sm"
+        className="pull-left"
+      >
+        <i className="fa fa-trash-o" /> Delete
+      </Button>
+    ) : null;
 
   return (
     <Card>
@@ -363,7 +358,9 @@ export default function ViewSpatial(props) {
 
             <div className="flex justify-content-between">
               {deleteBtn}
-              {updateBtn}
+              <Button color="primary" outline type="submit" size="sm">
+                {updateBtnText}
+              </Button>
             </div>
           </Form>
         </Collapse>
@@ -378,4 +375,5 @@ ViewSpatial.defaultProps = {
 ViewSpatial.propTypes = {
   delete: PropTypes.func.isRequired,
   item: PropTypes.object,
+  _id: PropTypes.string.isRequired,
 };

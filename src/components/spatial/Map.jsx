@@ -60,8 +60,6 @@ export default function Map(props) {
     }
   }, [item]);
 
-  console.log(selectedLocation);
-
   const handleSearch = useCallback(
     (e) => {
       const { value } = e.target;

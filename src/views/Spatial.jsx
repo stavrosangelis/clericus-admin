@@ -228,6 +228,7 @@ export default function Spatial() {
                   delete={toggleDeleteModal}
                   reload={reload}
                   item={item}
+                  _id={_id}
                 />
               </Suspense>
             </div>
