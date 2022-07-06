@@ -39,7 +39,7 @@
   "scripts": {
     "start": "NODE_ENV=production react-scripts start",
     "dev": "export HTTPS=true&&SSL_CRT_FILE=./cert/cert.pem&&SSL_KEY_FILE=./cert/key.pem NODE_ENV=development react-scripts start",
-    "build:dev": "REACT_APP_ENV=prod.dev BUILD_PATH='./build-dev' DOMAIN=http://devel.clericus.ie react-scripts build",
+    "build:dev": "REACT_APP_ENV=prod.dev BUILD_PATH='./build-dev' DOMAIN=https://devel.clericus.ie react-scripts build",
     "build": "react-scripts build",
     "test": "REACT_APP_APIPATH=http://localhost:5100/api/ react-scripts test",
     "test:cov": "REACT_APP_APIPATH=http://localhost:5100/api/ react-scripts test --coverage",

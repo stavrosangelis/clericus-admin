@@ -320,7 +320,7 @@ function TaxonomyTermModal(props) {
             </FormGroup>
           </Form>
         </ModalBody>
-        <ModalFooter>
+        <ModalFooter className="flex justify-content-between">
           {btnDelete}
           <Button
             size="sm"

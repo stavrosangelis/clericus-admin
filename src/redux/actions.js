@@ -169,7 +169,7 @@ export function login(email, password) {
     } else {
       payload = {
         loginError: true,
-        loginErrorText: responseData.errors,
+        loginErrorText: responseData.error,
         sessionActive: false,
         sessionUser: null,
       };

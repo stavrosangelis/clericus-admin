@@ -58,7 +58,7 @@ export default function ViewPerson(props) {
       const {
         _id,
         alternateAppelations = [],
-        descriptionVal = '',
+        description: descriptionVal = '',
         firstName = '',
         gender = '',
         honorificPrefix = '',

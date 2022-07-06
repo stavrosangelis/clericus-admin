@@ -17,13 +17,23 @@ import {
   Label,
   Spinner,
 } from 'reactstrap';
+import { useDispatch } from 'react-redux';
 import { addGenericReference, getData, putData } from '../../helpers';
 import TaxonomyTerm from './Taxonomy.Term';
 import DeleteModal from '../Delete.modal';
+import {
+  getEventTypes,
+  getOrganisationTypes,
+  getPeopleRoles,
+  getPersonTypes,
+  getSystemTypes,
+  loadDefaultEntities,
+} from '../../redux/actions';
 
 const TaxonomyTermModal = lazy(() => import('./Taxonomy.Term.Modal'));
 
 function Taxonomy(props) {
+  const dispatch = useDispatch();
   // state
   const [taxonomy, setTaxonomy] = useState(null);
   const [taxonomyTerms, setTaxonomyTerms] = useState([]);
@@ -304,6 +314,15 @@ function Taxonomy(props) {
     [loadTerm, termModalVisible]
   );
 
+  const reloadTypes = useCallback(async () => {
+    dispatch(getEventTypes());
+    dispatch(getOrganisationTypes());
+    dispatch(getPeopleRoles());
+    dispatch(getPersonTypes());
+    dispatch(getSystemTypes());
+    dispatch(loadDefaultEntities());
+  }, [dispatch]);
+
   const submitTerm = useCallback(
     async (postDataParams = null) => {
       if (termSaving) {
@@ -373,6 +392,7 @@ function Taxonomy(props) {
             <i className="fa fa-check" />{' '}
           </span>
         );
+        reloadTypes();
         timeout = setTimeout(() => {
           if (mounted.current) {
             setTermSubmitBtnText(
@@ -429,12 +449,14 @@ function Taxonomy(props) {
       termSaving,
       toggleTermModal,
       setLoading,
+      reloadTypes,
     ]
   );
 
   const reloadTaxonomy = () => {
     if (termModalVisible) {
       toggleTermModal();
+      reloadTypes();
     }
     setLoading(true);
   };

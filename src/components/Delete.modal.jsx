@@ -14,7 +14,8 @@ function DeleteModal(props) {
 
   const deleteFn = async () => {
     const responseData = await deleteData(path, params);
-    if (responseData.status) {
+    const { status, error: rError } = responseData;
+    if (status) {
       setError(false);
       setErrorHTML([]);
       toggle();
@@ -23,16 +24,10 @@ function DeleteModal(props) {
         hideModal();
       }
     } else {
-      const errorMsg = responseData.msg;
-      const errorText =
-        typeof errorMsg === 'string' ? (
-          <div>{errorMsg}</div>
-        ) : (
-          errorMsg.map((e, i) => {
-            const key = `a${i}`;
-            return <div key={key}>{e}</div>;
-          })
-        );
+      const errorText = rError.map((e, i) => {
+        const key = `a${i}`;
+        return <div key={key}>{e}</div>;
+      });
       setError(true);
       setErrorHTML(errorText);
     }

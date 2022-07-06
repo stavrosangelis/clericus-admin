@@ -3,6 +3,7 @@ import { Collapse, Button, Card, CardTitle, CardBody } from 'reactstrap';
 import PropTypes from 'prop-types';
 import UploadFile from './Upload.file';
 import DeleteModal from '../Delete.modal';
+import '../../assets/scss/upload.file.scss';
 
 const { REACT_APP_APIPATH: APIPath } = process.env;
 
